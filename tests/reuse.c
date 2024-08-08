@@ -689,6 +689,7 @@ main (void)
           test2 (mpfr_zeta, "mpfr_zeta", p, (mpfr_rnd_t) rnd);
           test2 (mpfr_gamma, "mpfr_gamma", p, (mpfr_rnd_t) rnd);
           test2 (mpfr_lngamma, "mpfr_lngamma", p, (mpfr_rnd_t) rnd);
+          test2 (mpfr_add17, "mpfr_add17", p, (mp_rnd_t) rnd);
 
           test2 (mpfr_rint, "mpfr_rint", p, (mpfr_rnd_t) rnd);
           test2 (mpfr_rint_ceil, "mpfr_rint_ceil", p, (mpfr_rnd_t) rnd);

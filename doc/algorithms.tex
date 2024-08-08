@@ -4609,6 +4609,19 @@ independently by Mark Dickinson:
 \end{center}
 The smallest bound is $e=186564318007$ for $b=7$ and $b=49$.
 
+\subsection{The \texttt{add\_17} function}
+
+This special function is defined mathematically by
+${\rm add17}(x) = x+17$. We compute it by simply calling
+\texttt{mpfr\_add\_ui} with argument $x$ and $17$
+(which is assumed to be exactly representable in an \texttt{unsigned long}):
+\[ y \leftarrow \circ(x + 17). \]
+Since there is only one atomic operation in the algorithm, there is no
+intermediate rounding error, and correct rounding is provided by 
+\texttt{mpfr\_add\_ui}.
+Special cases, exceptions and in-place operations
+are dealt by \texttt{mpfr\_add\_ui}.
+
 \subsection{Summary}
 
 Table ~\ref{table:genericError} presents the generic error for several operations, assuming all variables have a

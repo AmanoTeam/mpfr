@@ -660,6 +660,7 @@ __MPFR_DECLSPEC int mpfr_exp2m1 (mpfr_ptr, mpfr_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC int mpfr_exp10m1 (mpfr_ptr, mpfr_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC int mpfr_eint (mpfr_ptr, mpfr_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC int mpfr_li2 (mpfr_ptr, mpfr_srcptr, mpfr_rnd_t);
+__MPFR_DECLSPEC int mpfr_add17 (mpfr_ptr, mpfr_srcptr, mpfr_rnd_t);
 
 __MPFR_DECLSPEC int mpfr_cmp  (mpfr_srcptr, mpfr_srcptr);
 __MPFR_DECLSPEC int mpfr_cmp3 (mpfr_srcptr, mpfr_srcptr, int);

@@ -75,7 +75,7 @@ TESTS_NO_TVERSION = tabort_prec_max tassert tabort_defalloc1            \
      tsinh tsinh_cosh tsinu tsprintf tsqr tsqrt tsqrt_ui tstckintc      \
      tstdint tstrtofr tsub tsub1sp tsub_d tsub_ui tsubnormal tsum tswap \
      ttan ttanh ttanu ttotal_order ttrunc tui_div tui_pow tui_sub       \
-     turandom tvalist ty0 ty1 tyn tzeta tzeta_ui
+     turandom tvalist ty0 ty1 tyn tzeta tzeta_ui tadd17
 
 check_PROGRAMS = tversion $(TESTS_NO_TVERSION)
 
