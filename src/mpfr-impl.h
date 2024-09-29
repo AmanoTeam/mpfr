@@ -2532,10 +2532,19 @@ extern "C" {
    to avoid that (except with additional syntax ugliness and API breakage):
    https://news.ycombinator.com/item?id=11753236
 
-   A workaround should be to use mpfr_ptr to access the usual mpfr_t members
-   and mpfr_ubf_ptr to access the additional member _mpfr_zexp. And never
-   use __mpfr_ubf_struct as a declared type; otherwise this would force
-   __mpfr_ubf_struct to be the effective type of the whole object.
+   The issue is that a public function that takes a mpfr_t and supports UBF
+   does not know whether the object is a __mpfr_struct (MPFR number) or a
+   __mpfr_ubf_struct (UBF). For the generated code, this does not matter,
+   because of the common part. But one cannot avoid breaking the aliasing
+   rules in one of these two cases (at least). Even if one internally uses
+   a union (see below), which permits type-punning, this solution will not
+   be sufficient, because common code may still directly provide a mpfr_t
+   to public functions, and mpfr_t is not the same thing as a union type,
+   even though the union type has mpfr_t as one of its members.
+   This currently triggers a warning with GCC:
+     https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94337
+   but even if the code example there is correct, the actual issue in MPFR
+   (possibly undetected by GCC's diagnostic system) is worse.
 
    The alignment requirement for __mpfr_ubf_struct (UBF) needs to be at least
    as strong as the one for __mpfr_struct (MPFR number); this is not required
@@ -2577,7 +2586,9 @@ typedef __mpfr_ubf_struct *mpfr_ubf_ptr;
 
 /* The following is a trick to allocate a UBF as an automatic variable
    with the required alignment but without forcing the effective type
-   to __mpfr_ubf_struct, which would break the aliasing rules. */
+   to __mpfr_ubf_struct, which would break the aliasing rules. However,
+   this seems to be insufficient (see above discussion) as mpfr_t also
+   come into play. */
 typedef union {
   __mpfr_ubf_struct u[1];
   __mpfr_struct m[1];
