@@ -1,7 +1,7 @@
 /* Test file for mpfr_add_[q,z], mpfr_sub_[q,z], mpfr_div_[q,z],
    mpfr_mul_[q,z], mpfr_cmp_[f,q,z]
 
-Copyright 2004-2022 Free Software Foundation, Inc.
+Copyright 2004-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -17,9 +17,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-test.h"
 
@@ -108,7 +107,7 @@ special (void)
   res = mpfr_sub_q (y, x, q, MPFR_RNDU);
   CHECK_FOR ("0.5-3/2", mpfr_cmp_si(y, -1)==0 && res==0);
 
-  /* Inf Rationnal */
+  /* Inf rational */
   mpq_set_ui (q, 1, 0);
   mpfr_set_str1 (x, "0.5");
   res = mpfr_add_q (y, x, q, MPFR_RNDN);

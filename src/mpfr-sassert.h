@@ -1,6 +1,6 @@
 /* MPFR internal header related to Static Assertions
 
-Copyright 2012-2022 Free Software Foundation, Inc.
+Copyright 2012-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #ifndef __MPFR_STATIC_ASSERT_H__
 #define __MPFR_STATIC_ASSERT_H__
@@ -64,6 +63,13 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 # endif
 
 #else
+
+/* MPFR_ASSERTN is defined in mpfr-impl.h, so that except in configure tests
+   where MPFR_USE_STATIC_ASSERT is set to 1 (because static assertions are
+   needed), mpfr-sassert.h must not be used directly. */
+#ifndef __MPFR_IMPL_H__
+# error "Do not use mpfr-sassert.h directly; include mpfr-impl.h instead."
+#endif
 
 /* No support: default to classic assertions */
 # define MPFR_STAT_STATIC_ASSERT(c) MPFR_ASSERTN(c)

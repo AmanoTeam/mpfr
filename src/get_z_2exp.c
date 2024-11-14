@@ -1,7 +1,7 @@
 /* mpfr_get_z_2exp -- get a multiple-precision integer and an exponent
                       from a floating-point number
 
-Copyright 2000-2022 Free Software Foundation, Inc.
+Copyright 2000-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -17,9 +17,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-impl.h"
 
@@ -30,7 +29,7 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
  *   1) it is in the exponent range [__gmpfr_emin,__gmpfr_emax],
  *   2) the smaller a number is (in absolute value), the smaller its
  *      exponent is. In other words, the f -> exp function is monotonous
- *      on nonnegative numbers. --> This is WRONG since the returned
+ *      on non-negative numbers. --> This is WRONG since the returned
  *      exponent is not necessarily in the exponent range!
  * Note that this is different from the C function frexp().
  *

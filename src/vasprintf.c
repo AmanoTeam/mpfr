@@ -1,7 +1,7 @@
 /* mpfr_vasnprintf_aux -- helper function for the formatted output functions
    (printf functions family).
 
-Copyright 2007-2022 Free Software Foundation, Inc.
+Copyright 2007-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -17,9 +17,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 /* If the number of output characters is larger than INT_MAX, the
    ISO C99 / C11 standards are silent, but POSIX[*] requires the
@@ -47,6 +46,27 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
    However, the only requirement from ISO C is that both macros must be
    invoked in the same function (MPFR uses va_copy instead of va_start,
    but the requirement is the same). Here, MPFR just follows ISO C.
+*/
+
+/* FIXME: For the native types, the gmp_asprintf and gmp_vasprintf functions
+   are currently used, thus a full output is generated before being truncated
+   in case of mpfr_snprintf(). This is potentially very inefficient and could
+   unnecessarily exhaust the memory and/or crash.
+   (Not tested yet.)
+
+   A solution could be the use of gmp_snprintf / gmp_vsnprintf, but
+   note that as a consequence, the case n > buffer size might not be
+   supported everywhere. This would affect the snprintf_size() test
+   in "tests/tsprintf.c". See discussion
+     https://sourceware.org/pipermail/libc-alpha/2023-March/146343.html
+   and about MPFR:
+     https://sourceware.org/pipermail/libc-alpha/2023-March/146515.html
+
+   This should be better, though the implementation of the standard
+   formatted output functions may be inefficient, but this would be
+   the best we can do. For instance, for the GNU C Library (glibc):
+     https://sourceware.org/bugzilla/show_bug.cgi?id=17829
+     https://sourceware.org/bugzilla/show_bug.cgi?id=21127
 */
 
 /* Needed due to the tests on HAVE_STDARG and MPFR_USE_MINI_GMP */
@@ -125,11 +145,11 @@ static const char num_to_text[] = "0123456789abcdef";
    left to 0.
    This macro will be used to read the field width and the precision.
    The behavior will be similar to ISO C99. Note that unless "*" is
-   used, the result will be nonnegative (ISO C99 and C11 just specify
+   used, the result will be non-negative (ISO C99 and C11 just specify
    "optional decimal integer" for the precision, but the behavior with
    a hardcoded negative integer is not explicitly defined, thus it is
    undefined, so that it is fine to reject such integers; the C2x draft
-   now clarifies this: "an optional nonnegative decimal integer").
+   now clarifies this: "an optional non-negative decimal integer").
    Note: Since mpfr_intmax_t = int is theoretically possible, all values
    of var are potentially valid values (via '*'). Hence the need of an
    overflow flag instead of a special value that would indicate overflow.
@@ -189,9 +209,9 @@ enum arg_t
     UNSUPPORTED
   };
 
-/* Each conversion specification of the format string will be translated in a
-   printf_spec structure by the parser.
-   This structure is adapted from the GNU libc one. */
+/* Each conversion specification of the format string will be translated
+   into a printf_spec structure by the parser.
+   This structure is adapted from the GNU libc one (and augmented). */
 struct printf_spec
 {
   unsigned int alt:1;           /* # flag */
@@ -202,7 +222,8 @@ struct printf_spec
 
   mpfr_intmax_t width;          /* Width */
   mpfr_intmax_t prec;           /* Precision, or negative if omitted */
-  size_t size;                  /* Wanted size (0 iff snprintf with size=0) */
+  int size;                     /* If 0 (i.e. snprintf with size = 0),
+                                   no output. */
 
   enum arg_t arg_type;          /* Type of argument */
   mpfr_rnd_t rnd_mode;          /* Rounding mode */
@@ -211,25 +232,11 @@ struct printf_spec
   char pad;                     /* Padding character */
 };
 
-static void
-specinfo_init (struct printf_spec *specinfo)
-{
-  specinfo->alt = 0;
-  specinfo->space = 0;
-  specinfo->left = 0;
-  specinfo->showsign = 0;
-  specinfo->group = 0;
-  specinfo->width = 0;
-  specinfo->prec = 0;
-  specinfo->size = 1;
-  specinfo->arg_type = NONE;
-  specinfo->rnd_mode = MPFR_RNDN;
-  specinfo->spec = '\0';
-  specinfo->pad = ' ';
-}
-
+/* Note: LONG_ARG is unusual, but is accepted (ISO C99 says "as no effect
+   on a following a, A, e, E, f, F, g, or G conversion specifier"). */
 #define FLOATING_POINT_ARG_TYPE(at) \
-  ((at) == MPFR_ARG || (at) == MPF_ARG || (at) == LONG_DOUBLE_ARG)
+  ((at) == MPFR_ARG || (at) == MPF_ARG \
+   || (at) == LONG_ARG || (at) == LONG_DOUBLE_ARG)
 
 #define INTEGER_LIKE_ARG_TYPE(at)                                       \
   ((at) == SHORT_ARG || (at) == LONG_ARG || (at) == LONG_LONG_ARG       \
@@ -247,16 +254,18 @@ specinfo_is_valid (struct printf_spec spec)
 
     case 'a':    case 'A':
     case 'e':    case 'E':
-    case 'f':    case 'F':
+    case 'f':    /* 'F': see below */
     case 'g':    case 'G':
       return (spec.arg_type == NONE
               || FLOATING_POINT_ARG_TYPE (spec.arg_type));
 
+    case 'F':  /* only MPFR_ARG is supported since GMP doesn't support it
+                  due to its use as the mpf_t type specifier */
     case 'b':
       return spec.arg_type == MPFR_ARG;
 
     case 'd':    case 'i':
-    case 'u':    case 'o':
+    case 'o':    case 'u':
     case 'x':    case 'X':
       return (spec.arg_type == NONE
               || INTEGER_LIKE_ARG_TYPE (spec.arg_type));
@@ -403,7 +412,7 @@ parse_arg_type (const char *format, struct printf_spec *specinfo)
 
 /* some macros and functions filling the buffer */
 
-/* CONSUME_VA_ARG removes from va_list AP the type expected by SPECINFO */
+/* CONSUME_VA_ARG removes from va_list ap the type expected by specinfo */
 
 /* With a C++ compiler wchar_t and enumeration in va_list are converted to
    integer type : int, unsigned int, long or unsigned long (unfortunately,
@@ -412,7 +421,6 @@ parse_arg_type (const char *format, struct printf_spec *specinfo)
    to int (because wchar_t <= int).
    For wint_t, we assume that the case WINT_MAX < INT_MAX yields an
    integer promotion. */
-#ifdef HAVE_WCHAR_H
 #if defined(WINT_MAX) && WINT_MAX < INT_MAX
 typedef int    mpfr_va_wint;  /* integer promotion */
 #else
@@ -428,13 +436,14 @@ typedef wint_t mpfr_va_wint;
     (void) va_arg ((ap), mpfr_va_wint);                                 \
   else if ((specinfo).spec == 's')                                      \
     (void) va_arg ((ap), int); /* we assume integer promotion */        \
+  else if ((specinfo).spec == 'a' || (specinfo).spec == 'A'             \
+           || (specinfo).spec == 'e' || (specinfo).spec == 'E'          \
+           || (specinfo).spec == 'f' /* 'F' impossible */               \
+           || (specinfo).spec == 'g' || (specinfo).spec == 'G')         \
+    (void) va_arg ((ap), double);                                       \
+  else                                                                  \
+    MPFR_RET_NEVER_GO_HERE();                                           \
   break;
-#else
-#define CASE_LONG_ARG(specinfo, ap)             \
-  case LONG_ARG:                                \
-  (void) va_arg ((ap), long);                   \
-  break;
-#endif
 
 #if defined(_MPFR_H_HAVE_INTMAX_T)
 #define CASE_INTMAX_ARG(specinfo, ap)           \
@@ -504,14 +513,14 @@ typedef wint_t mpfr_va_wint;
           case 'c':                             \
             (void) va_arg ((ap), int);          \
             break;                              \
-          case 'f':                             \
-          case 'F':                             \
-          case 'e':                             \
-          case 'E':                             \
-          case 'g':                             \
-          case 'G':                             \
           case 'a':                             \
           case 'A':                             \
+          case 'e':                             \
+          case 'E':                             \
+          case 'f':                             \
+          /* 'F' impossible */                  \
+          case 'g':                             \
+          case 'G':                             \
             (void) va_arg ((ap), double);       \
             break;                              \
           case 's':                             \
@@ -523,10 +532,16 @@ typedef wint_t mpfr_va_wint;
       }                                         \
   } while (0)
 
-/* Process the format part which does not deal with mpfr types,
+/* Process the format part that does not deal with mpfr types,
+   from start to end (not included).
    Jump to external label 'error' if gmp_asprintf return -1.
    Note: start and end are pointers to the format string, so that
    size_t is the best type to express the difference.
+   Warning! Since the output from gmp_vasprintf may contain non-terminating
+   null characters (if %c is used with the value 0), the mpfr_free_str
+   function must not be used to free the allocated memory, because the size
+   may matter with some custom allocation functions. Anyway, mpfr_free_func
+   is more efficient here, as the size does not need to be recomputed.
    FIXME: If buf.size = 0 or size != 0, gmp_vsnprintf should be called
    instead of gmp_vasprintf, outputting data directly to the buffer
    when applicable.
@@ -543,7 +558,7 @@ typedef wint_t mpfr_va_wint;
                                                                         \
         MPFR_TMP_MARK (marker);                                         \
         fmt_copy = (char *) MPFR_TMP_ALLOC (n + 1);                     \
-        strncpy (fmt_copy, (start), n);                                 \
+        memcpy (fmt_copy, (start), n);                                  \
         fmt_copy[n] = '\0';                                             \
         length = gmp_vasprintf (&s, fmt_copy, (ap));                    \
         if (length < 0)                                                 \
@@ -552,7 +567,7 @@ typedef wint_t mpfr_va_wint;
             goto error;                                                 \
           }                                                             \
         buffer_cat ((buf_ptr), s, length);                              \
-        mpfr_free_str (s);                                              \
+        mpfr_free_func (s, length + 1);                                 \
         (flag) = 0;                                                     \
         MPFR_TMP_FREE (marker);                                         \
       }                                                                 \
@@ -640,8 +655,11 @@ buffer_widen (struct string_buffer *b, size_t len)
   MPFR_ASSERTD (*b->curr == '\0');
 }
 
-/* Concatenate the first len characters of the string s to the buffer b and
-   expand it if needed. Return non-zero if overflow. */
+/* Concatenate the first len characters of the array s to the buffer b,
+   and expand it if needed. Return non-zero if overflow.
+   Warning! The array s may contain null characters in addition to the
+   terminating one, in case %c has been used with the value 0.
+ */
 static int
 buffer_cat (struct string_buffer *b, const char *s, size_t len)
 {
@@ -651,8 +669,6 @@ buffer_cat (struct string_buffer *b, const char *s, size_t len)
      valid for len == 0, but this is safer, just in case. */
   if (len == 0)
     return 0;
-
-  MPFR_ASSERTD (len <= strlen (s));
 
   if (buffer_incr_len (b, len))
     return 1;
@@ -664,50 +680,48 @@ buffer_cat (struct string_buffer *b, const char *s, size_t len)
       if (MPFR_UNLIKELY (b->curr + len >= b->start + b->size))
         buffer_widen (b, len);
 
-      /* strncat is similar to strncpy here, except that strncat ensures
-         that the buffer will be null-terminated. */
-      strncat (b->curr, s, len);
-      b->curr += len;
-
-      MPFR_ASSERTD (b->curr < b->start + b->size);
       MPFR_ASSERTD (*b->curr == '\0');
+      memcpy (b->curr, s, len);
+      b->curr += len;
+      MPFR_ASSERTD (b->curr < b->start + b->size);
+      *b->curr = '\0';
     }
 
   return 0;
 }
 
-/* Add n characters c to the end of buffer b. Return non-zero if overflow. */
+/* Add n characters c to the end of buffer b. Return non-zero if overflow.
+   Note: this function is called only when there is output (b->size != 0),
+   since it is needed only by sprnt_fp(). */
 static int
 buffer_pad (struct string_buffer *b, const char c, const mpfr_intmax_t n)
 {
+  MPFR_ASSERTD (b->size != 0);
   MPFR_ASSERTD (n > 0);
 
   if (buffer_incr_len (b, n))
     return 1;
 
-  if (b->size != 0)
+  MPFR_ASSERTD (*b->curr == '\0');
+
+  if (n > (size_t) -1 || b->size > ((size_t) -1) - n)
     {
-      MPFR_ASSERTD (*b->curr == '\0');
-
-      if (n > (size_t) -1 || b->size > ((size_t) -1) - n)
-        {
-          /* Reallocation will not be possible. Regard this as an overflow. */
-          b->len = -1;
-          return 1;
-        }
-
-      if (MPFR_UNLIKELY (b->curr + n >= b->start + b->size))
-        buffer_widen (b, n);
-
-      if (n == 1)
-        *b->curr = c;
-      else
-        memset (b->curr, c, n);
-      b->curr += n;
-      *b->curr = '\0';
-
-      MPFR_ASSERTD (b->curr < b->start + b->size);
+      /* Reallocation will not be possible. Regard this as an overflow. */
+      b->len = -1;
+      return 1;
     }
+
+  if (MPFR_UNLIKELY (b->curr + n >= b->start + b->size))
+    buffer_widen (b, n);
+
+  if (n == 1)
+    *b->curr = c;
+  else
+    memset (b->curr, c, n);
+  b->curr += n;
+  *b->curr = '\0';
+
+  MPFR_ASSERTD (b->curr < b->start + b->size);
 
   return 0;
 }
@@ -715,7 +729,9 @@ buffer_pad (struct string_buffer *b, const char c, const mpfr_intmax_t n)
 /* Form a string by concatenating the first len characters of str to tz
    zero(s), insert into one character c each 3 characters starting from end
    to beginning and concatenate the result to the buffer b.
-   Assume c is not null (\0). Return non-zero if overflow. */
+   Assume c is not null (\0). Return non-zero if overflow.
+   Note: this function is called only when there is output (b->size != 0),
+   since it is needed only by sprnt_fp(). */
 static int
 buffer_sandwich (struct string_buffer *b, char *str, size_t len,
                  const size_t tz, const char c)
@@ -875,29 +891,32 @@ struct number_parts
   enum pad_t pad_type;    /* Padding type */
   mpfr_intmax_t pad_size; /* Number of padding characters */
 
-  char sign;              /* Sign character */
+  char sign;              /* Sign character ('-', '+', ' ', or '\0') */
 
   char *prefix_ptr;       /* Pointer to prefix part */
-  size_t prefix_size;     /* Number of characters in *prefix_ptr */
+  size_t prefix_size;     /* Number of characters in prefix_ptr */
 
   char thousands_sep;     /* Thousands separator (only with style 'f') */
 
-  char *ip_ptr;           /* Pointer to integral part characters*/
-  size_t ip_size;         /* Number of digits in *ip_ptr */
+  /* The integral part is given by the following 3 members
+     (excluding the possible padding with zeros). */
+  char *ip_ptr;           /* Pointer to integral part characters */
+  size_t ip_size;         /* Number of digits of the integral part */
   int ip_trailing_digits; /* Number of additional digits in integral part
                              (if spec.size != 0, this can only be a zero) */
 
   char point;             /* Decimal point character */
 
   mpfr_intmax_t fp_leading_zeros;  /* Number of additional leading zeros in
-                                      fractional part */
+                                      the fractional part */
   char *fp_ptr;           /* Pointer to fractional part characters */
-  size_t fp_size;         /* Number of digits in *fp_ptr */
+  size_t fp_size;         /* Number of digits of the fractional part,
+                             without leading and trailing zeros */
   mpfr_intmax_t fp_trailing_zeros;  /* Number of additional trailing zeros in
-                                       fractional part */
+                                       the fractional part */
 
   char *exp_ptr;          /* Pointer to exponent part */
-  size_t exp_size;        /* Number of characters in *exp_ptr */
+  size_t exp_size;        /* Number of characters in exp_ptr */
 
   struct string_list *sl; /* List of string buffers in use: we need such a
                              mechanism because fp_ptr may point into the same
@@ -980,6 +999,12 @@ floor_log10 (mpfr_srcptr x)
 
 #define NDIGITS 8
 
+/* If output is needed (spec.size != 0), this is mpfr_get_str.
+   Otherwise...
+   TODO: Explain the meaning of the returned string. Is it really used?
+   Note that this wrapper is not used for %Rg, since trailing zeros may
+   need to be removed.
+*/
 MPFR_RETURNS_NONNULL static char *
 mpfr_get_str_wrapper (mpfr_exp_t *exp, int base, size_t n, mpfr_srcptr op,
                       const struct printf_spec spec)
@@ -996,14 +1021,20 @@ mpfr_get_str_wrapper (mpfr_exp_t *exp, int base, size_t n, mpfr_srcptr op,
 
   /* Special case size = 0, i.e., xxx_snprintf with size = 0: we only want
      to compute the number of printed characters. Try to deduce it from
-     a small number of significant digits. */
+     a small number of significant digits, and increase the number of
+     digits until this is possible. */
   nine = base == 2 ? '1' : base == 10 ? '9' : 'f';
   for (ndigits = NDIGITS; ; ndigits *= 2)
     {
       mpfr_rnd_t rnd = MPFR_RNDZ;
-      /* when ndigits > n, we reduce it to the target size n, and then we use
+      /* When ndigits > n, we reduce it to the target size n, and then we use
          the wanted rounding mode, to avoid errors for example when n=1 and
-         x = 9.5 with spec.rnd_mode = RNDU */
+         x = 9.5 with spec.rnd_mode = RNDU.
+         WARNING! If n == 0, then it is important that ndigits is set to 0
+         too, so that the correct number of characters is generated. Indeed,
+         if n == 0, the number of characters is determined by this function;
+         and it is important that it is correct, since the value returned by
+         mpfr_*snprintf (NULL, 0, "%Re", ...) will be based on it. */
       if (ndigits >= n)
         {
           ndigits = n;
@@ -1015,7 +1046,11 @@ mpfr_get_str_wrapper (mpfr_exp_t *exp, int base, size_t n, mpfr_srcptr op,
       neg = str[0] == '-';
       s = str + neg;
       while (*s == nine)
-        s ++;
+        s++;
+      /* Due to the above code, ndigits < n, and in this case, it is
+         important that ndigits is at least 2 in order to have a non-empty
+         fractional part (see the warning comments later). */
+      MPFR_ASSERTD (ndigits < n && ndigits >= 2);
       if (s < str + neg + ndigits) /* we don't have ndigits 'nines' */
         break;
       mpfr_free_str (str);
@@ -1062,12 +1097,6 @@ regular_ab (struct number_parts *np, mpfr_srcptr p,
 
   uppercase = spec.spec == 'A';
 
-  /* sign */
-  if (MPFR_IS_NEG (p))
-    np->sign = '-';
-  else if (spec.showsign || spec.space)
-    np->sign = spec.showsign ? '+' : ' ';
-
   if (spec.spec == 'a' || spec.spec == 'A')
     /* prefix part */
     {
@@ -1081,7 +1110,7 @@ regular_ab (struct number_parts *np, mpfr_srcptr p,
 
   /* integral part */
   np->ip_size = 1;
-  base = (spec.spec == 'b') ? 2 : 16;
+  base = spec.spec == 'b' ? 2 : 16;
 
   if (spec.prec != 0)
     {
@@ -1090,7 +1119,7 @@ regular_ab (struct number_parts *np, mpfr_srcptr p,
       /* Number of significant digits:
          - if no given precision, let mpfr_get_str determine it;
          - if a non-zero precision is specified, then one digit before decimal
-         point plus SPEC.PREC after it (which will give nsd > 1 below). */
+         point plus spec.prec after it (which will give nsd > 1 below). */
       MPFR_ASSERTD (np->ip_size == 1);  /* thus the + 1 below */
       if (spec.prec < 0)
         nsd = 0;
@@ -1099,14 +1128,15 @@ regular_ab (struct number_parts *np, mpfr_srcptr p,
           if (MPFR_UNLIKELY (spec.prec > (size_t) -2))  /* overflow */
             return -1;
           nsd = (size_t) spec.prec + 1;
-          MPFR_ASSERTD (nsd != 1);
+          MPFR_ASSERTD (nsd > 1);
         }
       str = mpfr_get_str_wrapper (&exp, base, nsd, p, spec);
       register_string (np->sl, str);
-      np->ip_ptr = MPFR_IS_NEG (p) ? ++str : str;  /* skip sign if any */
+      if (MPFR_IS_NEG (p))
+        str++;  /* skip sign */
 
       if (base == 16)
-        /* EXP is the exponent for radix sixteen with decimal point BEFORE the
+        /* exp is the exponent for radix sixteen with decimal point BEFORE the
            first digit, we want the exponent for radix two and the decimal
            point AFTER the first digit. */
         {
@@ -1116,7 +1146,7 @@ regular_ab (struct number_parts *np, mpfr_srcptr p,
           exp = (exp - 1) * 4;
         }
       else
-        /* EXP is the exponent for decimal point BEFORE the first digit, we
+        /* exp is the exponent for decimal point BEFORE the first digit, we
            want the exponent for decimal point AFTER the first digit. */
         {
           /* An integer overflow is normally not possible since MPFR_EXP_MIN
@@ -1125,50 +1155,43 @@ regular_ab (struct number_parts *np, mpfr_srcptr p,
           --exp;
         }
     }
-  else if (next_base_power_p (p, base, spec.rnd_mode))
-    {
-      str = (char *) mpfr_allocate_func (2);
-      str[0] = '1';
-      str[1] = '\0';
-      np->ip_ptr = register_string (np->sl, str);
-
-      exp = MPFR_GET_EXP (p);
-    }
-  else if (base == 2)
-    {
-      str = (char *) mpfr_allocate_func (2);
-      str[0] = '1';
-      str[1] = '\0';
-      np->ip_ptr = register_string (np->sl, str);
-
-      exp = MPFR_GET_EXP (p) - 1;
-    }
   else
     {
-      int digit;
-      mp_limb_t msl = MPFR_MANT (p)[MPFR_LIMB_SIZE (p) - 1];
-      int rnd_bit = GMP_NUMB_BITS - 5;
+      exp = MPFR_GET_EXP (p);
+      str = (char *) mpfr_allocate_func (2);
+      register_string (np->sl, str);
+      if (next_base_power_p (p, base, spec.rnd_mode))
+        {
+          str[0] = '1';
+        }
+      else if (base == 2)
+        {
+          str[0] = '1';
+          exp--;
+        }
+      else
+        {
+          int digit;
+          mp_limb_t msl = (MPFR_MANT (p))[MPFR_LAST_LIMB (p)];
+          int rnd_bit = GMP_NUMB_BITS - 5;
 
-      /* pick up the 4 first bits */
-      digit = msl >> (rnd_bit + 1);
-      if (spec.rnd_mode == MPFR_RNDA
-          || (spec.rnd_mode == MPFR_RNDU && MPFR_IS_POS (p))
-          || (spec.rnd_mode == MPFR_RNDD && MPFR_IS_NEG (p))
-          || (spec.rnd_mode == MPFR_RNDN
-              && (msl & (MPFR_LIMB_ONE << rnd_bit))))
-        digit++;
-      MPFR_ASSERTD (0 <= digit && digit <= 15);
+          /* pick up the 4 first bits */
+          digit = msl >> (rnd_bit + 1);
+          if (MPFR_IS_LIKE_RNDA (spec.rnd_mode, MPFR_IS_NEG (p)) ||
+              (spec.rnd_mode == MPFR_RNDN &&
+               (msl & (MPFR_LIMB_ONE << rnd_bit))))
+            digit++;
+          MPFR_ASSERTD (0 <= digit && digit <= 15);
 
-      str = (char *) mpfr_allocate_func (1 + np->ip_size);
-      str[0] = num_to_text [digit];
+          str[0] = num_to_text [digit];
+          exp -= 4;
+        }
       str[1] = '\0';
-      np->ip_ptr = register_string (np->sl, str);
-
-      exp = MPFR_GET_EXP (p) - 4;
     }
+  np->ip_ptr = str;
 
-  if (uppercase)
-    /* All digits in upper case */
+  if (uppercase && spec.size != 0)
+    /* All digits in upper case (not needed if spec.size == 0) */
     {
       char *s1 = str;
       while (*s1)
@@ -1199,7 +1222,7 @@ regular_ab (struct number_parts *np, mpfr_srcptr p,
     }
 
   if (spec.spec == 'b' || spec.prec != 0)
-    /* compute the number of digits in fractional part */
+    /* compute the number of digits in the fractional part */
     {
       char *ptr;
       size_t str_len;
@@ -1219,8 +1242,26 @@ regular_ab (struct number_parts *np, mpfr_srcptr p,
             }
         }
 
+      /* WARNING! Due to mpfr_get_str_wrapper, str_len may be smaller
+         than the correct value when there is no output. However, the
+         code is correct because:
+         * If str_len == 0, i.e. the fractional part is empty, then
+           if mpfr_get_str_wrapper was called, the number of digits
+           has not been reduced; in summary, if str_len == 0, then
+           it has the correct value. Otherwise, the first "if" below
+           is entered and...
+         * If spec.prec <= 0, then mpfr_get_str_wrapper could have been
+           called only with spec.prec < 0 (see "if" above), and in this
+           case, it was called with n == 0, so that str_len has the
+           correct value.
+         * If str_len >= spec.prec, then str_len == spec.prec, which is
+           the correct value.
+         * Otherwise the "if" condition below is true and one will have
+           np->fp_size + np->fp_trailing_zeros == spec.prec, which is
+           the correct value (both terms of the sum may be incorrect,
+           but only the sum will matter). */
       if (str_len != 0)
-        /* there are some non-zero digits in fractional part */
+        /* there are some digits in the fractional part */
         {
           np->fp_ptr = str;
           np->fp_size = str_len;
@@ -1240,7 +1281,7 @@ regular_ab (struct number_parts *np, mpfr_srcptr p,
   /* the exponent part contains the character 'p', or 'P' plus the sign
      character plus at least one digit and only as many more digits as
      necessary to represent the exponent.
-     We assume that |EXP| < 10^INT_MAX. */
+     We assume that |exp| < 10^INT_MAX. */
   np->exp_size = 3;
   {
     mpfr_uexp_t x;
@@ -1271,8 +1312,9 @@ regular_ab (struct number_parts *np, mpfr_srcptr p,
 
 /* Determine the different parts of the string representation of the regular
    number P when spec.spec is 'e', 'E', 'g', or 'G'.
-   dec_info contains the previously computed exponent and string or is
-   a null pointer.
+   For 'e' / 'E', dec_info is a null pointer and trailing zeros will be kept.
+   For 'g' / 'G', dec_info contains the previously computed exponent and
+   string. Note that if trailing zeros are not kept, we need the full string.
 
    Return -1 in case of overflow on the sizes. */
 static int
@@ -1285,22 +1327,20 @@ regular_eg (struct number_parts *np, mpfr_srcptr p,
 
   const int uppercase = spec.spec == 'E' || spec.spec == 'G';
 
-  /* sign */
-  if (MPFR_IS_NEG (p))
-    np->sign = '-';
-  else if (spec.showsign || spec.space)
-    np->sign = spec.showsign ? '+' : ' ';
-
   /* integral part */
   np->ip_size = 1;
   if (dec_info == NULL)
     {
       size_t nsd;
 
+      /* We will keep the trailing zeros. Thus we can use
+         mpfr_get_str_wrapper below. */
+      MPFR_ASSERTD (keep_trailing_zeros);
+
       /* Number of significant digits:
          - if no given precision, then let mpfr_get_str determine it,
          - if a precision is specified, then one digit before decimal point
-         plus SPEC.PREC after it.
+         plus spec.prec after it.
          We use the fact here that mpfr_get_str allows us to ask for only one
          significant digit when the base is not a power of 2. */
       MPFR_ASSERTD (np->ip_size == 1);  /* thus the + 1 below */
@@ -1323,7 +1363,7 @@ regular_eg (struct number_parts *np, mpfr_srcptr p,
   np->ip_ptr = MPFR_IS_NEG (p) ? ++str : str;  /* skip sign if any */
 
   if (spec.prec != 0)
-    /* compute the number of digits in fractional part */
+    /* compute the number of digits in the fractional part */
     {
       char *ptr;
       size_t str_len;
@@ -1343,15 +1383,39 @@ regular_eg (struct number_parts *np, mpfr_srcptr p,
             }
         }
 
+      /* WARNING! Due to mpfr_get_str_wrapper, str_len may be smaller
+         than the correct value when there is no output. However, the
+         code is correct because:
+         * If keep_trailing_zeros is false, then mpfr_get_str_wrapper
+           is not used. In the following items, we consider the case
+           where keep_trailing_zeros is true, so that str_len has not
+           been modified above.
+         * If str_len == 0, i.e. the fractional part is empty, then
+           if mpfr_get_str_wrapper was called, the number of digits
+           has not been reduced; in summary, if str_len == 0, then
+           it has the correct value. Otherwise, the first "if" below
+           is entered and...
+         * If spec.prec <= 0, then spec.prec < 0 (see "if" above), and
+           in this case, mpfr_get_str_wrapper was called with n == 0,
+           so that str_len has the correct value.
+         * If str_len >= spec.prec, then str_len == spec.prec, which is
+           the correct value.
+         * Otherwise the "if" condition below is true and one will have
+           np->fp_size + np->fp_trailing_zeros == spec.prec, which is
+           the correct value (both terms of the sum may be incorrect,
+           but only the sum will matter). */
       if (str_len != 0)
-        /* there are some non-zero digits in fractional part */
+        /* there are some digits in the fractional part */
         {
           np->fp_ptr = str;
           np->fp_size = str_len;
+          MPFR_ASSERTD (spec.prec < 0 || str_len <= spec.prec);
           /* Warning! str_len has type size_t, which is unsigned. */
           if (keep_trailing_zeros && spec.prec > 0 && str_len < spec.prec)
             {
-              /* add missing trailing zeros */
+              /* add missing trailing zeros or missing digits
+                 (in case mpfr_get_str_wrapper has been used
+                 and there is no output) */
               np->fp_trailing_zeros = spec.prec - str_len;
               MPFR_ASSERTD (np->fp_trailing_zeros >= 0);
             }
@@ -1362,7 +1426,7 @@ regular_eg (struct number_parts *np, mpfr_srcptr p,
   if (np->fp_size != 0 || spec.alt)
     np->point = MPFR_DECIMAL_POINT;
 
-  /* EXP is the exponent for decimal point BEFORE the first digit, we want
+  /* exp is the exponent for decimal point BEFORE the first digit, we want
      the exponent for decimal point AFTER the first digit.
      Here, no possible overflow because exp < MPFR_EXP (p) / 3 */
   exp--;
@@ -1370,7 +1434,7 @@ regular_eg (struct number_parts *np, mpfr_srcptr p,
   /* the exponent part contains the character 'e', or 'E' plus the sign
      character plus at least two digits and only as many more digits as
      necessary to represent the exponent.
-     We assume that |EXP| < 10^INT_MAX. */
+     We assume that |exp| < 10^INT_MAX. */
   np->exp_size = 3;
   {
     mpfr_uexp_t x;
@@ -1419,12 +1483,6 @@ regular_fg (struct number_parts *np, mpfr_srcptr p,
   /* WARNING: an empty precision field is forbidden (it means precision = 6
      and it should have been changed to 6 before the function call) */
   MPFR_ASSERTD (spec.prec >= 0);
-
-  /* sign */
-  if (MPFR_IS_NEG (p))
-    np->sign = '-';
-  else if (spec.showsign || spec.space)
-    np->sign = spec.showsign ? '+' : ' ';
 
   if (MPFR_GET_EXP (p) <= 0)
     /* 0 < |p| < 1 */
@@ -1522,7 +1580,7 @@ regular_fg (struct number_parts *np, mpfr_srcptr p,
                   np->fp_ptr = register_string (np->sl, str);
                 }
               else
-                /* only zeros in fractional part */
+                /* only zeros in the fractional part */
                 {
                   MPFR_ASSERTD (spec.spec == 'f' || spec.spec == 'F');
                   np->fp_leading_zeros = spec.prec;
@@ -1530,7 +1588,7 @@ regular_fg (struct number_parts *np, mpfr_srcptr p,
             }
           else  /* exp >= -spec.prec */
             /* the most significant digits are the last
-               spec.prec + exp + 1 digits in fractional part */
+               spec.prec + exp + 1 digits in the fractional part */
             {
               char *ptr;
               size_t str_len;
@@ -1539,6 +1597,10 @@ regular_fg (struct number_parts *np, mpfr_srcptr p,
               if (dec_info == NULL)
                 {
                   size_t nsd;
+
+                  /* We will keep the trailing zeros. Thus we can use
+                     mpfr_get_str_wrapper below. */
+                  MPFR_ASSERTD (keep_trailing_zeros);
 
                   MPFR_ASSERTD (exp <= -1);
                   MPFR_ASSERTD (spec.prec + (exp + 1) >= 0);
@@ -1588,21 +1650,33 @@ regular_fg (struct number_parts *np, mpfr_srcptr p,
                         }
                     }
 
+                  /* Before it is potentially reduced, str_len comes from the
+                     size argument of mpfr_get_str or mpfr_get_str_wrapper,
+                     and this argument is bounded by a mpfr_intmax_t value
+                     in both cases. */
+                  MPFR_ASSERTD (str_len <= MPFR_INTMAX_MAX);
+
                   MPFR_ASSERTD (str_len > 0);
                   np->fp_size = str_len;
 
-                  /* The np->fp_size <= MPFR_INTMAX_MAX test and the
-                     cast to mpfr_uintmax_t below allow one to avoid
-                     integer overflow. */
-                  if (keep_trailing_zeros
-                      && spec.prec > 0
-                      && np->fp_size <= MPFR_INTMAX_MAX
-                      && ((mpfr_uintmax_t)
-                          np->fp_leading_zeros + np->fp_size) < spec.prec)
+                  /* WARNING! Due to mpfr_get_str_wrapper, str_len may be
+                     smaller than the correct value when there is no output.
+                     However, the code is correct because this function is
+                     used only when keep_trailing_zeros is true, and in this
+                     case, the "np->fp_size = str_len;" above and the code
+                     below ensure that
+                     np->fp_size + np->fp_trailing_zeros == spec.prec + exp,
+                     which is the correct value. */
+                  if (keep_trailing_zeros)
                     {
                       /* add missing trailing zeros */
-                      np->fp_trailing_zeros = spec.prec
-                        - np->fp_leading_zeros - np->fp_size;
+                      /* Since spec.prec >= 0 and exp <= 0
+                         and since spec.prec + exp >= 0 and
+                         0 <= str_len <= MPFR_INTMAX_MAX, there is
+                         no integer overflow in the operations below
+                         (done in the mpfr_intmax_t type). */
+                      np->fp_trailing_zeros =
+                        (spec.prec + exp) - (mpfr_intmax_t) str_len;
                       MPFR_ASSERTD (np->fp_trailing_zeros >= 0);
                     }
                 }
@@ -1676,7 +1750,7 @@ regular_fg (struct number_parts *np, mpfr_srcptr p,
         }
 
       if (str_len > 0)
-        /* some nonzero digits in fractional part */
+        /* some digits in the fractional part */
         {
           np->point = MPFR_DECIMAL_POINT;
           np->fp_ptr = str;
@@ -1720,8 +1794,7 @@ partition_number (struct number_parts *np, mpfr_srcptr p,
   /* WARNING: left justification means right space padding */
   np->pad_type = spec.left ? RIGHT : spec.pad == '0' ? LEADING_ZEROS : LEFT;
   np->pad_size = 0;
-  np->sign = '\0';
-  np->prefix_ptr =NULL;
+  np->prefix_ptr = NULL;
   np->prefix_size = 0;
   np->thousands_sep = '\0';
   np->ip_ptr = NULL;
@@ -1740,6 +1813,12 @@ partition_number (struct number_parts *np, mpfr_srcptr p,
 
   uppercase = spec.spec == 'A' || spec.spec == 'E' || spec.spec == 'F'
     || spec.spec == 'G';
+
+  /* The sign/space rule is the same for all cases. */
+  np->sign =
+    MPFR_IS_NEG (p) ? '-' :
+    spec.showsign ? '+' :
+    spec.space ? ' ' : '\0';
 
   if (MPFR_UNLIKELY (MPFR_IS_SINGULAR (p)))
     {
@@ -1762,9 +1841,6 @@ partition_number (struct number_parts *np, mpfr_srcptr p,
                with left spaces instead */
             np->pad_type = LEFT;
 
-          if (MPFR_IS_NEG (p))
-            np->sign = '-';
-
           np->ip_size = MPFR_INF_STRING_LENGTH;
           str = (char *) mpfr_allocate_func (1 + np->ip_size);
           strcpy (str, uppercase ? MPFR_INF_STRING_UC : MPFR_INF_STRING_LC);
@@ -1776,11 +1852,6 @@ partition_number (struct number_parts *np, mpfr_srcptr p,
           /* note: for 'g' spec, zero is always displayed with 'f'-style with
              precision spec.prec - 1 and the trailing zeros are removed unless
              the flag '#' is used. */
-          if (MPFR_IS_NEG (p))
-            /* signed zero */
-            np->sign = '-';
-          else if (spec.showsign || spec.space)
-            np->sign = spec.showsign ? '+' : ' ';
 
           if (spec.spec == 'a' || spec.spec == 'A')
             /* prefix part */
@@ -1844,9 +1915,6 @@ partition_number (struct number_parts *np, mpfr_srcptr p,
         /* change to right justification padding with left spaces */
         np->pad_type = LEFT;
 
-      if (MPFR_IS_NEG (p))
-        np->sign = '-';
-
       np->ip_size = 3;
       str = (char *) mpfr_allocate_func (1 + np->ip_size);
       strcpy (str, uppercase ? "UBF" : "ubf");
@@ -1883,7 +1951,7 @@ partition_number (struct number_parts *np, mpfr_srcptr p,
              precision T-1.
              where T is the threshold computed below and X is the exponent
              that would be displayed with style 'e' and precision T-1. */
-          int threshold;
+          mpfr_intmax_t threshold;
           mpfr_exp_t x, e, k;
           struct decimal_info dec_info;
 
@@ -1909,15 +1977,31 @@ partition_number (struct number_parts *np, mpfr_srcptr p,
              weight 2^(-k). If k <= 0, then p is an integer, otherwise
              the fractional part in base 10 may have up to k digits
              (this bound is reached if the last bit is 1).
-             Note: The bound could be improved, but this is not critical. */
+             Note: The bound could be improved, but this is not critical.
+             Note also that even when there is no output, this may take much
+             memory when both the exponent magnitude and the format precision
+             are huge. The exponent of the most significant decimal digit
+             can be obtained with mpfr_get_str_wrapper, and the exponent of
+             the least significant decimal digit can easily be computed in
+             at most linear space, but this allows one to deduce the number
+             of decimal digits of the rounded value only if the requested
+             format precision is at least as large as the number of decimal
+             digits of the exact value. The code could be improved in this
+             case, though. */
           e = MPFR_GET_EXP (p);
           k = MPFR_PREC (p) - e;
           e = e <= 0 ? k : (e + 2) / 3 + (k <= 0 ? 0 : k);
           MPFR_ASSERTD (e >= 1);
 
+          if (e > threshold)
+            e = threshold;
+
+          /* error if e does not fit in size_t (for mpfr_get_str) */
+          if (e > (size_t) -1)
+            goto error;
+
           dec_info.str = mpfr_get_str (NULL, &dec_info.exp, 10,
-                                       e < threshold ? e : threshold,
-                                       p, spec.rnd_mode);
+                                       e, p, spec.rnd_mode);
           register_string (np->sl, dec_info.str);
           /* mpfr_get_str corresponds to a significand between 0.1 and 1,
              whereas here we want a significand between 1 and 10. */
@@ -1995,7 +2079,7 @@ partition_number (struct number_parts *np, mpfr_srcptr p,
    Return -1 if the built string is too long (i.e. has more than
    INT_MAX or MPFR_INTMAX_MAX characters).
 
-   If spec.size is 0, we only want the size of the string.
+   If spec.size is 0, we only want the number of characters (no output).
 */
 static int
 sprnt_fp (struct string_buffer *buf, mpfr_srcptr p,
@@ -2011,10 +2095,10 @@ sprnt_fp (struct string_buffer *buf, mpfr_srcptr p,
       return -1;
     }
 
-  if (spec.size == 0)
+  if (spec.size == 0)  /* no output */
     {
-      /* This is equivalent to the following code (no need to fill the buffer
-         and length is known). */
+      /* This is equivalent to the code below this "if" (since there is
+         no need to fill the buffer and length is already  known). */
       buffer_incr_len (buf, length);
       goto clear_and_exit;
     }
@@ -2025,7 +2109,7 @@ sprnt_fp (struct string_buffer *buf, mpfr_srcptr p,
   if (np.pad_type == LEFT && np.pad_size != 0)
     buffer_pad (buf, ' ', np.pad_size);
 
-  /* sign character (may be '-', '+', or ' ') */
+  /* sign character (may be '-', '+', ' ', or '\0') */
   if (np.sign)
     buffer_pad (buf, np.sign, 1);
 
@@ -2033,7 +2117,7 @@ sprnt_fp (struct string_buffer *buf, mpfr_srcptr p,
   if (np.prefix_ptr)
     buffer_cat (buf, np.prefix_ptr, np.prefix_size);
 
-  /* right justification  padding with leading zeros */
+  /* right justification padding with leading zeros */
   if (np.pad_type == LEADING_ZEROS && np.pad_size != 0)
     buffer_pad (buf, '0', np.pad_size);
 
@@ -2062,15 +2146,15 @@ sprnt_fp (struct string_buffer *buf, mpfr_srcptr p,
   if (np.point)
     buffer_pad (buf, np.point, 1);
 
-  /* leading zeros in fractional part */
+  /* leading zeros in the fractional part */
   if (np.fp_leading_zeros != 0)
     buffer_pad (buf, '0', np.fp_leading_zeros);
 
-  /* significant digits in fractional part */
+  /* significant digits in the fractional part */
   if (np.fp_ptr)
     buffer_cat (buf, np.fp_ptr, np.fp_size);
 
-  /* trailing zeros in fractional part */
+  /* trailing zeros in the fractional part */
   if (np.fp_trailing_zeros != 0)
     buffer_pad (buf, '0', np.fp_trailing_zeros);
 
@@ -2096,7 +2180,10 @@ sprnt_fp (struct string_buffer *buf, mpfr_srcptr p,
    (b) or ptr = NULL, and it implements mpfr_vsnprintf (Buf, size, fmt, ap)
    It returns the number of characters that would have been written had 'size'
    been sufficiently large, not counting the terminating null character, or -1
-   if this number is too large for the return type 'int' (overflow).
+   if this number is too large for the return type 'int' (overflow), in which
+   case, if ptr <> NULL, the memory is deallocated (otherwise, there is no way
+   to deallocate it later, since the actual size, needed by mpfr_free_func, is
+   unknown as there may be non-terminating null characters).
 */
 int
 mpfr_vasnprintf_aux (char **ptr, char *Buf, size_t size, const char *fmt,
@@ -2114,15 +2201,20 @@ mpfr_vasnprintf_aux (char **ptr, char *Buf, size_t size, const char *fmt,
   const char *start, *end;
   /* pointer to arguments for gmp_vasprintf */
   va_list ap2;
-
   MPFR_SAVE_EXPO_DECL (expo);
+
+  MPFR_LOG_FUNC
+    (("size=%zu", size),
+     ("nbchar=%d", nbchar));
+
   MPFR_SAVE_EXPO_MARK (expo);
 
-  /* FIXME: Once buf.len >= size, switch to size = 0 for efficiency and
-     avoid potential DoS? i.e. we no longer need to generate the strings
-     (potentially huge), just compute the lengths. */
+  /* FIXME: For ptr = NULL, once buf.len >= size, switch to size = 0 for
+     efficiency and avoid potential DoS? i.e. we no longer need to generate
+     the strings (potentially huge), just compute the lengths. */
 
-  buffer_init (&buf, ptr != NULL || size != 0 ? 4096 : 0);
+  spec.size = ptr != NULL || size != 0;  /* true iff do output */
+  buffer_init (&buf, spec.size ? 4096 : 0);
   xgmp_fmt_flag = 0;
   va_copy (ap2, ap);
   start = fmt;
@@ -2149,8 +2241,20 @@ mpfr_vasnprintf_aux (char **ptr, char *Buf, size_t size, const char *fmt,
 
       end = fmt - 1;
 
+      /* Initialize spec (of type struct printf_spec). */
+      spec.alt = 0;
+      spec.space = 0;
+      spec.left = 0;
+      spec.showsign = 0;
+      spec.group = 0;
+      spec.width = 0;
+      spec.prec = 0;
+      spec.arg_type = NONE;
+      spec.rnd_mode = MPFR_RNDN;
+      spec.spec = '\0';
+      spec.pad = ' ';
+
       /* format string analysis */
-      specinfo_init (&spec);
       fmt = parse_flags (fmt, &spec);
 
       READ_INT (ap, fmt, spec.width);
@@ -2421,8 +2525,6 @@ mpfr_vasnprintf_aux (char **ptr, char *Buf, size_t size, const char *fmt,
               goto error;
             }
 
-          if (ptr == NULL)
-            spec.size = size;
           sprnt_fp (&buf, p, spec);
         }
       else
@@ -2444,23 +2546,21 @@ mpfr_vasnprintf_aux (char **ptr, char *Buf, size_t size, const char *fmt,
   nbchar = buf.len;
   MPFR_ASSERTD (nbchar >= 0);
 
+  /* Warning! Be careful that the buffer may contain null characters
+     in addition to the terminating one, in case %c has been used with
+     the value 0. */
+
   if (ptr != NULL)  /* implement mpfr_vasprintf */
     {
-      MPFR_ASSERTD (nbchar == strlen (buf.start));
       *ptr = (char *) mpfr_reallocate_func (buf.start, buf.size, nbchar + 1);
     }
   else if (size != 0)  /* implement mpfr_vsnprintf */
     {
-      if (nbchar < size)
-        {
-          strncpy (Buf, buf.start, nbchar);
-          Buf[nbchar] = '\0';
-        }
-      else
-        {
-          strncpy (Buf, buf.start, size - 1);
-          Buf[size-1] = '\0';
-        }
+      /* The size is limited to int (see above). */
+      int len = nbchar < size ? nbchar : size - 1;
+
+      memcpy (Buf, buf.start, len);
+      Buf[len] = '\0';
       mpfr_free_func (buf.start, buf.size);
     }
 

@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2009 Free Software Foundation, Inc.
+Copyright 2005-2022 Free Software Foundation, Inc.
 Contributed by Patrick Pelissier, INRIA.
 
 This file is part of the MPFR Library.
@@ -15,9 +15,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -70,7 +69,7 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
   BENCH("set", mpf_set(x,y)); \
   BENCH("set0", mpf_set_ui(x,0)); \
   BENCH("set1", mpf_set_ui(x,1)); \
-  BENCH("swap", mpf_swap(y,z)); 
+  BENCH("swap", mpf_swap(y,z));
 
 
 #define USAGE                                                                \
@@ -81,7 +80,7 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 
 int verbose = 0;
 
-void mpfr_bench(mpfr_prec_t prec_a, mpfr_prec_t prec_b, mpfr_prec_t prec_c, 
+void mpfr_bench(mpfr_prec_t prec_a, mpfr_prec_t prec_b, mpfr_prec_t prec_c,
 		const char *b_str, const char *c_str, unsigned long seed)
 {
   mpfr_t a,b,c;
@@ -135,7 +134,7 @@ void mpfr_bench(mpfr_prec_t prec_a, mpfr_prec_t prec_b, mpfr_prec_t prec_c,
 }
 
 #define MAX_OP 40
-void mpfr_stats (unsigned long num, mpfr_prec_t prec_a, mpfr_prec_t prec_b, 
+void mpfr_stats (unsigned long num, mpfr_prec_t prec_a, mpfr_prec_t prec_b,
 		 mpfr_prec_t prec_c, unsigned long seed)
 {
   mpf_t xt[num],yt[num],zt[num];
@@ -169,7 +168,7 @@ void mpfr_stats (unsigned long num, mpfr_prec_t prec_a, mpfr_prec_t prec_b,
       mpf_init2(xt[i],  prec_a);
       mpf_init2(yt[i],  prec_b);
       mpf_init2(zt[i],  prec_c);
-      mpf_urandomb(yt[i], state, prec_b); 
+      mpf_urandomb(yt[i], state, prec_b);
       yt[i][0]._mp_exp += (rand() % prec_b) / GMP_NUMB_BITS;
       mpf_urandomb(zt[i], state, prec_c);
       /* zt[i][0]._mp_exp += (rand() % prec_c) / GMP_NUMB_BITS; */

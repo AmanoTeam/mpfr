@@ -1,7 +1,7 @@
 /* mpfr_set_ld -- convert a machine long double to
                   a multiple precision floating-point number
 
-Copyright 2002-2022 Free Software Foundation, Inc.
+Copyright 2002-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -17,9 +17,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #include <float.h> /* needed so that MPFR_LDBL_MANT_DIG is correctly defined */
 
@@ -29,7 +28,7 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 /* To check for +inf, one can use the test x > LDBL_MAX, as LDBL_MAX is
    the maximum finite number representable in a long double, according
    to DR 467; see
-     http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2092.htm
+     https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2092.htm
    If this fails on some platform, a test x - x != 0 might be used. */
 
 #if defined(HAVE_LDOUBLE_IS_DOUBLE)

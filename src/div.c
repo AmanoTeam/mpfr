@@ -1,6 +1,6 @@
 /* mpfr_div -- divide two floating-point numbers
 
-Copyright 1999, 2001-2022 Free Software Foundation, Inc.
+Copyright 1999, 2001-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 /* References:
    [1] Short Division of Long Integers, David Harvey and Paul Zimmermann,
@@ -76,7 +75,7 @@ mpfr_div2_approx (mpfr_limb_ptr Q1, mpfr_limb_ptr Q0,
   r0 = u0 - r0;
   r1 = u1 - r1 - (r0 > u0);
 
-  /* r1:r0 should be nonnegative */
+  /* r1:r0 should be non-negative */
   MPFR_ASSERTD((r1 & MPFR_LIMB_HIGHBIT) == 0);
 
   /* the second quotient limb is approximated by (r1*B^2+r0*B) / v1,
@@ -770,10 +769,10 @@ mpfr_div (mpfr_ptr q, mpfr_srcptr u, mpfr_srcptr v, mpfr_rnd_t rnd_mode)
   MPFR_TMP_DECL(marker);
 
   MPFR_LOG_FUNC (
-    ("u[%Pu]=%.*Rg v[%Pu]=%.*Rg rnd=%d",
+    ("u[%Pd]=%.*Rg v[%Pd]=%.*Rg rnd=%d",
      mpfr_get_prec(u), mpfr_log_prec, u,
      mpfr_get_prec (v),mpfr_log_prec, v, rnd_mode),
-    ("q[%Pu]=%.*Rg inexact=%d", mpfr_get_prec(q), mpfr_log_prec, q, inex));
+    ("q[%Pd]=%.*Rg inexact=%d", mpfr_get_prec(q), mpfr_log_prec, q, inex));
 
   /**************************************************************************
    *                                                                        *

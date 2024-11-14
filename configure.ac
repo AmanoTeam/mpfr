@@ -4,7 +4,7 @@ dnl WARNING! C code starting with # (preprocessor directives) must not
 dnl be indented!
 
 AC_COPYRIGHT([
-Copyright 1999-2022 Free Software Foundation, Inc.
+Copyright 1999-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -20,13 +20,12 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>.
 ])
 
 dnl Add check-news when it checks for more than 15 lines
-AC_INIT([MPFR],[4.2.0-dev])
+AC_INIT([MPFR],[4.3.0-dev])
 
 dnl AC_CANONICAL_HOST is needed by this configure.ac file.
 dnl AC_CANONICAL_TARGET is not explicitly needed, but may be required by
@@ -74,7 +73,7 @@ dnl Alternatively, the test program could output the result to a file and
 dnl return with the 0 exit status if it could do that successfully.
 dnl
 dnl [*] 2.8.2 Exit Status for Commands
-dnl https://pubs.opengroup.org/onlinepubs/9699919799//utilities/V3_chap02.html#tag_18_08_02
+dnl https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html#tag_19_08_02
 
 test_CFLAGS=${CFLAGS+set}
 
@@ -94,6 +93,11 @@ dnl There is still some problem with GMP's HAVE_CONFIG
 dnl AC_CONFIG_HEADERS([mpfrconf.h:mpfrconf.in])
 
 unset gmp_lib_path GMP_CFLAGS GMP_CC
+
+unset dev_version
+if $EGREP -q -e '-dev$' $srcdir/VERSION; then
+  dev_version=1
+fi
 
 dnl ********************************************************************
 dnl Extra arguments to configure (AC_ARG_WITH and AC_ARG_ENABLE)
@@ -228,6 +232,9 @@ AC_ARG_ENABLE(warnings,
       *)   AC_MSG_ERROR([bad value for --enable-warnings: yes or no]) ;;
      esac])
 
+dnl For timeout support (in the testsuite), the case "yes" and absent
+dnl --enable-tests-timeout option will be handled in a consistent way
+dnl in MPFR_CONFIGS (see acinclude.m4).
 AC_ARG_ENABLE(tests-timeout,
    [  --enable-tests-timeout=NUM
                           [[for developers]] enable timeout for test programs
@@ -236,8 +243,8 @@ AC_ARG_ENABLE(tests-timeout,
                           overrides NUM (0: no timeout)],
    [ case $enableval in
       no)   ;;
-      yes)  AC_DEFINE([MPFR_TESTS_TIMEOUT], 0, [timeout limit]) ;;
-      [[0-9]]|[[0-9]][[0-9]]|[[0-9]][[0-9]][[0-9]]|[[0-9]][[0-9]][[0-9]][[0-9]])
+      yes)  ;;
+      [[0-9]|[0-9][0-9]|[0-9][0-9][0-9]|[0-9][0-9][0-9][0-9]])
        AC_DEFINE_UNQUOTED([MPFR_TESTS_TIMEOUT], $enableval, [timeout limit]) ;;
       *)    AC_MSG_ERROR([bad value for --enable-tests-timeout]) ;;
      esac])
@@ -430,6 +437,15 @@ AC_LANG(C)
 dnl AM_PROG_AR is needed so that ar-lib (wrapper for Microsoft lib.exe)
 dnl gets installed by "automake -i" (if absent, "automake --warnings=all"
 dnl gives a warning).
+dnl However, if GMP chooses a non-default mode (a.k.a. ABI), this test may
+dnl fail. The reason is that GMP provides GMP_CC and GMP_CFLAGS to get the
+dnl right commands to compile (and link?) in the chosen non-default mode,
+dnl but does not provide a macro for the archiver (if such a special command
+dnl is needed). In case of failure, the user needs to either force GMP to
+dnl use the default mode or provide an AR variable for MPFR's configure.
+dnl Example: on power-aix, "gcc -c -O2 -maix64 -mpowerpc64 -mtune=power7"
+dnl is used, but "ar cru" fails. Solution: use AR="ar -X64" NM="nm -B -X64"
+dnl as said in the INSTALL file ("Notes on AIX/PowerPC").
 AM_PROG_AR
 
 dnl This must done before MPFR_CONFIGS.
@@ -439,12 +455,10 @@ dnl Warning: This test is *only* for CFLAGS settings.
 dnl If the compiler is ICC, add some specific flags, except on MS-Windows.
 dnl Don't add warnings flags (Otherwise you'll get more than 20000 warnings).
 dnl Add -long_double flags? Don't use -pc64 !
-dnl Notes (VL):
-dnl   * With icc 10.1 20080212 on itanium, the __ICC macro is not defined,
-dnl     even when the -icc option is used (contrary to what is documented
-dnl     on the icc man page).
-dnl   * When ICC is correctly detected (__ICC macro defined), unsetting
-dnl     the GCC variable confuses libtool. See:
+dnl Notes (some might be obsolete):
+dnl   * the old __ICC macro is now replaced by __INTEL_COMPILER
+dnl   * When ICC is correctly detected (__INTEL_COMPILER macro defined),
+dnl     unsetting the GCC variable confuses libtool. See:
 dnl       https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=485421
 dnl   * If need be, the gcc predefined macros __GNUC_* can be disabled
 dnl     thanks to the -no-gcc option.
@@ -457,7 +471,7 @@ dnl     option has been introduced in ICC 9.0 for Linux (2005-06):
 dnl     https://climserv.ipsl.polytechnique.fr/documentation/intel-icc/ReleaseNotes.htm
 AC_MSG_CHECKING(for non-MS-Windows ICC)
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-#if (!defined(__ICC) && !defined(__INTEL_COMPILER)) || defined(_WIN32)
+#if !defined(__INTEL_COMPILER) || defined(_WIN32)
 # error "Not a non-MS-Windows ICC"
 error
 #endif
@@ -549,9 +563,16 @@ dnl
 dnl We need to check whether --disable-new-dtags is supported as alternate
 dnl linkers may be used (e.g., with tcc: CC=tcc LD=tcc).
 dnl
+dnl [2023-08]
+dnl On Android/Termux, -Wl,--disable-new-dtags is supported by clang, but
+dnl the DT_RPATH directories are stripped away when running the program.
+dnl Moreover, config.guess identifies the host as GNU/Linux (*-*-linux-gnu)
+dnl instead of Android (linux*android*), so that we need to explicitly
+dnl exclude Termux.
+dnl
 case $host in
-  *-*-linux*)
-    if test -n "$LD_LIBRARY_PATH"; then
+  *-*-linux-gnu)
+    if test -n "$LD_LIBRARY_PATH" && test -z "$TERMUX_VERSION"; then
       saved_LDFLAGS="$LDFLAGS"
       LDFLAGS="$LDFLAGS -Wl,--disable-new-dtags"
       AC_MSG_CHECKING(whether --disable-new-dtags is supported by the linker)
@@ -712,10 +733,25 @@ You probably need to change some of the GMP or MPFR compile options.
 See 'config.log' for details (search for GMP_NUMB_BITS).])],
        [AC_MSG_RESULT([cannot test])])
 
+MPFR_CHECK_MP_LIMB_T_VS_LONG
+MPFR_CHECK_MP_LIMB_T_VS_INTMAX
+
+dnl Now we will need the GMP library (not just gmp.h).
+dnl Do not use AC_CHECK_LIB as it is based on a deprecated ISO C feature.
+LIBS="-lgmp $LIBS"
+
 dnl Check if we can link with GMP
-AC_CHECK_LIB(gmp, __gmpz_init, [LIBS="-lgmp $LIBS"],
- [AC_MSG_ERROR([libgmp not found or uses a different ABI (including static vs shared).
-Please read the INSTALL file -- see "In case of problem".])])
+AC_MSG_CHECKING(if we can link with GMP)
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+#include "gmp.h"
+mpz_t m;
+]],[[
+mpz_init (m);
+]])],[AC_MSG_RESULT(yes)],[
+ AC_MSG_RESULT(no)
+ AC_MSG_ERROR([libgmp not found or uses a different ABI (including static vs shared).
+Please read the INSTALL file -- see "In case of problem".])
+])
 
 dnl Check for corresponding 'gmp.h' and libgmp
 AC_MSG_CHECKING(if gmp.h version and libgmp version are the same)
@@ -726,6 +762,7 @@ dnl incorrect and even have security implications.
 dnl WARNING! LD_RUN_PATH is not taken into account by the GNU gold ld,
 dnl e.g. from binutils-gold 2.22-5 under Debian; see
 dnl   https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=660813
+dnl   https://sourceware.org/bugzilla/show_bug.cgi?id=13764
 saved_LD_RUN_PATH="$LD_RUN_PATH"
 LD_RUN_PATH="${LD_RUN_PATH:+$LD_RUN_PATH$PATH_SEPARATOR}$gmp_lib_path"
 export LD_RUN_PATH
@@ -762,7 +799,7 @@ AC_RUN_IFELSE([AC_LANG_PROGRAM([[
     AC_MSG_WARN([or --with-gmp-include with a system include directory])
     AC_MSG_WARN([(such as /usr/include or /usr/local/include). Another])
     AC_MSG_WARN([cause may be that LD_RUN_PATH is not honored (problem])
-    AC_MSG_WARN([seen under OpenBSD 6.6).])
+    AC_MSG_WARN([seen under OpenBSD 6.6 and with the GNU gold linker).])
     AC_MSG_WARN([However, since we can't use 'libtool' inside the configure,])
     AC_MSG_WARN([we can't be sure. See 'config.log' for details.])
     AC_MSG_WARN([CC="$CC"])
@@ -790,9 +827,6 @@ dnl same for other GMP internal functions
 AC_CHECK_FUNCS([__gmpn_invert_limb])
 dnl mpn_rsblsh1_n(rp, up, vp, n) does {rp, n} <- 2 * {vp, n} - {up, n}
 AC_CHECK_FUNCS([__gmpn_rsblsh1_n])
-
-MPFR_CHECK_MP_LIMB_T_VS_LONG
-MPFR_CHECK_MP_LIMB_T_VS_INTMAX
 
 else
 
@@ -847,7 +881,7 @@ if test -f confdefs.h; then
   done
 fi
 
-if $EGREP -q -e '-dev$' $srcdir/VERSION; then
+if test -n "$dev_version"; then
   AC_SUBST([DATAFILES])dnl
   DATAFILES=`echo \`$SED -n \
     's/^ *data_check *("\(data\/[[^"]]*\)".*/tests\/\1/p' \

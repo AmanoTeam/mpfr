@@ -1,6 +1,6 @@
 /* tfprintf.c -- test file for mpfr_fprintf and mpfr_vfprintf
 
-Copyright 2008-2022 Free Software Foundation, Inc.
+Copyright 2008-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 /* FIXME: The output is not tested (thus coverage data are meaningless).
    For instance, slightly changing the code of mpfr_fprintf does not
@@ -55,11 +54,17 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 #define check_length_with_cmp(num_test, var, value, cmp, var_spec)      \
   if (cmp != 0)                                                         \
     {                                                                   \
-      mpfr_printf ("Error in test #%d, mpfr_vfprintf printed %"         \
+      mpfr_printf ("Error in test #%d: mpfr_vfprintf printed %"         \
                    QUOTE(var_spec) " characters instead of %d\n",       \
                    (num_test), (var), (value));                         \
       exit (1);                                                         \
     }
+
+#if MPFR_LCONV_DPTS
+#define DPLEN ((int) strlen (localeconv()->decimal_point))
+#else
+#define DPLEN 1
+#endif
 
 /* limit for random precision in random() */
 const int prec_max_printf = 5000;
@@ -195,12 +200,12 @@ check_mixed (FILE *fout)
                   lo, &ulo);
   check_length (2, ulo, 36, lu);
   check_vfprintf (fout, "a. %hi, b. %*f, c. %Re%hn", ush, 3, f, mpfr, &ush);
-  check_length (3, ush, 46, hu);
+  check_length (3, ush, 45 + DPLEN, hu);
   check_vfprintf (fout, "a. %hi, b. %f, c. %#.2Rf%n", sh, d, mpfr, &i);
-  check_length (4, i, 29, d);
+  check_length (4, i, 28 + DPLEN, d);
   check_vfprintf (fout, "a. %R*A, b. %Fe, c. %i%zn", rnd, mpfr, mpf, sz,
                   &sz);
-  check_length (5, (unsigned long) sz, 34, lu); /* no format specifier "%zu" in C90 */
+  check_length (5, (unsigned long) sz, 33 + DPLEN, lu); /* no format specifier "%zu" in C90 */
   check_vfprintf (fout, "a. %Pu, b. %c, c. %Zi%Zn", prec, ch, mpz, &mpz);
   check_length_with_cmp (6, mpz, 17, mpz_cmp_ui (mpz, 17), Zi);
   check_vfprintf (fout, "%% a. %#.0RNg, b. %Qx%Rn, c. %p", mpfr, mpq, &mpfr,
@@ -212,7 +217,9 @@ check_mixed (FILE *fout)
   check_vfprintf (fout, "%% a. %RNg, b. %Qx, c. %td%tn", mpfr, mpq, p, &p);
   if (p != 20)
     {
-      mpfr_fprintf (stderr, "Error in test 8, got '%% a. %RNg, b. %Qx, c. %td'\n", mpfr, mpq, saved_p);
+      mpfr_fprintf (stderr,
+                    "Error in test #8: got '%% a. %RNg, b. %Qx, c. %td'\n",
+                    mpfr, mpq, saved_p);
 #if defined(__MINGW32__) || defined(__MINGW64__)
       fprintf (stderr,
                "Your MinGW may be too old, in which case compiling GMP\n"
@@ -224,7 +231,7 @@ check_mixed (FILE *fout)
 
 #ifdef PRINTF_L
   check_vfprintf (fout, "a. %RA, b. %Lf, c. %QX%zn", mpfr, ld, mpq, &sz);
-  check_length (9, (unsigned long) sz, 30, lu); /* no format specifier "%zu" in C90 */
+  check_length (9, (unsigned long) sz, 29 + DPLEN, lu); /* no format specifier "%zu" in C90 */
 #endif
 
 #ifndef NPRINTF_HH
@@ -397,6 +404,20 @@ bug_20090316 (FILE *fout)
   mpfr_clear (x);
 }
 
+/* See check_null test in tsprintf.c for details.
+   Fixed in commits
+     390e51ef8570da4e338e9806ecaf2d022210d951 (2023-12-03)
+     3babf029fe604c08ec517ca6945a5efb155f69d1 (2023-12-13)
+*/
+static void
+check_null (FILE *fout)
+{
+  int n;
+
+  check_vfprintf (fout, ".%c%c.%n", 0, 1, &n);
+  check_length (40, n, 4, d);
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -434,6 +455,7 @@ main (int argc, char *argv[])
   check_random (fout, N);
 
   bug_20090316 (fout);
+  check_null (fout);
 
   fclose (fout);
   tests_end_mpfr ();

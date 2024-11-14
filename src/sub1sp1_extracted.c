@@ -4,7 +4,7 @@
 
 Source: https://github.com/project-everest/hacl-star/tree/dev_mpfr/code/mpfr
 
-Copyright 2004-2022 Free Software Foundation, Inc.
+Copyright 2004-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -20,12 +20,12 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
-#include "stdint.h"
-#include "inttypes.h" /* for __builtin_clzll */
+/* TODO: For consistency with add1sp1_extracted.c, use #define's
+   instead of <stdint.h>? */
+#include <stdint.h>
 
 /* beginning of manually added declarations */
 
@@ -527,4 +527,3 @@ int32_t
   MPFR_RoundingMode_mpfr_rnd_t x3,
   int64_t x4
 ) = MPFR_Sub1sp1_mpfr_sub1sp1;
-

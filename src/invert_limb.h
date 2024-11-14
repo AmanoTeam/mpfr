@@ -1,6 +1,6 @@
 /* __gmpfr_invert_limb -- implement GMP's invert_limb (which is not in GMP API)
 
-Copyright 2016-2022 Free Software Foundation, Inc.
+Copyright 2016-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,28 +16,14 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
 
 /* for now, we only provide __gmpfr_invert_limb for 64-bit limb */
 #if GMP_NUMB_BITS == 64
-
-/* umul_hi(h, x, y) puts in h the high part of x*y */
-#ifdef HAVE_MULX_U64
-#include <immintrin.h>
-#define umul_hi(h, x, y) _mulx_u64 (x, y, (unsigned long long *) &(h))
-#else
-#define umul_hi(h, x, y)                        \
-  do {                                          \
-    mp_limb_t _l;                               \
-    umul_ppmm (h, _l, x, y);                    \
-    (void) _l;  /* unused variable */           \
-  } while (0)
-#endif
 
 /* for 256 <= d9 < 512, invert_limb_table[d9-256] = floor((2^19-3*2^8)/d9) */
 static const unsigned short invert_limb_table[256] =

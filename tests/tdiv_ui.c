@@ -1,6 +1,6 @@
 /* Test file for mpfr_div_ui.
 
-Copyright 1999-2022 Free Software Foundation, Inc.
+Copyright 1999-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #include <float.h>
 
@@ -208,7 +207,7 @@ check_inexact (void)
   mpfr_clear (z);
 }
 
-/* Note the the preprocessor test and the if test in the function are
+/* Note that the preprocessor test and the if test in the function are
    complementary. If the size of an unsigned long is a power of 2 and
    this type has no padding bits, the test on ULONG_MAX and the if test
    are equivalent. The preprocessor test can avoid compiler warnings

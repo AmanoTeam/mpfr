@@ -1,6 +1,6 @@
 /* mpfr_get_str -- output a floating-point number to a string
 
-Copyright 1999-2022 Free Software Foundation, Inc.
+Copyright 1999-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H
 #define MPFR_NEED_INTMAX_H
@@ -92,6 +91,11 @@ mpfr_get_str_aux (char *const str, mpfr_exp_t *const exp, mp_limb_t *const r,
   size_t i;
   int exact = (e < 0);
   MPFR_TMP_DECL(marker);
+
+  MPFR_LOG_FUNC
+    (("n=%Pd f=%" MPFR_EXP_FSPEC "d e=%ld b=%d m=%zu rnd=%d",
+      (mpfr_prec_t) n, (mpfr_eexp_t) f, e, b, m, rnd),
+     ("exp=%" MPFR_EXP_FSPEC "d", (mpfr_eexp_t) exp));
 
   /* if f > 0, then the maximal error 2^(e+f) is larger than 2 so we can't
      determine the integer Y */
@@ -2590,7 +2594,7 @@ mpfr_get_str (char *s, mpfr_exp_t *e, int b, size_t m, mpfr_srcptr x,
   mpfr_exp_t exp_a;
   mp_limb_t *result;
   mp_limb_t *xp;
-  mp_limb_t *reste;
+  mp_limb_t *rem; /* remainder */
   size_t nx, nx1;
   size_t n, i;
   char *s0;
@@ -2605,7 +2609,7 @@ mpfr_get_str (char *s, mpfr_exp_t *e, int b, size_t m, mpfr_srcptr x,
   /* otherwise err is such that |x*b^(m-g)-a*2^exp_a| < 2^(err+exp_a) */
 
   MPFR_LOG_FUNC
-    (("b=%d m=%zu x[%Pu]=%.*Rg rnd=%d",
+    (("b=%d m=%zu x[%Pd]=%.*Rg rnd=%d",
       b, m, mpfr_get_prec (x), mpfr_log_prec, x, rnd),
      ("flags=%lx", (unsigned long) __gmpfr_flags));
 
@@ -2830,9 +2834,9 @@ mpfr_get_str (char *s, mpfr_exp_t *e, int b, size_t m, mpfr_srcptr x,
           err = mpfr_mpn_exp (a, &exp_a, b, exp, n);
           exact = (err == -1);
 
-          /* allocate memory for x1, result and reste */
+          /* allocate memory for x1, result and rem */
           result = MPFR_TMP_LIMBS_ALLOC (n + 1);
-          reste = MPFR_TMP_LIMBS_ALLOC (n);
+          rem = MPFR_TMP_LIMBS_ALLOC (n);
 
           if (2 * n <= nx)
             {
@@ -2850,12 +2854,12 @@ mpfr_get_str (char *s, mpfr_exp_t *e, int b, size_t m, mpfr_srcptr x,
             }
 
           /* result = x / a */
-          mpn_tdiv_qr (result, reste, 0, x1, 2 * n, a, n);
+          mpn_tdiv_qr (result, rem, 0, x1, 2 * n, a, n);
           exp_a = MPFR_GET_EXP (x) - exp_a - 2 * n * GMP_NUMB_BITS;
 
           /* test if division was exact */
           if (exact)
-            exact = mpn_popcount (reste, n) == 0;
+            exact = mpn_popcount (rem, n) == 0;
 
           /* normalize the result and copy into a */
           if (result[n] == 1)
@@ -2914,7 +2918,8 @@ mpfr_get_str (char *s, mpfr_exp_t *e, int b, size_t m, mpfr_srcptr x,
   return s0;
 }
 
-void mpfr_free_str (char *str)
+void
+mpfr_free_str (char *str)
 {
   mpfr_free_func (str, strlen (str) + 1);
 }

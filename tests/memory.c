@@ -1,6 +1,6 @@
 /* Memory allocation used during tests.
 
-Copyright 2001-2003, 2006-2022 Free Software Foundation, Inc.
+Copyright 2001-2003, 2006-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 /* Note: this file originally came from GMP's tests/memory.c
    (some features have been added). */
@@ -58,8 +57,23 @@ struct header {
    programs may also change the memory limit. */
 size_t tests_memory_limit = DEFAULT_MEMORY_LIMIT;
 
+/* The special tests_allocate/tests_reallocate/tests_free memory allocation
+   functions for the testsuite track memory allocations and record them via
+   the tests_memory_list and tests_total_size global variables. For tests
+   that use several threads, these data are shared between all threads
+   (obviously by design), so that thread locking must be used by these
+   special memory allocation functions.
+   On 2023-04-12: thread locking is currently enabled only with the
+   shared cache (--enable-shared-cache); since the only test that uses
+   several threads (it is in tconst_pi.c) can be executed only with the
+   shared cache enabled, this is OK. But in the future, if other tests
+   with several threads are added and executed whether the shared cache
+   is enabled or not, thread locking should be enabled together with TLS
+   whenever possible, and when it is unavailable, these multithread tests
+   must not be run. */
 static struct header  *tests_memory_list;
 static size_t tests_total_size = 0;
+static size_t tests_max_size = 0;
 MPFR_LOCK_DECL(mpfr_lock_memory)
 
 static void *
@@ -139,6 +153,8 @@ tests_addsize (size_t size)
       fflush (NULL);
       abort ();
     }
+  if (tests_total_size > tests_max_size)
+    tests_max_size = tests_total_size;
 }
 
 void *
@@ -176,7 +192,7 @@ tests_allocate (size_t size)
    Note that pointers may be larger than uintmax_t, even in practice[*];
    however, since this is just used in error messages, the loss of
    information may be acceptable (but we should probably use %p).
-   [*] http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2889.htm
+   [*] https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2889.htm
 */
 void *
 tests_reallocate (void *ptr, size_t old_size, size_t new_size)
@@ -281,6 +297,24 @@ tests_free (void *ptr, size_t size)
   tests_free_nosize (ptr);
 
   MPFR_UNLOCK_WRITE(mpfr_lock_memory);
+}
+
+size_t
+tests_get_totalsize (void)
+{
+  return tests_total_size;
+}
+
+size_t
+tests_get_maxsize (void)
+{
+  return tests_max_size;
+}
+
+void
+tests_reset_maxsize (void)
+{
+  tests_max_size = 0;
 }
 
 void

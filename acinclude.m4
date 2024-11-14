@@ -1,14 +1,14 @@
 dnl  MPFR specific autoconf macros
 
-dnl  Copyright 2000, 2002-2022 Free Software Foundation, Inc.
+dnl  Copyright 2000, 2002-2024 Free Software Foundation, Inc.
 dnl  Contributed by the AriC and Caramba projects, INRIA.
 dnl
 dnl  This file is part of the GNU MPFR Library.
 dnl
-dnl  The GNU MPFR Library is free software; you can redistribute it and/or modify
-dnl  it under the terms of the GNU Lesser General Public License as published
-dnl  by the Free Software Foundation; either version 3 of the License, or (at
-dnl  your option) any later version.
+dnl  The GNU MPFR Library is free software; you can redistribute it and/or
+dnl  modify it under the terms of the GNU Lesser General Public License as
+dnl  published by the Free Software Foundation; either version 3 of the
+dnl  License, or (at your option) any later version.
 dnl
 dnl  The GNU MPFR Library is distributed in the hope that it will be useful, but
 dnl  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
@@ -16,9 +16,8 @@ dnl  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 dnl  License for more details.
 dnl
 dnl  You should have received a copy of the GNU Lesser General Public License
-dnl  along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-dnl  https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-dnl  51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
+dnl  along with the GNU MPFR Library; see the file COPYING.LESSER.
+dnl  If not, see <https://www.gnu.org/licenses/>.
 
 dnl  autoconf 2.60 is necessary because of the use of AC_PROG_SED.
 dnl  The following line allows the autoconf wrapper (when installed)
@@ -394,6 +393,12 @@ fi
 dnl Check whether NAN != NAN (as required by the IEEE-754 standard,
 dnl but not by the ISO C standard). For instance, this is false with
 dnl MIPSpro 7.3.1.3m under IRIX64. By default, assume this is true.
+dnl Note that this test may not detect all issues. For instance, with
+dnl icx 2021.2.0 (and default fast-math), the result depends on whether
+dnl the identifier has internal or external linkage:
+dnl   https://community.intel.com/t5/Intel-oneAPI-Base-Toolkit/icx-2021-2-0-bug-incorrect-NaN-comparison-using-an-identifier/m-p/1286869
+dnl TODO: change "NAN == NAN" to "NaN is supported" and rename
+dnl the MPFR_NANISNAN macro?
 AC_CACHE_CHECK([if NAN == NAN], mpfr_cv_nanisnan, [
 AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <stdio.h>
@@ -509,27 +514,6 @@ static int f (double (*func)(double)) { return 0; }
    AC_DEFINE(HAVE_NEARBYINT, 1,[Have ISO C99 nearbyint function])
 ],[AC_MSG_RESULT(no)])
 
-dnl Check if _mulx_u64 is provided
-dnl Note: This intrinsic is not standard. We need a run because
-dnl it may be provided but not working as expected (with ICC 15,
-dnl one gets an "Illegal instruction").
-AC_MSG_CHECKING([for _mulx_u64])
-AC_RUN_IFELSE([AC_LANG_PROGRAM([[
-#include <immintrin.h>
-]], [[
- unsigned long long h1, h2;
- _mulx_u64(17, 42, &h1);
- _mulx_u64(-1, -1, &h2);
- return h1 == 0 && h2 == -2 ? 0 : 1;
-]])],
-  [AC_MSG_RESULT(yes)
-   AC_DEFINE(HAVE_MULX_U64, 1,[Have a working _mulx_u64 function])
-  ],
-  [AC_MSG_RESULT(no)
-  ],
-  [AC_MSG_RESULT([cannot test, assume no])
-  ])
-
 LIBS="$saved_LIBS"
 
 dnl Try to determine the format of double
@@ -548,7 +532,20 @@ case $mpfr_cv_c_double_format in
     ;;
 esac
 
-dnl Now try to determine the format of long double
+dnl Now try to determine the format of long double.
+dnl For IEEE extended, only a normal number is tested. However, there is
+dnl a difference between x86 and m68k in and near the subnormal range:
+dnl emin(m68k) = emin(x86) - 1.
+dnl https://www.nxp.com/docs/en/reference-manual/M68000PM.pdf
+dnl Page 1-18, Section 1.6.1 "Normalized Numbers" says:
+dnl   In extended precision, the mantissa's MSB, the explicit integer bit,
+dnl   can only be a one (see Figure 1-13); and the exponent can be zero.
+dnl and Section 1.6.2 "Denormalized Numbers" says:
+dnl   In extended precision, the mantissa's MSB, the explicit integer bit,
+dnl   can only be a zero (see Figure 1-14).
+dnl However, m68k is big endian, while x86 is little endian. So it seems
+dnl that HAVE_LDOUBLE_IEEE_EXT_LITTLE means x86 extended precision and
+dnl HAVE_LDOUBLE_IEEE_EXT_BIG means m68k extended precision.
 MPFR_C_REALFP_FORMAT(long double,L)
 case $mpfr_cv_c_long_double_format in
   "IEEE double, big endian"*)
@@ -885,6 +882,32 @@ int main (void) {
      ])
 fi
 
+dnl Timeout support in the testsuite.
+dnl If the --enable-tests-timeout option has not been provided, let's
+dnl enable timeout support only in -dev versions and if we detect that
+dnl the needed POSIX features seem to be available (this is not much
+dnl useful for releases, where an infinite loop is very unlikely).
+dnl When supported, default is 0 (no timeout).
+if test -z "$enable_tests_timeout" && test -n "$dev_version"; then
+AC_MSG_CHECKING(if timeout can be supported)
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+#include <sys/resource.h>
+]], [[
+  struct rlimit rlim[1];
+  if (getrlimit (RLIMIT_CPU, rlim))
+    return 1;
+  rlim->rlim_cur = 1;
+  if (setrlimit (RLIMIT_CPU, rlim))
+    return 1;
+]])], [
+  AC_MSG_RESULT(yes)
+  enable_tests_timeout=yes
+],[AC_MSG_RESULT(no)])
+fi
+if test "$enable_tests_timeout" = yes; then
+  AC_DEFINE([MPFR_TESTS_TIMEOUT], 0, [timeout limit])
+fi
+
 ])
 dnl end of MPFR_CONFIGS
 
@@ -907,7 +930,7 @@ AC_CACHE_CHECK([for GMP library vs header correctness], mpfr_cv_check_gmp, [
 AC_RUN_IFELSE([AC_LANG_PROGRAM([[
 #include <stdio.h>
 #include <limits.h>
-#include <gmp.h>
+#include "gmp.h"
 ]], [[
   fprintf (stderr, "GMP_NAIL_BITS     = %d\n", (int) GMP_NAIL_BITS);
   fprintf (stderr, "GMP_NUMB_BITS     = %d\n", (int) GMP_NUMB_BITS);
@@ -968,7 +991,7 @@ AC_REQUIRE([MPFR_CONFIGS])dnl
 AC_CACHE_CHECK([for double-to-integer conversion bug], mpfr_cv_dbl_int_bug, [
 AC_RUN_IFELSE([AC_LANG_PROGRAM([[
 #include <stdio.h>
-#include <gmp.h>
+#include "gmp.h"
 ]], [[
   double d;
   mp_limb_t u;
@@ -1020,7 +1043,7 @@ dnl undefined function-like macros (which otherwise may be regarded
 dnl as valid function calls with AC_COMPILE_IFELSE since prototypes
 dnl are not required by the C standard).
 AC_LINK_IFELSE([AC_LANG_PROGRAM([[
-#include <gmp.h>
+#include "gmp.h"
 /* Make sure that a static assertion is used (not MPFR_ASSERTN). */
 #undef MPFR_USE_STATIC_ASSERT
 #define MPFR_USE_STATIC_ASSERT 1
@@ -1052,7 +1075,7 @@ dnl undefined function-like macros (which otherwise may be regarded
 dnl as valid function calls with AC_COMPILE_IFELSE since prototypes
 dnl are not required by the C standard).
 AC_LINK_IFELSE([AC_LANG_PROGRAM([[
-#include <gmp.h>
+#include "gmp.h"
 /* Make sure that a static assertion is used (not MPFR_ASSERTN). */
 #undef MPFR_USE_STATIC_ASSERT
 #define MPFR_USE_STATIC_ASSERT 1
@@ -1602,7 +1625,7 @@ AC_RUN_IFELSE([AC_LANG_PROGRAM([[
 #include <stdio.h>
 #include <string.h>
 $3
-#include <gmp.h>
+#include "gmp.h"
 ]], [[
   char s[256];
   $2 a = 17;
@@ -1650,17 +1673,17 @@ if test "$ac_cv_type_intmax_t" = yes; then
 fi
 
 MPFR_FUNC_GMP_PRINTF_SPEC([hhd], [char], [
-#include <gmp.h>
+#include "gmp.h"
          ],,
          [AC_DEFINE([NPRINTF_HH], 1, [printf/gmp_printf cannot use `hh' length modifier])])
 
 MPFR_FUNC_GMP_PRINTF_SPEC([lld], [long long int], [
-#include <gmp.h>
+#include "gmp.h"
          ],,
          [AC_DEFINE([NPRINTF_LL], 1, [printf/gmp_printf cannot read long long int])])
 
 MPFR_FUNC_GMP_PRINTF_SPEC([Lf], [long double], [
-#include <gmp.h>
+#include "gmp.h"
          ],
          [AC_DEFINE([PRINTF_L], 1, [printf/gmp_printf can read long double])],
          [AC_DEFINE([NPRINTF_L], 1, [printf/gmp_printf cannot read long double])])
@@ -1671,7 +1694,7 @@ MPFR_FUNC_GMP_PRINTF_SPEC([td], [ptrdiff_t], [
 #else
 #include <stddef.h>
 #endif
-#include <gmp.h>
+#include "gmp.h"
     ],
     [AC_DEFINE([PRINTF_T], 1, [printf/gmp_printf can read ptrdiff_t])],
     [AC_DEFINE([NPRINTF_T], 1, [printf/gmp_printf cannot read ptrdiff_t])])
@@ -1688,7 +1711,7 @@ AC_DEFUN([MPFR_CHECK_PRINTF_GROUPFLAG], [
 AC_MSG_CHECKING(if gmp_printf supports the ' group flag)
 AC_RUN_IFELSE([AC_LANG_PROGRAM([[
 #include <string.h>
-#include <gmp.h>
+#include "gmp.h"
 ]], [[
   char s[256];
 

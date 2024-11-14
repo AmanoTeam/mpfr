@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2017 Free Software Foundation, Inc.
+Copyright 2005-2022 Free Software Foundation, Inc.
 Contributed by Patrick Pelissier, INRIA.
 
 This file is part of the MPFR Library.
@@ -15,9 +15,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #ifndef __TIMP__H__
 #define __TIMP__H__
@@ -31,21 +30,21 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 #define TIMP_VERSION 1*100+1*10+0
 
 #ifndef __GNUC__
-# error  CC != GCC 
+# error  CC != GCC
 #endif
 
 /* High accuracy timing */
 #if defined (USE_CLOCK_MONOTONIC)
 
 /* Needs to include -lrt in the library section */
-#include <time.h> 
+#include <time.h>
 
 #define timp_rdtsc()                                           \
-({unsigned long long int x;				       \
-  struct timespec ts;                                          \
-  clock_gettime(CLOCK_MONOTONIC, &ts);                         \
-  x = ts.tv_sec * 1000000000UL + ts.tv_nsec;                   \
- x; })
+  ({ unsigned long long int x;                                 \
+    struct timespec ts;                                        \
+    clock_gettime(CLOCK_MONOTONIC, &ts);                       \
+    x = ts.tv_sec * 1000000000ULL + ts.tv_nsec;                \
+    x; })
 #define timp_rdtsc_before(time) (time = timp_rdtsc())
 #define timp_rdtsc_after(time)  (time = timp_rdtsc())
 

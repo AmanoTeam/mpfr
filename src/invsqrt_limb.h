@@ -1,6 +1,6 @@
 /* __gmpfr_invsqrt_limb_approx -- reciprocal approximate square root of a limb
 
-Copyright 2017-2022 Free Software Foundation, Inc.
+Copyright 2017-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
@@ -227,19 +226,6 @@ static const mp_limb_t T3[768] =
     1092727000, 1089547389, 1089547389, 1086373952, 1086373952, 1083206683,
     1083206683, 1080045576, 1080045576, 1076890625, 1076890625, 1073741824,
     1073741824 };
-
-/* umul_hi(h, x, y) puts in h the high part of x*y */
-#ifdef HAVE_MULX_U64
-#include <immintrin.h>
-#define umul_hi(h, x, y) _mulx_u64 (x, y, (unsigned long long *) &(h))
-#else
-#define umul_hi(h, x, y)                        \
-  do {                                          \
-    mp_limb_t _l;                               \
-    umul_ppmm (h, _l, x, y);                    \
-    (void) _l;  /* unused variable */           \
-  } while (0)
-#endif
 
 /* given 2^62 <= d < 2^64, put in r an approximation of
    s = floor(2^96/sqrt(d)) - 2^64, with r <= s <= r + 15 */

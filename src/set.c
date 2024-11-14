@@ -1,6 +1,6 @@
 /* mpfr_set -- copy of a floating-point number
 
-Copyright 1999, 2001-2022 Free Software Foundation, Inc.
+Copyright 1999, 2001-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-impl.h"
 
@@ -70,10 +69,12 @@ int
 mpfr_set (mpfr_ptr a, mpfr_srcptr b, mpfr_rnd_t rnd_mode)
 {
   /* Contrary to other mpfr_set4 based functions (mpfr_abs, mpfr_neg, etc.),
-     do not detect the case a == b as there is no interest to call mpfr_set
-     in this case, so that it is very unlikely that the user calls it
-     with a == b (this is the reverse of what is assumed for the other
-     functions). */
+     do not detect the case a == b as it is assumed that this case is
+     uncommon (this is the reverse of what is assumed for the other
+     functions). However, it may occur, e.g. for mpfr_fma(z,x,y,z,rnd_mode)
+     when x and y happen to be both 0. Note also that it is possible to
+     have a != b while they share their significand, e.g. with mpfr_fms
+     due to the use of an alias via MPFR_TMP_INIT_NEG. */
   return mpfr_set4 (a, b, rnd_mode, MPFR_SIGN (b));
 }
 

@@ -1,4 +1,8 @@
-# Copyright 2000-2022 Free Software Foundation, Inc.
+# Copyright 2000-2024 Free Software Foundation, Inc.
+# Contributed by the AriC and Caramba projects, INRIA.
+
+# This file is part of the GNU MPFR Library.
+
 # This Makefile.am is free software; the Free Software Foundation
 # gives unlimited permission to copy and/or distribute it,
 # with or without modifications, as long as this notice is preserved.
@@ -18,10 +22,9 @@
 
 EXTRA_DIST = round_raw_generic.c jyn_asympt.c                           \
         add1sp1_extracted.c mul_1_extracted.c sub1sp1_extracted.c       \
-        amd/mparam.h arm/mparam.h                                       \
-        generic/coverage/mparam.h generic/mparam.h                      \
+        arm/mparam.h generic/coverage/mparam.h generic/mparam.h         \
         mips/mparam.h powerpc64/mparam.h sparc64/mparam.h               \
-        x86/mparam.h x86_64/core2/mparam.h x86_64/mparam.h
+        x86/mparam.h x86_64/mparam.h
 
 include_HEADERS = mpfr.h mpf2mpfr.h
 nodist_include_HEADERS =
@@ -32,7 +35,7 @@ lib_LTLIBRARIES = libmpfr.la
 
 libmpfr_la_SOURCES = mpfr.h mpf2mpfr.h mpfr-cvers.h mpfr-gmp.h          \
 mpfr-impl.h mpfr-intmax.h mpfr-longlong.h mpfr-sassert.h mpfr-thread.h  \
-exceptions.c extract.c uceil_exp2.c                                     \
+exceptions.c uceil_exp2.c                                               \
 uceil_log2.c ufloor_log2.c add.c add1.c add_ui.c agm.c clear.c cmp.c    \
 cmpabs.c cmp_si.c cmp_ui.c comparisons.c div_2exp.c div_2si.c           \
 div_2ui.c div.c div_ui.c dot.c dump.c eq.c exp10.c exp2.c exp3.c exp.c  \
@@ -98,7 +101,8 @@ libmpfr_la_LIBADD = @LIBOBJS@
 #        3.1.x    5:x:1
 #        4.0.x    6:x:0
 #        4.1.x    7:x:1
-libmpfr_la_LDFLAGS = $(MPFR_LDFLAGS) $(LIBMPFR_LDFLAGS) -version-info 7:0:1
+#        4.2.x    8:x:2
+libmpfr_la_LDFLAGS = $(MPFR_LDFLAGS) $(LIBMPFR_LDFLAGS) -version-info 8:0:2
 
 GET_PATCHES_SH = $(top_srcdir)/tools/get_patches.sh
 PATCHES = $(top_srcdir)/PATCHES

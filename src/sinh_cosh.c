@@ -1,6 +1,6 @@
 /* mpfr_sinh_cosh -- hyperbolic sine and cosine
 
-Copyright 2001-2022 Free Software Foundation, Inc.
+Copyright 2001-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
@@ -37,9 +36,9 @@ mpfr_sinh_cosh (mpfr_ptr sh, mpfr_ptr ch, mpfr_srcptr xt, mpfr_rnd_t rnd_mode)
   MPFR_ASSERTN (sh != ch);
 
   MPFR_LOG_FUNC
-    (("x[%Pu]=%.*Rg rnd=%d",
+    (("x[%Pd]=%.*Rg rnd=%d",
       mpfr_get_prec (xt), mpfr_log_prec, xt, rnd_mode),
-     ("sh[%Pu]=%.*Rg ch[%Pu]=%.*Rg",
+     ("sh[%Pd]=%.*Rg ch[%Pd]=%.*Rg",
       mpfr_get_prec (sh), mpfr_log_prec, sh,
       mpfr_get_prec (ch), mpfr_log_prec, ch));
 

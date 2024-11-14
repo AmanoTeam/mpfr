@@ -1,4 +1,4 @@
-% see https://hal.inria.fr/hal-00934443 to simplify/improve the ulp calculus
+% see https://inria.hal.science/hal-00934443 to simplify/improve the ulp calculus
 
 \documentclass[12pt]{amsart}
 
@@ -301,7 +301,7 @@ apply to addition too.
 \error(w)& \leq&(c_w + k_u + k_v) \, \ulp(w)
 \end{eqnarray}
 \begin{eqnarray}\nonumber
-\textnormal{Note:}&&\textnormal{If}\;\; w=\N(u+v) \;\;\textnormal{Then}\;\; c_w =\frac{1}{2} \;\;\textnormal{else}\;\; c_w =1\\\nonumber
+\textnormal{Note:}&&\textnormal{If}\;\; w=\N(u+v) \;\;\textnormal{then}\;\; c_w =\frac{1}{2} \;\;\textnormal{else}\;\; c_w =1\\\nonumber
 \end{eqnarray}
 
 \subsection{Generic error of multiplication}\label{generic:mul}
@@ -324,7 +324,7 @@ w&=&\circ(uv) \\\nonumber
 & \leq & [ c_w +  (1+c_u^+) k_v + (1+c_v^+) k_u ] \ulp(w)\U{R8}\\\nonumber
 \end{eqnarray}
 \begin{eqnarray}\nonumber
-\textnormal{Note:}&&\textnormal{If}\;\; w=\N(uv) \;\;\textnormal{Then}\;\; c_w =\frac{1}{2} \;\;\textnormal{else}\;\; c_w =1
+\textnormal{Note:}&&\textnormal{If}\;\; w=\N(uv) \;\;\textnormal{then}\;\; c_w =\frac{1}{2} \;\;\textnormal{else}\;\; c_w =1
 \end{eqnarray}
 
 \subsection{Generic error of inverse}\label{generic:inv}
@@ -353,7 +353,7 @@ w&=&\circ(\frac{1}{u}) \\\nonumber
 & \leq & [c_w + 2.c_u.k_u].\ulp(w) \U{R8}
 \end{eqnarray}
 \begin{eqnarray}\nonumber
-\textnormal{Note:}&&\textnormal{If}\;\; w=\N(\frac{1}{u}) \;\;\textnormal{Then}\;\; c_w =\frac{1}{2} \;\;\textnormal{else}\;\; c_w =1\\\nonumber\end{eqnarray}
+\textnormal{Note:}&&\textnormal{If}\;\; w=\N(\frac{1}{u}) \;\;\textnormal{then}\;\; c_w =\frac{1}{2} \;\;\textnormal{else}\;\; c_w =1\\\nonumber\end{eqnarray}
 
 \subsection{Generic error of division}\label{generic:div}
 
@@ -388,7 +388,7 @@ w&=&\circ(\frac{u}{v}) \\\nonumber
 & \leq & [c_w  + 2.k_u+ 2.c_u.c_v.k_v].\ulp(w) \U{R8}
 \end{eqnarray}
 \begin{eqnarray}\nonumber
-\textnormal{Note:}&&\textnormal{If}\;\; w=\N(\frac{u}{v}) \;\;\textnormal{Then}\;\; c_w =\frac{1}{2} \;\;\textnormal{else}\;\; c_w =1
+\textnormal{Note:}&&\textnormal{If}\;\; w=\N(\frac{u}{v}) \;\;\textnormal{then}\;\; c_w =\frac{1}{2} \;\;\textnormal{else}\;\; c_w =1
 \end{eqnarray}
 Note that we can obtain a slightly different result by writing
 $uy-vx = (uy - uv) + (uv - vx)$ instead of $(uy-xy)+(xy-vx)$.
@@ -556,23 +556,7 @@ $(1-\epsilon)^n \geq 1-n\epsilon$, which is true.
 
 \subsection{The {\tt mpfr\_add} function}
 
-\begin{verbatim}
-   mpfr_add (A, B, C, rnd)
-   /* on suppose B et C de me^me signe, et EXP(B) >= EXP(C) */
-
-   0. d = EXP(B) - EXP(C) /* d >= 0 par hypothe`se */
-   1. Soient B1 les prec(A) premiers bits de B, et B0 le reste
-             C1 les bits de C correspondant a` B1, C0 le reste
-   /* B0, C1, C0 peuvent e^tre vides, mais pas B1 */
-
-          <----------- A ---------->
-          <----------- B1 ---------><------ B0 ----->
-             <---------- C1 -------><------------ C0 ----------->
-
-   2. A <- B1 + (C1 >> d)
-   3. q <- compute_carry (B0, C0, rnd)
-   4. A <- A + q
-\end{verbatim}
+See \cite{lefevre:inria-00000026}.
 
 \subsection{The {\tt mpfr\_cmp2} function}
 
@@ -3100,7 +3084,7 @@ Return $s \cdot 2^{-w}$.
 Note: in $t \leftarrow {\rm trunc}(t m 2^e/k)$,
 we first compute $tm$ exactly, then if $e$ is negative,
 we first divide by $2^{-e}$ and
-truncate, then divide by $k$ and truncate; this gives the same answer than
+truncate, then divide by $k$ and truncate; this gives the same answer as
 dividing once by $k 2^{-e}$, but it is more efficient.
 Let $\epsilon_k$ be the absolute difference between $t$ and
 $2^w x^k/k!$ at step $k$.
@@ -3752,7 +3736,7 @@ When $z \rightarrow 0^+$, $Y_n(z)$ tends to $-\infty$; when $z \rightarrow
 We deduce from \cite[Eq.~(9.23)]{Temme96}:
 \[ Y_n(-z) = (-1)^n [Y_n(z) + 2 i J_n(z)], \]
 which shows that for $z > 0$, $Y_n(-z)$ is real only when $z$ is a zero of
-$J_n(z)$; assuming those zeroes are irrational, $Y_n(z)$ is thus NaN for
+$J_n(z)$; assuming those zeros are irrational, $Y_n(z)$ is thus NaN for
 $z$ negative.
 
 Formula 9.1.11 from \cite{AbSt73} gives:
@@ -4941,7 +4925,7 @@ Catalan's constant is defined by
 \[ G = \sum_{k=0}^{\infty} \frac{(-1)^k}{(2k+1)^2}. \]
 We compute it using formula (31) of Victor Adamchik's document
 ``33 representations for Catalan's constant''\footnote{
-\url{http://www-2.cs.cmu.edu/~adamchik/articles/catalan/catalan.htm}}:
+\url{https://web.archive.org/web/20090624123133/http://www-2.cs.cmu.edu/~adamchik/articles/catalan/catalan.htm}}:
 \[ G = \frac{\pi}{8} \log(2 + \sqrt{3}) + \frac{3}{8}
   \sum_{k=0}^{\infty} \frac{(k!)^2}{(2k)! (2k+1)^2}. \]
 Let $f(k) = \frac{(k!)^2}{(2k)! (2k+1)^2}$, and

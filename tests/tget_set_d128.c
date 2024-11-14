@@ -1,6 +1,6 @@
 /* Test file for mpfr_set_decimal128 and mpfr_get_decimal128.
 
-Copyright 2018-2022 Free Software Foundation, Inc.
+Copyright 2018-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 /* Needed due to the test on MPFR_WANT_DECIMAL_FLOATS */
 #ifdef HAVE_CONFIG_H
@@ -49,15 +48,15 @@ print_decimal128 (_Decimal128 d)
   else /* regular number */
     {
       long e = 0;
-      while (d < 1.0dl)
+      while (d < 1.dl)
         {
-          d *= 10.0dl;
+          d *= 10.dl;
           e --;
         }
       /* now d >= 1 */
-      while (d > 10.0dl)
+      while (d > 10.dl)
         {
-          d /= 10.0dl;
+          d /= 10.dl;
           e ++;
         }
       /* now 1 <= d < 10 */
@@ -471,7 +470,7 @@ noncanonical (void)
          in tget_set_d64.c). More information at:
          https://gcc.gnu.org/bugzilla/show_bug.cgi?id=91226
       */
-      volatile _Decimal128 d = 9999999999999999999999999999999999.0dl;
+      volatile _Decimal128 d = 9999999999999999999999999999999999.dl;
       mpfr_t y;
 
       x.s.comb = 98560; /* force Gh >= 24 thus a non-canonical number

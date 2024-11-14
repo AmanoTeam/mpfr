@@ -1,7 +1,7 @@
 /* mpfr_sub1sp -- internal function to perform a "real" subtraction
    All the op must have the same precision
 
-Copyright 2003-2022 Free Software Foundation, Inc.
+Copyright 2003-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -17,12 +17,21 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
+
+/* Note: The 3 "INITIALIZED(sh)" occurrences below are necessary
+   to avoid a maybe-uninitialized warning or error, e.g. when
+   configuring MPFR with
+     ./configure --enable-assert CFLAGS="-O2 -Werror=maybe-uninitialized"
+   (a --enable-assert or --enable-assert=full is needed to reproduce
+   the issue). This occurs with GCC 4.9.4, 5.5.0, 6.5.0, 8.4.0, 9.5.0,
+   10.4.0, 11.3.0 and 12.2.0 under Linux (Debian/unstable).
+   Bug report: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108467
+*/
 
 /* define MPFR_FULLSUB to use alternate code in mpfr_sub1sp2 and mpfr_sub1sp2n
    (see comments in mpfr_sub1sp2) */
@@ -108,7 +117,11 @@ int mpfr_sub1sp (mpfr_ptr a, mpfr_srcptr b, mpfr_srcptr c, mpfr_rnd_t rnd_mode)
 
 #if !defined(MPFR_GENERIC_ABI)
 
-/* the sub1sp1_extracted.c is not ready yet */
+/* Under "#if 0" as the sub1sp1_extracted.c is not ready yet.
+   Note: if this is enabled and __builtin_clzll is still used, the
+   documentation about MPFR_WANT_PROVEN_CODE / --enable-formally-proven-code
+   would have to be updated, because GCC (or compatible) would be needed,
+   not just a C99 compiler. */
 
 #if 0 && defined(MPFR_WANT_PROVEN_CODE) && GMP_NUMB_BITS == 64 && \
   UINT_MAX == 0xffffffff && MPFR_PREC_BITS == 64 && \
@@ -1441,8 +1454,13 @@ mpfr_sub1sp (mpfr_ptr a, mpfr_srcptr b, mpfr_srcptr c, mpfr_rnd_t rnd_mode)
     gcc claims that they might be used uninitialized. We fill them with invalid
     values, which should produce a failure if so. See README.dev file. */
   int pow2;
-
   MPFR_TMP_DECL(marker);
+
+  MPFR_LOG_FUNC
+    (("b[%Pd]=%.*Rg c[%Pd]=%.*Rg rnd=%d",
+      mpfr_get_prec (b), mpfr_log_prec, b,
+      mpfr_get_prec (c), mpfr_log_prec, c, rnd_mode),
+     ("a[%Pd]=%.*Rg", mpfr_get_prec (a), mpfr_log_prec, a));
 
   MPFR_ASSERTD(MPFR_PREC(a) == MPFR_PREC(b) && MPFR_PREC(b) == MPFR_PREC(c));
   MPFR_ASSERTD(MPFR_IS_PURE_FP(b));

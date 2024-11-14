@@ -1,7 +1,7 @@
 /* mpfr_exp_2 -- exponential of a floating-point number
                  using algorithms in O(n^(1/2)*M(n)) and O(n^(1/3)*M(n))
 
-Copyright 1999-2022 Free Software Foundation, Inc.
+Copyright 1999-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -17,9 +17,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H  /* MPFR_INT_CEIL_LOG2 */
 #include "mpfr-impl.h"
@@ -87,8 +86,8 @@ mpfr_exp_2 (mpfr_ptr y, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   MPFR_ZIV_DECL (loop);
 
   MPFR_LOG_FUNC
-    (("x[%Pu]=%.*Rg rnd=%d", mpfr_get_prec(x), mpfr_log_prec, x, rnd_mode),
-     ("y[%Pu]=%.*Rg inexact=%d", mpfr_get_prec(y), mpfr_log_prec, y,
+    (("x[%Pd]=%.*Rg rnd=%d", mpfr_get_prec(x), mpfr_log_prec, x, rnd_mode),
+     ("y[%Pd]=%.*Rg inexact=%d", mpfr_get_prec(y), mpfr_log_prec, y,
       inexact));
 
   expx = MPFR_GET_EXP (x);
@@ -106,7 +105,7 @@ mpfr_exp_2 (mpfr_ptr y, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
     n = 0;
   else
     {
-      mp_limb_t r_limb[(sizeof (long) -1) / sizeof(mp_limb_t) + 1];
+      mp_limb_t r_limb[(sizeof (long) - 1) / MPFR_BYTES_PER_MP_LIMB + 1];
       /* Note: we use precision sizeof (long) * CHAR_BIT - 1 here since it is
          more efficient that full limb precision.
          The value of n will depend on whether MPFR_LONG_WITHIN_LIMB is
@@ -354,6 +353,10 @@ mpfr_exp2_aux2 (mpz_t s, mpfr_srcptr r, mpfr_prec_t q, mpfr_exp_t *exps)
   mp_size_t sbit, rrbit;
   MPFR_TMP_DECL(marker);
 
+  MPFR_LOG_FUNC
+    (("x[%Pd]=%.*Rg q=%Pd", mpfr_get_prec(r), mpfr_log_prec, r, q),
+     ("exps=%" MPFR_EXP_FSPEC "d l=%lu", (mpfr_eexp_t) exps, l));
+
   /* estimate value of l */
   MPFR_ASSERTD (MPFR_GET_EXP (r) < 0);
   l = q / (- MPFR_GET_EXP (r));
@@ -452,5 +455,6 @@ mpfr_exp2_aux2 (mpz_t s, mpfr_srcptr r, mpfr_prec_t q, mpfr_exp_t *exps)
   mpz_clear (t);
   mpz_clear (tmp);
 
-  return l * (l + 4);
+  l *= l + 4;
+  return l;
 }

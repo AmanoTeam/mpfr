@@ -1,6 +1,6 @@
 /* mpfr_zeta_ui -- compute the Riemann Zeta function for integer argument.
 
-Copyright 2005-2022 Free Software Foundation, Inc.
+Copyright 2005-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
@@ -29,8 +28,8 @@ mpfr_zeta_ui (mpfr_ptr z, unsigned long m, mpfr_rnd_t r)
   MPFR_ZIV_DECL (loop);
 
   MPFR_LOG_FUNC
-    (("m=%lu rnd=%d prec=%Pu", m, r, mpfr_get_prec (z)),
-     ("z[%Pu]=%.*Rg", mpfr_get_prec (z), mpfr_log_prec, z));
+    (("m=%lu rnd=%d prec=%Pd", m, r, mpfr_get_prec (z)),
+     ("z[%Pd]=%.*Rg", mpfr_get_prec (z), mpfr_log_prec, z));
 
   if (m == 0) /* zeta(0) = -1/2 */
     return mpfr_set_si_2exp (z, -1, -1, r);

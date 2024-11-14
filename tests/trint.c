@@ -1,7 +1,7 @@
 /* Test file for mpfr_rint, mpfr_trunc, mpfr_floor, mpfr_ceil, mpfr_round,
    mpfr_rint_trunc, mpfr_rint_floor, mpfr_rint_ceil, mpfr_rint_round.
 
-Copyright 2002-2022 Free Software Foundation, Inc.
+Copyright 2002-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -17,9 +17,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-test.h"
 
@@ -307,8 +306,23 @@ basic_tests (void)
 
 #if __MPFR_STDC (199901L)
 
+typedef int (*F2)(mpfr_ptr, mpfr_srcptr);
+
+/* The argument g below will be of type F2 with args (mpfr_ptr, mpfr_srcptr),
+   except for mpfr_rint, with args (mpfr_ptr, mpfr_srcptr, mpfr_rnd_t). So,
+   when passing mpfr_rint, we need a cast: "(F2) &mpfr_rint". The cast will
+   also be needed to compare the pointers: "g == (F2) &mpfr_rint", and that's
+   all. */
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8 || __clang_major__ >= 13
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+#endif
+#endif
+
 static void
-test_fct (double (*f)(double), int (*g)(), const char *s, mpfr_rnd_t r)
+test_fct (double (*f)(double), F2 g, const char *s, mpfr_rnd_t r)
 {
   double d, y;
   mpfr_t dd, yy;
@@ -319,7 +333,7 @@ test_fct (double (*f)(double), int (*g)(), const char *s, mpfr_rnd_t r)
     {
       mpfr_set_d (dd, d, r);
       y = (*f)(d);
-      if (g == &mpfr_rint)
+      if (g == (F2) &mpfr_rint)
         mpfr_rint (yy, dd, r);
       else
         (*g)(yy, dd);
@@ -360,9 +374,13 @@ test_against_libc (void)
 #if HAVE_NEARBYINT
   RND_LOOP (r)
     if (mpfr_set_machine_rnd_mode ((mpfr_rnd_t) r) == 0)
-      test_fct (&nearbyint, &mpfr_rint, "rint", (mpfr_rnd_t) r);
+      test_fct (&nearbyint, (F2) &mpfr_rint, "rint", (mpfr_rnd_t) r);
 #endif
 }
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 #endif
 

@@ -1,7 +1,7 @@
 /* mpfr_cmp_si_2exp -- compare a floating-point number with a signed
 machine integer multiplied by a power of 2
 
-Copyright 1999, 2001-2022 Free Software Foundation, Inc.
+Copyright 1999, 2001-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -17,9 +17,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
@@ -34,6 +33,11 @@ int
 mpfr_cmp_si_2exp (mpfr_srcptr b, long int i, mpfr_exp_t f)
 {
   int si;
+
+  MPFR_LOG_FUNC
+    (("x[%Pd]=%.*Rg i=%ld e=%" MPFR_EXP_FSPEC "d",
+      mpfr_get_prec (b), mpfr_log_prec, b, i, (mpfr_eexp_t) f),
+     ("", 0));
 
   si = i < 0 ? -1 : 1; /* sign of i */
   if (MPFR_UNLIKELY (MPFR_IS_SINGULAR (b)))

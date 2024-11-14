@@ -1,6 +1,6 @@
 /* mpfr_log_ui -- compute natural logarithm of an unsigned long
 
-Copyright 2014-2022 Free Software Foundation, Inc.
+Copyright 2014-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
@@ -33,7 +32,7 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
    truncate the rationals inside the algorithm, but then the error analysis
    should be redone. */
 
-/* Cf http://www.ginac.de/CLN/binsplit.pdf: the Taylor series of log(1+x)
+/* Cf https://www.ginac.de/CLN/binsplit.pdf - the Taylor series of log(1+x)
    up to order N for x=p/2^k is T/(B*Q).
    P[0] <- (-p)^(n2-n1) [with opposite sign when n1=1]
    q <- k*(n2-n1) [corresponding to Q[0] = 2^q]
@@ -98,6 +97,11 @@ mpfr_log_ui (mpfr_ptr x, unsigned long n, mpfr_rnd_t rnd_mode)
   MPFR_TMP_DECL(marker);
   MPFR_ZIV_DECL(loop);
   MPFR_SAVE_EXPO_DECL (expo);
+
+  MPFR_LOG_FUNC
+    (("n=%lu rnd=%d", n, rnd_mode),
+     ("y[%Pd]=%.*Rg inexact=%d",
+      mpfr_get_prec(x), mpfr_log_prec, x, inexact));
 
   if (n <= 2)
     {

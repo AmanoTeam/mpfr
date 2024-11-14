@@ -1,6 +1,6 @@
 /* Utilities for MPFR developers, not exported.
 
-Copyright 1999-2022 Free Software Foundation, Inc.
+Copyright 1999-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #ifndef __MPFR_CVERS_H__
 #define __MPFR_CVERS_H__
@@ -35,8 +34,6 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
    support/enable extensions like the ones seen under GNU/Linux.
    https://sympa.inria.fr/sympa/arc/mpfr/2011-02/msg00032.html */
 # define __MPFR_ICC(a,b,c) 0
-#elif defined(__ICC)
-# define __MPFR_ICC(a,b,c) (__ICC >= (a)*100+(b)*10+(c))
 #elif defined(__INTEL_COMPILER)
 # define __MPFR_ICC(a,b,c) (__INTEL_COMPILER >= (a)*100+(b)*10+(c))
 #else
@@ -44,6 +41,12 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 #endif
 
 #define __MPFR_MAJMIN(a,i) (((a) << 8) | (i))
+
+/* Instead of __MPFR_MAJMIN below, we could use code like
+     (__MAJ__ + (__MIN__ >= (i)) > (a))
+   as in the patch at
+   https://sympa.inria.fr/sympa/arc/mpfr/2022-12/msg00007.html
+*/
 
 #if defined(__GNUC__) && defined(__GNUC_MINOR__) && ! __MPFR_ICC(0,0,0)
 # define __MPFR_GNUC(a,i) \

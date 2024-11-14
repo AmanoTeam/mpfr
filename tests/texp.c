@@ -1,6 +1,6 @@
 /* Test file for mpfr_exp.
 
-Copyright 1999, 2001-2022 Free Software Foundation, Inc.
+Copyright 1999, 2001-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-test.h"
 
@@ -1058,6 +1057,8 @@ main (int argc, char *argv[])
 
   data_check ("data/exp", mpfr_exp, "mpfr_exp");
   bad_cases (mpfr_exp, mpfr_log, "mpfr_exp", 0, -256, 255, 4, 128, 800, 50);
+  ofuf_thresholds (mpfr_exp, mpfr_log, "mpfr_exp", 999, 999, 0, POSOF);
+  ofuf_thresholds (mpfr_exp, mpfr_log, "mpfr_exp", 999, 999, 0, POSUF);
 
   tests_end_mpfr ();
   return 0;

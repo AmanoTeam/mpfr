@@ -1,6 +1,6 @@
 /* mpfr_gamma -- gamma function
 
-Copyright 2001-2022 Free Software Foundation, Inc.
+Copyright 2001-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
@@ -122,8 +121,8 @@ mpfr_gamma (mpfr_ptr gamma, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   MPFR_ZIV_DECL (loop);
 
   MPFR_LOG_FUNC
-    (("x[%Pu]=%.*Rg rnd=%d", mpfr_get_prec (x), mpfr_log_prec, x, rnd_mode),
-     ("gamma[%Pu]=%.*Rg inexact=%d",
+    (("x[%Pd]=%.*Rg rnd=%d", mpfr_get_prec (x), mpfr_log_prec, x, rnd_mode),
+     ("gamma[%Pd]=%.*Rg inexact=%d",
       mpfr_get_prec (gamma), mpfr_log_prec, gamma, inex));
 
   /* Trivial cases */
@@ -172,7 +171,7 @@ mpfr_gamma (mpfr_ptr gamma, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
        n = MAX(MPFR_PREC(x), MPFR_PREC(gamma)).
      We know from "Bound on Runs of Zeros and Ones for Algebraic Functions",
      Proceedings of Arith15, T. Lang and J.-M. Muller, 2001, that the maximal
-     number of consecutive zeroes or ones after the round bit for 1/x is n-1
+     number of consecutive zeros or ones after the round bit for 1/x is n-1
      for an input x of n bits [this is an actually much older result!].
      But we need a more precise lower bound. Assume that 1/x is near a
      breakpoint y. From the definition of n, the input x fits on n bits
@@ -189,7 +188,7 @@ mpfr_gamma (mpfr_ptr gamma, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
           Now, assuming |gamma(x)-1/x| < 1, which is true for 0 < x <= 1,
           if 2^(-2n) ufp(y) >= 1, then gamma(x) and 1/x round in the same
           way, so that rounding 1/x gives the correct result and correct
-          (nonzero) ternary value.
+          (non-zero) ternary value.
           If x < 2^E, then y >= 2^(-E), thus ufp(y) >= 2^(-E).
           A sufficient condition is thus EXP(x) <= -2n, where
           n = MAX(MPFR_PREC(x), MPFR_PREC(gamma)).

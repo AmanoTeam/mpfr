@@ -1,6 +1,6 @@
 /* mpfr_rec_sqrt -- inverse square root
 
-Copyright 2008-2022 Free Software Foundation, Inc.
+Copyright 2008-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H /* for umul_ppmm */
 #include "mpfr-impl.h"
@@ -160,6 +159,10 @@ mpfr_mpn_rec_sqrt (mpfr_limb_ptr x, mpfr_prec_t p,
 };
   mp_size_t n = LIMB_SIZE(p);   /* number of limbs of X */
   mp_size_t an = LIMB_SIZE(ap); /* number of limbs of A */
+
+  MPFR_LOG_FUNC
+    (("p=%Pd ap=%Pd as=%d", p, ap, as),
+     ("", 0));
 
   /* A should be normalized */
   MPFR_ASSERTD((a[an - 1] & MPFR_LIMB_HIGHBIT) != 0);
@@ -463,10 +466,11 @@ mpfr_rec_sqrt (mpfr_ptr r, mpfr_srcptr u, mpfr_rnd_t rnd_mode)
   int s, cy, inex;
   mpfr_limb_ptr x;
   MPFR_TMP_DECL(marker);
+  MPFR_ZIV_DECL (loop);
 
   MPFR_LOG_FUNC
-    (("x[%Pu]=%.*Rg rnd=%d", mpfr_get_prec (u), mpfr_log_prec, u, rnd_mode),
-     ("y[%Pu]=%.*Rg inexact=%d", mpfr_get_prec (r), mpfr_log_prec, r, inex));
+    (("x[%Pd]=%.*Rg rnd=%d", mpfr_get_prec (u), mpfr_log_prec, u, rnd_mode),
+     ("y[%Pd]=%.*Rg inexact=%d", mpfr_get_prec (r), mpfr_log_prec, r, inex));
 
   /* special values */
   if (MPFR_UNLIKELY(MPFR_IS_SINGULAR(u)))
@@ -530,8 +534,10 @@ mpfr_rec_sqrt (mpfr_ptr r, mpfr_srcptr u, mpfr_rnd_t rnd_mode)
   wp = rp + 11;
   if (wp < rn * GMP_NUMB_BITS)
     wp = rn * GMP_NUMB_BITS;
+  MPFR_ZIV_INIT (loop, wp);
   for (;;)
     {
+      MPFR_LOG_MSG (("working precision = %Pd\n", wp));
       MPFR_TMP_MARK (marker);
       wn = LIMB_SIZE(wp);
       if (r == u || wn > rn) /* out of place, i.e., we cannot write to r */
@@ -561,8 +567,9 @@ mpfr_rec_sqrt (mpfr_ptr r, mpfr_srcptr u, mpfr_rnd_t rnd_mode)
         }
       MPFR_TMP_FREE(marker);
 
-      wp += GMP_NUMB_BITS;
+      MPFR_ZIV_NEXT (loop, wp);
     }
+  MPFR_ZIV_FREE (loop);
   cy = mpfr_round_raw (MPFR_MANT(r), x, wp, 0, rp, rnd_mode, &inex);
   MPFR_EXP(r) = - (MPFR_EXP(u) - 1 - s) / 2;
   if (MPFR_UNLIKELY(cy != 0))

@@ -1,6 +1,6 @@
 /* mpfr_agm -- arithmetic-geometric mean of two floating-point numbers
 
-Copyright 1999-2022 Free Software Foundation, Inc.
+Copyright 1999-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
@@ -39,10 +38,10 @@ mpfr_agm (mpfr_ptr r, mpfr_srcptr op2, mpfr_srcptr op1, mpfr_rnd_t rnd_mode)
   MPFR_SAVE_EXPO_DECL (expo);
 
   MPFR_LOG_FUNC
-    (("op2[%Pu]=%.*Rg op1[%Pu]=%.*Rg rnd=%d",
+    (("op2[%Pd]=%.*Rg op1[%Pd]=%.*Rg rnd=%d",
       mpfr_get_prec (op2), mpfr_log_prec, op2,
       mpfr_get_prec (op1), mpfr_log_prec, op1, rnd_mode),
-     ("r[%Pu]=%.*Rg inexact=%d",
+     ("r[%Pd]=%.*Rg inexact=%d",
       mpfr_get_prec (r), mpfr_log_prec, r, inexact));
 
   /* Deal with special values */

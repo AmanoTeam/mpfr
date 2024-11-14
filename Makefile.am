@@ -1,4 +1,8 @@
-# Copyright 2000-2022 Free Software Foundation, Inc.
+# Copyright 2000-2024 Free Software Foundation, Inc.
+# Contributed by the AriC and Caramba projects, INRIA.
+
+# This file is part of the GNU MPFR Library.
+
 # This Makefile.am is free software; the Free Software Foundation
 # gives unlimited permission to copy and/or distribute it,
 # with or without modifications, as long as this notice is preserved.
@@ -7,6 +11,15 @@
 # but WITHOUT ANY WARRANTY, to the extent permitted by law; without
 # even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE.
+
+
+# Warning! Do not add rules for DISTFILES files (such as ChangeLog),
+# because GNU Automake will create a "distdir-am: $(DISTFILES)" rule,
+# which could regenerate such files, and this is not allowed as this
+# changes files from the source directory; for this reason, this
+# makes "make distcheck" fail. To update the ChangeLog file, use
+# "make update-changelog" or run the tools/update-changelog script
+# directly.
 
 
 # The ".POSIX" line is needed in particular for GNU "make", so that
@@ -35,15 +48,16 @@ nobase_dist_doc_DATA = AUTHORS BUGS COPYING COPYING.LESSER NEWS TODO \
   examples/rndo-add.c examples/sample.c examples/threads.c \
   examples/version.c
 
-# Note: Even though tarballs do not normally contain a .git directory,
-# we need to distribute version-ext.sh to avoid a failure in case a
-# tarball is tested from a Git directory (this script is executed by
-# tests/Makefile.am in case of a Git working tree), which happens with
-# "make distcheck", for instance.
+# Note: The version-ext.sh script is normally no longer needed because
+# the output_info code in tests/Makefile.am now executes this script
+# only if $(top_srcdir)/.git exists and is readable, but this should
+# not occur in a tarball (built based on EXTRA_DIST), unless someone
+# has modified it for some reason. But since this script is small, we
+# distribute it just in case it would be used.
 EXTRA_DIST = PATCHES VERSION doc/README.dev doc/check-typography doc/mini-gmp \
   tools/check_mparam.c tools/ck-clz_tab tools/ck-copyright-notice \
-  tools/ck-mparam tools/ck-news tools/ck-version-info tools/get_patches.sh \
-  version-ext.sh $(DATAFILES)
+  tools/ck-mparam tools/ck-news tools/ck-proto tools/ck-version-info \
+  tools/get_patches.sh version-ext.sh $(DATAFILES)
 
 bench:
 	cd tools/bench && $(MAKE) $(AM_MAKEFLAGS) bench
@@ -63,6 +77,7 @@ dist-hook:
 	cd $(srcdir) && tools/ck-version-info
 	cd $(srcdir) && tools/ck-copyright-notice
 	cd $(srcdir) && tools/ck-news
+	cd $(srcdir) && tools/ck-proto
 	cd $(srcdir) && tools/ck-clz_tab
 	$(srcdir)/tools/ck-mparam
 	cd $(srcdir)/doc && ./check-typography
@@ -78,4 +93,7 @@ check-gmp-symbols:
 check-exported-symbols:
 	cd src && $(MAKE) check-exported-symbols
 
-.PHONY: check-gmp-symbols check-exported-symbols
+update-changelog:
+	cd $(srcdir) && tools/update-changelog
+
+.PHONY: check-gmp-symbols check-exported-symbols update-changelog

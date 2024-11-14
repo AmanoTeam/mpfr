@@ -1,7 +1,7 @@
 /* mpfr_y0, mpfr_y1, mpfr_yn -- Bessel functions of 2nd kind, integer order.
    https://pubs.opengroup.org/onlinepubs/9699919799/functions/y0.html
 
-Copyright 2007-2022 Free Software Foundation, Inc.
+Copyright 2007-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -17,9 +17,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
@@ -154,8 +153,8 @@ mpfr_yn (mpfr_ptr res, long n, mpfr_srcptr z, mpfr_rnd_t r)
   MPFR_SAVE_EXPO_DECL (expo);
 
   MPFR_LOG_FUNC
-    (("n=%ld x[%Pu]=%.*Rg rnd=%d", n, mpfr_get_prec (z), mpfr_log_prec, z, r),
-     ("y[%Pu]=%.*Rg inexact=%d", mpfr_get_prec (res), mpfr_log_prec, res, inex));
+    (("n=%ld x[%Pd]=%.*Rg rnd=%d", n, mpfr_get_prec (z), mpfr_log_prec, z, r),
+     ("y[%Pd]=%.*Rg inexact=%d", mpfr_get_prec (res), mpfr_log_prec, res, inex));
 
   absn = SAFE_ABS (unsigned long, n);
 

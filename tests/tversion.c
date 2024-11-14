@@ -1,6 +1,6 @@
 /* Test file for mpfr_version.
 
-Copyright 2004-2022 Free Software Foundation, Inc.
+Copyright 2004-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #include <errno.h>
 
@@ -70,8 +69,8 @@ main (void)
   /************************* Compiler information **************************/
 
   /* TODO: We may want to output info for non-GNUC-compat compilers too. See:
-   * http://sourceforge.net/p/predef/wiki/Compilers/
-   * http://nadeausoftware.com/articles/2012/10/c_c_tip_how_detect_compiler_name_and_version_using_compiler_predefined_macros
+   * https://sourceforge.net/p/predef/wiki/Compilers/
+   * https://web.archive.org/web/20191011050717/http://nadeausoftware.com/articles/2012/10/c_c_tip_how_detect_compiler_name_and_version_using_compiler_predefined_macros
    *
    * For ICC, do not check the __ICC macro as it is obsolete and not always
    * defined (in particular, on MS Windows).
@@ -135,20 +134,9 @@ main (void)
           );
 #endif
 
-#if defined(__ICC) || defined(__INTEL_COMPILER)
-  (puts) ("[tversion] Intel compiler: __ICC = "
-#if defined(__ICC)
-          MAKE_STR(__ICC)
-#else
-          "undef"
-#endif
-          ", __INTEL_COMPILER = "
 #if defined(__INTEL_COMPILER)
-          MAKE_STR(__INTEL_COMPILER)
-#else
-          "undef"
-#endif
-          );
+  (puts) ("[tversion] Intel compiler: __INTEL_COMPILER = "
+          MAKE_STR(__INTEL_COMPILER));
 #endif
 
 #if defined(_WIN32) || defined(_MSC_VER)
@@ -384,14 +372,6 @@ main (void)
           "yes"
 #else
           "?"
-#endif
-          );
-
-  (puts) ("[tversion] _mulx_u64 = "
-#if defined(HAVE_MULX_U64)
-          "yes"
-#else
-          "no"
 #endif
           );
 

@@ -1,6 +1,6 @@
 /* mpfr_sub1 -- internal function to perform a "real" subtraction
 
-Copyright 2001-2022 Free Software Foundation, Inc.
+Copyright 2001-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,11 +16,14 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-impl.h"
+
+/* Warning! Because of possible aliases (e.g. from mpfr_fms), for the
+   detection of reused arguments, do comparisons on the pointers to the
+   significands instead of pointers to the MPFR numbers. */
 
 /* compute sign(b) * (|b| - |c|), with |b| > |c|, diff_exp = EXP(b) - EXP(c)
    Returns 0 iff result is exact,
@@ -43,6 +46,12 @@ mpfr_sub1 (mpfr_ptr a, mpfr_srcptr b, mpfr_srcptr c, mpfr_rnd_t rnd_mode)
                       negative if low(b) < low(c), positive if low(b) > low(c) */
   int sh, k;
   MPFR_TMP_DECL(marker);
+
+  MPFR_LOG_FUNC
+    (("b[%Pd]=%.*Rg c[%Pd]=%.*Rg rnd=%d",
+      mpfr_get_prec (b), mpfr_log_prec, b,
+      mpfr_get_prec (c), mpfr_log_prec, c, rnd_mode),
+     ("a[%Pd]=%.*Rg", mpfr_get_prec (a), mpfr_log_prec, a));
 
   MPFR_TMP_MARK(marker);
   ap = MPFR_MANT(a);
@@ -267,7 +276,7 @@ mpfr_sub1 (mpfr_ptr a, mpfr_srcptr b, mpfr_srcptr c, mpfr_rnd_t rnd_mode)
           MPN_COPY(cp, ap, cn);
         }
     }
- else
+  else
     {
       cp = MPFR_TMP_LIMBS_ALLOC (cn + 1);
       cp[0] = mpn_rshift (cp + 1, MPFR_MANT(c), cn++, shift_c);
@@ -294,7 +303,7 @@ mpfr_sub1 (mpfr_ptr a, mpfr_srcptr b, mpfr_srcptr c, mpfr_rnd_t rnd_mode)
      by the multiplication code), then the computation of cancel2 could
      be simplified to
        cancel2 = (cancel - (diff_exp - shift_c)) / GMP_NUMB_BITS;
-     because cancel, diff_exp and shift_c are all nonnegative and
+     because cancel, diff_exp and shift_c are all non-negative and
      these variables are signed. */
 
   MPFR_ASSERTD (cancel >= 0);

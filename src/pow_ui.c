@@ -1,6 +1,6 @@
 /* mpfr_pow_ui -- compute the power of a floating-point by a machine integer
 
-Copyright 1999-2022 Free Software Foundation, Inc.
+Copyright 1999-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
@@ -44,9 +43,9 @@ POW_U (mpfr_ptr y, mpfr_srcptr x, UTYPE n, mpfr_rnd_t rnd)
   MPFR_BLOCK_DECL (flags);
 
   MPFR_LOG_FUNC
-    (("x[%Pu]=%.*Rg n=%" FSPEC "u rnd=%d",
+    (("x[%Pd]=%.*Rg n=%" FSPEC "u rnd=%d",
       mpfr_get_prec (x), mpfr_log_prec, x, n, rnd),
-     ("y[%Pu]=%.*Rg inexact=%d",
+     ("y[%Pd]=%.*Rg inexact=%d",
       mpfr_get_prec (y), mpfr_log_prec, y, inexact));
 
   /* x^0 = 1 for any x, even a NaN */
@@ -99,7 +98,7 @@ POW_U (mpfr_ptr y, mpfr_srcptr x, UTYPE n, mpfr_rnd_t rnd)
     ;
   /* 2^(nlen-1) <= n < 2^nlen */
 
-  /* setup initial precision */
+  /* set up initial precision */
   prec = MPFR_PREC (y) + 3 + GMP_NUMB_BITS
     + MPFR_INT_CEIL_LOG2 (MPFR_PREC (y));
   if (prec <= nlen)

@@ -1,6 +1,6 @@
 /* mpfr_set_prec -- reset the precision of a floating-point number
 
-Copyright 1999, 2001-2002, 2004, 2006-2022 Free Software Foundation, Inc.
+Copyright 1999, 2001-2002, 2004, 2006-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-impl.h"
 
@@ -27,7 +26,7 @@ mpfr_set_prec (mpfr_ptr x, mpfr_prec_t p)
 {
   mp_size_t xsize, xoldsize;
 
-  MPFR_LOG_MSG (("prec=%Pu\n", p));
+  MPFR_LOG_MSG (("prec=%Pd\n", p));
 
   /* first, check if p is correct */
   MPFR_ASSERTN (MPFR_PREC_COND (p));

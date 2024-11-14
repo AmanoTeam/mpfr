@@ -1,6 +1,6 @@
 /* MPFR Logging functions.
 
-Copyright 2005-2022 Free Software Foundation, Inc.
+Copyright 2005-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-impl.h"
 
@@ -35,11 +34,10 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 
 FILE *mpfr_log_file;
 int   mpfr_log_flush;
-int   mpfr_log_type;
 int   mpfr_log_level;
 int   mpfr_log_current;
-int   mpfr_log_worstcase_limit;
 mpfr_prec_t mpfr_log_prec;
+unsigned int mpfr_log_type;
 
 static void mpfr_log_begin (void) __attribute__((constructor));
 
@@ -49,7 +47,6 @@ static void
 mpfr_log_begin (void)
 {
   const char *var;
-  time_t tt;
 
   /* Grab some information */
   var = getenv ("MPFR_LOG_LEVEL");
@@ -65,19 +62,20 @@ mpfr_log_begin (void)
     mpfr_log_type |= MPFR_LOG_INPUT_F;
   if (getenv ("MPFR_LOG_OUTPUT") != NULL)
     mpfr_log_type |= MPFR_LOG_OUTPUT_F;
-  if (getenv ("MPFR_LOG_TIME") != NULL)
-    mpfr_log_type |= MPFR_LOG_TIME_F;
   if (getenv ("MPFR_LOG_INTERNAL") != NULL)
     mpfr_log_type |= MPFR_LOG_INTERNAL_F;
+  if (getenv ("MPFR_LOG_TIME") != NULL)
+    mpfr_log_type |= MPFR_LOG_TIME_F;
+  if (getenv ("MPFR_LOG_ZIV") != NULL)
+    mpfr_log_type |= MPFR_LOG_ZIV_F;
   if (getenv ("MPFR_LOG_MSG") != NULL)
     mpfr_log_type |= MPFR_LOG_MSG_F;
-  if (getenv ("MPFR_LOG_ZIV") != NULL)
-    mpfr_log_type |= MPFR_LOG_BADCASE_F;
   if (getenv ("MPFR_LOG_STAT") != NULL)
     mpfr_log_type |= MPFR_LOG_STAT_F;
+  if (getenv ("MPFR_LOG_ALLOCA") != NULL)
+    mpfr_log_type |= MPFR_LOG_ALLOCA_F;
   if (getenv ("MPFR_LOG_ALL") != NULL)
-    mpfr_log_type = MPFR_LOG_INPUT_F|MPFR_LOG_OUTPUT_F|MPFR_LOG_TIME_F
-      |MPFR_LOG_INTERNAL_F|MPFR_LOG_MSG_F|MPFR_LOG_BADCASE_F|MPFR_LOG_STAT_F;
+    mpfr_log_type = (unsigned int) -1;
 
   mpfr_log_flush = getenv ("MPFR_LOG_FLUSH") != NULL;
 
@@ -87,6 +85,11 @@ mpfr_log_begin (void)
     var = "mpfr.log";
   if (mpfr_log_type != 0)
     {
+      time_t tt;
+      struct tm *tm_p;
+      char s[32];  /* a bit more than needed, just in case */
+      size_t r;
+
       mpfr_log_file = fopen (var, "w");
       if (mpfr_log_file == NULL)
         {
@@ -94,7 +97,11 @@ mpfr_log_begin (void)
           abort ();
         }
       time (&tt);
-      fprintf (mpfr_log_file, "MPFR LOG FILE %s\n", ctime (&tt));
+      tm_p = localtime (&tt);
+      r = strftime (s, sizeof s, "%Y-%m-%d %H:%M:%S", tm_p);
+
+      fprintf (mpfr_log_file, "MPFR LOG FILE %s\n",
+               r != 0 ? s : "[strftime failed]");
       fflush (mpfr_log_file);  /* always done */
     }
 }

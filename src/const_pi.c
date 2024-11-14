@@ -1,6 +1,6 @@
 /* mpfr_const_pi -- compute Pi
 
-Copyright 1999-2022 Free Software Foundation, Inc.
+Copyright 1999-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-impl.h"
 
@@ -48,14 +47,15 @@ int
 mpfr_const_pi_internal (mpfr_ptr x, mpfr_rnd_t rnd_mode)
 {
   mpfr_t a, A, B, D, S;
-  mpfr_prec_t px, p, cancel, k, kmax;
+  mpfr_prec_t px, p, k, kmax;
+  mpfr_exp_t cancel;
   MPFR_GROUP_DECL (group);
   MPFR_ZIV_DECL (loop);
   int inex;
 
   MPFR_LOG_FUNC
     (("rnd_mode=%d", rnd_mode),
-     ("x[%Pu]=%.*Rg inexact=%d", mpfr_get_prec(x), mpfr_log_prec, x, inex));
+     ("x[%Pd]=%.*Rg inexact=%d", mpfr_get_prec(x), mpfr_log_prec, x, inex));
 
   px = MPFR_PREC (x);
 
@@ -90,7 +90,7 @@ mpfr_const_pi_internal (mpfr_ptr x, mpfr_rnd_t rnd_mode)
         mpfr_mul_2ui (Bp, Bp, 1, MPFR_RNDN); /* -1/2 <= Bp <= 3/2 */
         mpfr_sub (S, Ap, Bp, MPFR_RNDN);
         MPFR_ASSERTD (mpfr_cmp_ui (S, 1) < 0);
-        cancel = MPFR_NOTZERO (S) ? (mpfr_uexp_t) -mpfr_get_exp(S) : p;
+        cancel = MPFR_NOTZERO (S) ? - mpfr_get_exp (S) : p;
         /* MPFR_ASSERTN (cancel >= px || cancel >= 9 * (1 << k) - 4); */
         mpfr_mul_2ui (S, S, k, MPFR_RNDN);
         mpfr_sub (D, D, S, MPFR_RNDN);

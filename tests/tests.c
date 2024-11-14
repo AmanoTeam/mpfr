@@ -1,6 +1,6 @@
 /* Miscellaneous support for test programs.
 
-Copyright 2001-2022 Free Software Foundation, Inc.
+Copyright 2001-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 /* NOTE. Some tests on macro definitions are already done in src/init2.c
  * as static assertions (in general). This allows one to get a failure at
@@ -67,7 +66,7 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 #include "mpfr-test.h"
 
 #ifdef MPFR_FPU_PREC
-/* This option allows to test MPFR on x86 processors when the FPU
+/* This option allows one to test MPFR on x86 processors when the FPU
  * rounding precision has been changed. As MPFR is a library, this can
  * occur in practice, either by the calling software or by some other
  * library or plug-in used by the calling software. This option is
@@ -109,6 +108,7 @@ char             mpfr_rands_initialized = 0;
 gmp_randstate_t  mpfr_rands;
 
 char *locale = NULL;
+int tests_locale_enabled = 1;
 
 /* Programs that test GMP's mp_set_memory_functions() need to set
    tests_memory_disabled = 2 before calling tests_start_mpfr(). */
@@ -273,10 +273,11 @@ tests_start_mpfr (void)
   test_version ();
 
 #if defined HAVE_LOCALE_H && defined HAVE_SETLOCALE
-  /* Added on 2005-07-09. This allows to test MPFR under various
+  /* Added on 2005-07-09. This allows one to test MPFR under various
      locales. New bugs will probably be found, in particular with
      LC_ALL="tr_TR.ISO8859-9" because of the i/I character... */
-  locale = setlocale (LC_ALL, "");
+  if (tests_locale_enabled)
+    locale = setlocale (LC_ALL, "");
 #endif
 
 #ifdef MPFR_FPU_PREC
@@ -1048,14 +1049,14 @@ bad_cases (int (*fct)(FLIST), int (*inv)(FLIST), const char *name,
       tests_default_random (y, pos, emin, emax, 0);
       if (dbg)
         {
-          printf ("bad_cases: yprec =%4ld, y = ", (long) py);
+          printf ("bad_cases: yprec =%6ld, y = ", (long) py);
           mpfr_out_str (stdout, 16, 0, y, MPFR_RNDN);
           printf ("\n");
         }
       px = py + psup;
       mpfr_set_prec (x, px);
       if (dbg)
-        printf ("bad_cases: xprec =%4ld\n", (long) px);
+        printf ("bad_cases: xprec =%6ld\n", (long) px);
       mpfr_clear_flags ();
       inex_inv = inv (x, y, MPFR_RNDN);
       if (mpfr_nanflag_p () || mpfr_overflow_p () || mpfr_underflow_p ())
@@ -1086,10 +1087,9 @@ bad_cases (int (*fct)(FLIST), int (*inv)(FLIST), const char *name,
                 }
               if (inex_inv)
                 {
-                  printf ("bad_cases: f exact while f^(-1) inexact,\n"
-                          "due to a poor choice of the parameters.\n");
-                  exit (1);
-                  /* alternatively, goto next_i */
+                  if (dbg)
+                    printf ("bad_cases: f exact while f^(-1) inexact\n");
+                  goto does_not_match;
                 }
               inex = 0;
               break;
@@ -1112,6 +1112,10 @@ bad_cases (int (*fct)(FLIST), int (*inv)(FLIST), const char *name,
           if (mpfr_nanflag_p () || mpfr_overflow_p () || mpfr_underflow_p ()
               || ! mpfr_equal_p (z, y))
             {
+              /* This may occur when psup is not large enough: evaluating
+                 x = (f^(-1))(y) then z = f(x) may not give back y if the
+                 precision of x is too small. */
+            does_not_match:
               if (dbg)
                 {
                   printf ("bad_cases: inverse doesn't match for %s\ny = ",
@@ -1164,7 +1168,7 @@ bad_cases (int (*fct)(FLIST), int (*inv)(FLIST), const char *name,
         }
       if (dbg)
         {
-          printf ("bad_cases: yprec =%4ld, y = ", (long) py);
+          printf ("bad_cases: yprec =%6ld, y = ", (long) py);
           mpfr_out_str (stdout, 16, 0, y, MPFR_RNDN);
           printf ("\n");
         }
@@ -1191,6 +1195,241 @@ bad_cases (int (*fct)(FLIST), int (*inv)(FLIST), const char *name,
     }
 }
 
+/* Check the behavior around the overflow/underflow thresholds by using
+   the inverse function (argument inv).
+   Argument name is the name of the tested function (for messages).
+   Arguments pxmax and pymax are the maximum precisions for x and y
+   when considering y = fct(x) or x = inv(y). Precisions are tested
+   starting at MPFR_PREC_MIN. If pxmax > 64 and pymax > 64, then
+   pxmax and pymax are overridden by the MPFR_TESTS_OFUF_PMAX
+   environment variable (when defined), and precisions are tested
+   in geometric progression. Otherwise all precisions are tested.
+   If the function is locally increasing, use decr = 0.
+   If the function is locally decreasing, use decr = 1.
+   Argument threshold is the threshold type: positive or negative,
+   overflow or underflow (see the beginning of the code). Macros are
+   defined in mpfr-test.h: POSOF, POSUF, NEGOF, NEGUF.
+   Note: Unfortunately, there are some interesting arguments for the
+   inverse function that are outside the extended exponent range,
+   e.g. 2^(emax+1) and 2^(emin-1). Thus the current test is limited
+   (though it should be able to detect the most problematic bugs).
+   There would be 3 solutions:
+     1. Have a test build where the MPFR_SAVE_EXPO_MARK macro would use
+        global variables instead of MPFR_EMIN_MIN and MPFR_EMAX_MAX. To
+        generate the testcases, these global variables could temporarily
+        be set to MPFR_EMIN_MIN-1 and MPFR_EMAX_MAX+1 respectively, but
+        with no guarantee that this will work. Alternatively, they could
+        be set to MPFR_EMIN_MIN+1 and MPFR_EMAX_MAX-1 respectively (or
+        powers of 2) for the test of the library, but again, there may
+        be fake failures (not a real issue for the developers).
+     2. Generate testcases on a 64-bit build for a 32-bit target (where
+        the extended exponent range is smaller). Then copy these testcases
+        in the testsuite (they will be significant only on 32-bit hosts,
+        but bug fixes could benefit all hosts).
+     3. Determine the expected results manually, with maths.
+   TODO: It could be a good idea to introduce some randomness in the tested
+   precisions, since in case of a small mistake in the error analysis of
+   the functions, it is possible that the test succeeds most of the time
+   and fails in some cases. But first, a study needs to be done on the pow
+   bugs present before 2023-03-02, in order to make sure to do the right
+   thing; this is a good example, as with *all* precisions from 1 to 128,
+   a failure occurs only for (xprec,yprec) = (127,50), (128,47), (128,50)
+   [positive overflow] and (63,1) [positive underflow], i.e. about 0.01%
+   of the cases.
+*/
+/* FIXME: Since underflow is after rounding, the test does not seem to
+   be correct in some cases of MPFR_RNDN. Add comments to describe all
+   the possible cases and fix the code. For underflow, consistency
+   checks could be added when testing various precisions, as the true
+   underflow threshold increases with the precision.
+   Also check whether there isn't the same kind of issue for overflow. */
+void
+ofuf_thresholds (int (*fct)(FLIST), int (*inv)(FLIST), const char *name,
+                 mpfr_prec_t pxmax, mpfr_prec_t pymax,
+                 int decr, unsigned int threshold)
+{
+  char *dbgenv, *pmaxenv;
+  mpfr_exp_t old_emin, old_emax;
+  mpfr_prec_t px, py;
+  mpfr_t t;
+  int neg, ufl, nxu, dbg, skip;
+  mpfr_flags_t eflags;
+  int always_exact = 1;
+
+  neg = threshold >> 1;  /* 0: positive, 1: negative */
+  ufl = threshold & 1;   /* 0: overflow, 1: underflow */
+  nxu = neg ^ ufl;
+  eflags = (ufl ? MPFR_FLAGS_UNDERFLOW : MPFR_FLAGS_OVERFLOW) |
+    MPFR_FLAGS_INEXACT;
+
+  old_emin = mpfr_get_emin ();
+  old_emax = mpfr_get_emax ();
+
+  dbgenv = getenv ("MPFR_DEBUG_OFUF");
+  dbg = dbgenv != 0 ? atoi (dbgenv) : 0;  /* debug level */
+  if (dbg)
+    printf ("ofuf_thresholds: %s with %s %s\n", name,
+            neg ? "negative" : "positive", ufl ? "underflow" : "overflow");
+
+  skip = pxmax > 64 && pymax > 64;
+
+  /* Override pxmax and pymax by MPFR_TESTS_OFUF_PMAX, but not when
+     testing all precisions, as this could take too much time. */
+  pmaxenv = getenv ("MPFR_TESTS_OFUF_PMAX");
+  if (skip && pmaxenv != 0)
+    pxmax = pymax = atoi (pmaxenv);
+
+  /* Extend the exponent range to the maximum since this is what is
+     generally done in the implementation.
+     Note: This test assumes that the minimum and maximum positive numbers
+     correspond to inexact values, which is normally the case for the tested
+     functions. */
+  set_emin (MPFR_EMIN_MIN);
+  set_emax (MPFR_EMAX_MAX);
+
+  mpfr_init2 (t, MPFR_PREC_MIN);
+  MPFR_SIGN (t) = neg ? MPFR_SIGN_NEG : MPFR_SIGN_POS;
+
+  if (ufl)
+    {
+      /* The underflow threshold does not depend on the precision. */
+      mpfr_setmin (t, mpfr_get_emin ());
+    }
+
+  for (px = MPFR_PREC_MIN; px <= pxmax; px += skip * (px >> 2) + 1)
+    {
+      mpfr_t x[2];
+
+      mpfr_inits2 (px, x[0], x[1], (mpfr_ptr) 0);
+
+      for (py = MPFR_PREC_MIN; py <= pymax; py += skip * (py >> 2) + 1)
+        {
+          mpfr_t y;
+          int inex, i, r;
+
+          if (!ufl)
+            {
+              mpfr_set_prec (t, py);
+              mpfr_setmax (t, mpfr_get_emax ());
+            }
+
+          if (dbg)
+            {
+              printf ("ofuf_thresholds: xprec=%lu, yprec=%lu\n"
+                      "ofuf_thresholds: t = ",
+                      (unsigned long) px, (unsigned long) py);
+              mpfr_dump (t);
+            }
+
+          inex = inv (x[0], t, MPFR_RNDD);
+          MPFR_ASSERTN (inex <= 0);
+
+          if (dbg)
+            {
+              printf ("ofuf_thresholds: inex = %d, xd = ", VSIGN (inex));
+              mpfr_dump (x[0]);
+            }
+
+          /* The test is valid only on an inexact threshold. */
+          if (inex == 0)
+            continue;
+
+          /* This means that the threshold is not always exact. */
+          always_exact = 0;
+
+          inex = mpfr_set (x[1], x[0], MPFR_RNDN);
+          MPFR_ASSERTN (inex == 0);
+          mpfr_nextabove (x[1]);
+          /* x[0] < inv(t) < x[1] */
+          if (decr)
+            mpfr_swap (x[0], x[1]);
+          /* fct(x[0]) < t < fct(x[1]) */
+
+          mpfr_init2 (y, py);
+
+          for (i = 0; i <= 1; i++)
+            RND_LOOP_NO_RNDF (r)
+              {
+                const char *err = "";
+                mpfr_rnd_t rnd = (mpfr_rnd_t) r;
+                mpfr_flags_t flags;
+                int sign;
+
+                if (dbg)
+                  {
+                    printf ("ofuf_thresholds: xprec=%lu, yprec=%lu, rnd=%s\n"
+                            "ofuf_thresholds: x = ",
+                            (unsigned long) px, (unsigned long) py,
+                            mpfr_print_rnd_mode ((mpfr_rnd_t) r));
+                    mpfr_dump (x[i]);
+                  }
+
+                mpfr_clear_flags ();
+                inex = fct (y, x[i], rnd);
+                flags = __gmpfr_flags;
+                sign = MPFR_SIGN (y);
+
+                /* Note: In the underflow test, if fct(x[i]) is less than
+                   the threshold in absolute value, the result can be either
+                   an underflow (inex != 0) or an exact 0 (inex == 0). */
+
+                if ((inex != 0) ^ (flags != 0))
+                  err = "inex inconsistency";
+                else if (MPFR_IS_LIKE_RNDD (rnd, sign) && inex > 0)
+                  err = "inex should not be positive";
+                else if (MPFR_IS_LIKE_RNDU (rnd, sign) && inex < 0)
+                  err = "inex should not be negative";
+                else if (!(nxu ^ i) &&
+                         (flags | MPFR_FLAGS_INEXACT) != MPFR_FLAGS_INEXACT)
+                  err = "expected no exceptions (except inexact)";
+                else if ((nxu ^ i) &&
+                         (nxu ? inex <= 0 : inex >= 0) &&
+                         !(ufl && inex == 0) /* skip case "exact 0" */ &&
+                         flags != eflags)
+                  err = ufl ? "expected underflow" : "expected overflow";
+                else
+                  continue;
+
+                /* failure */
+                printf ("ofuf_thresholds: error for %s with %s %s,\n"
+                        "xprec=%lu, yprec=%lu, rnd=%s\n", name,
+                        neg ? "negative" : "positive",
+                        ufl ? "underflow" : "overflow",
+                        (unsigned long) px, (unsigned long) py,
+                        mpfr_print_rnd_mode ((mpfr_rnd_t) r));
+                printf ("emin=%" MPFR_EXP_FSPEC "d "
+                        "emax=%" MPFR_EXP_FSPEC "d\n",
+                        (mpfr_eexp_t) mpfr_get_emin (),
+                        (mpfr_eexp_t) mpfr_get_emax ());
+                printf ("x = ");
+                mpfr_dump (x[i]);
+                printf ("Got ");
+                mpfr_dump (y);
+                printf ("with inex = %d and flags =", inex);
+                flags_out (flags);
+                printf ("%s\n", err);
+                exit (1);
+              }
+
+          mpfr_clear (y);
+        }
+
+      mpfr_clears (x[0], x[1], (mpfr_ptr) 0);
+    }
+
+  mpfr_clear (t);
+  set_emin (old_emin);
+  set_emax (old_emax);
+
+  if (always_exact)
+    {
+      printf ("ofuf_thresholds: %s with %s %s is always exact\n", name,
+              neg ? "negative" : "positive", ufl ? "underflow" : "overflow");
+      printf ("(remove this test if is this really the case).\n");
+      exit (1);
+    }
+}
+
 void
 flags_out (unsigned int flags)
 {
@@ -1206,6 +1445,8 @@ flags_out (unsigned int flags)
     none = 0, printf (" inexact");
   if (flags & MPFR_FLAGS_ERANGE)
     none = 0, printf (" erange");
+  if (flags & MPFR_FLAGS_DIVBY0)
+    none = 0, printf (" divide-by-zero");
   if (none)
     printf (" none");
   printf (" (%u)\n", flags);

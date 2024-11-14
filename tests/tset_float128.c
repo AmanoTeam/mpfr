@@ -1,6 +1,6 @@
 /* Test file for mpfr_set_float128 and mpfr_get_float128.
 
-Copyright 2012-2022 Free Software Foundation, Inc.
+Copyright 2012-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 /* Needed due to the test on MPFR_WANT_FLOAT128 */
 #ifdef HAVE_CONFIG_H
@@ -45,6 +44,8 @@ check_special (void)
   if (! mpfr_nan_p (x))
     {
       printf ("Error in mpfr_set_float128(x, NaN)\n");
+      printf ("got ");
+      mpfr_dump (x);
       exit (1);
     }
   f = mpfr_get_float128 (x, MPFR_RNDN);
@@ -61,12 +62,15 @@ check_special (void)
   if (! mpfr_inf_p (x) || MPFR_IS_NEG (x))
     {
       printf ("Error in mpfr_set_float128(x, +Inf)\n");
+      printf ("got ");
+      mpfr_dump (x);
       exit (1);
     }
   f = mpfr_get_float128 (x, MPFR_RNDN);
   if (f != MPFR_DBL_INFP)
     {
       printf ("Error in mpfr_get_float128(+Inf)\n");
+      printf ("got %f\n", (double) f);
       exit (1);
     }
 
@@ -76,12 +80,15 @@ check_special (void)
   if (! mpfr_inf_p (x) || MPFR_IS_POS (x))
     {
       printf ("Error in mpfr_set_float128(x, -Inf)\n");
+      printf ("got ");
+      mpfr_dump (x);
       exit (1);
     }
   f = mpfr_get_float128 (x, MPFR_RNDN);
   if (f != MPFR_DBL_INFM)
     {
       printf ("Error in mpfr_get_float128(-Inf)\n");
+      printf ("got %f\n", (double) f);
       exit (1);
     }
 #endif
@@ -92,18 +99,22 @@ check_special (void)
   if (! mpfr_zero_p (x) || MPFR_IS_NEG (x))
     {
       printf ("Error in mpfr_set_float128(x, +0)\n");
+      printf ("got ");
+      mpfr_dump (x);
       exit (1);
     }
   f = mpfr_get_float128 (x, MPFR_RNDN);
   if (f != 0.0)  /* the sign is not checked */
     {
       printf ("Error in mpfr_get_float128(+0.0)\n");
+      printf ("got %f\n", (double) f);
       exit (1);
     }
 #if !defined(MPFR_ERRDIVZERO) && defined(HAVE_SIGNEDZ)
   if (1 / f != MPFR_DBL_INFP)  /* check the sign */
     {
       printf ("Error in mpfr_get_float128(+0.0)\n");
+      printf ("got %f\n", (double) f);
       exit (1);
     }
 #endif
@@ -114,12 +125,16 @@ check_special (void)
   if (! mpfr_zero_p (x))
     {
       printf ("Error in mpfr_set_float128(x, -0)\n");
+      printf ("got ");
+      mpfr_dump (x);
       exit (1);
     }
 #if defined(HAVE_SIGNEDZ)
   if (MPFR_IS_POS (x))
     {
       printf ("Error in mpfr_set_float128(x, -0)\n");
+      printf ("got ");
+      mpfr_dump (x);
       exit (1);
     }
 #endif
@@ -127,12 +142,14 @@ check_special (void)
   if (f != -0.0)  /* the sign is not checked */
     {
       printf ("Error in mpfr_get_float128(-0.0)\n");
+      printf ("got %f\n", (double) f);
       exit (1);
     }
 #if !defined(MPFR_ERRDIVZERO) && defined(HAVE_SIGNEDZ)
   if (1 / f != MPFR_DBL_INFM)  /* check the sign */
     {
       printf ("Error in mpfr_get_float128(-0.0)\n");
+      printf ("got %f\n", (double) f);
       exit (1);
     }
 #endif

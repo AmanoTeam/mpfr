@@ -1,6 +1,6 @@
 /* mpfr_ai -- Airy function Ai
 
-Copyright 2010-2022 Free Software Foundation, Inc.
+Copyright 2010-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
@@ -70,8 +69,8 @@ mpfr_ai1 (mpfr_ptr y, mpfr_srcptr x, mpfr_rnd_t rnd)
 
   /* Logging */
   MPFR_LOG_FUNC (
-    ("x[%Pu]=%.*Rg rnd=%d", mpfr_get_prec (x), mpfr_log_prec, x, rnd),
-    ("y[%Pu]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y) );
+    ("x[%Pd]=%.*Rg rnd=%d", mpfr_get_prec (x), mpfr_log_prec, x, rnd),
+    ("y[%Pd]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y) );
 
   /* Save current exponents range */
   MPFR_SAVE_EXPO_MARK (expo);
@@ -198,7 +197,7 @@ mpfr_ai1 (mpfr_ptr y, mpfr_srcptr x, mpfr_rnd_t rnd)
   /* ZIV loop */
   for (;;)
     {
-      MPFR_LOG_MSG (("Working precision: %Pu\n", wprec));
+      MPFR_LOG_MSG (("Working precision: %Pd\n", wprec));
       mpfr_set_prec (ti, wprec);
       mpfr_set_prec (tip1, wprec);
       mpfr_set_prec (x3, wprec);
@@ -257,8 +256,8 @@ mpfr_ai1 (mpfr_ptr y, mpfr_srcptr x, mpfr_rnd_t rnd)
 
       /* err is the number of bits lost due to the evaluation error */
       /* wprec-(prec+1): number of bits lost due to the approximation error */
-      MPFR_LOG_MSG (("Roundoff error: %Pu\n", err));
-      MPFR_LOG_MSG (("Approxim error: %Pu\n", wprec-prec-1));
+      MPFR_LOG_MSG (("Roundoff error: %Pd\n", err));
+      MPFR_LOG_MSG (("Approxim error: %Pd\n", wprec-prec-1));
 
       if (wprec < err + 1)
         correct_bits = 0;
@@ -342,8 +341,8 @@ mpfr_ai2 (mpfr_ptr y, mpfr_srcptr x, mpfr_rnd_t rnd)
 
   /* Logging */
   MPFR_LOG_FUNC (
-    ("x[%Pu]=%.*Rg rnd=%d", mpfr_get_prec (x),  mpfr_log_prec, x, rnd),
-    ("y[%Pu]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y));
+    ("x[%Pd]=%.*Rg rnd=%d", mpfr_get_prec (x),  mpfr_log_prec, x, rnd),
+    ("y[%Pd]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y));
 
   /* Save current exponents range */
   MPFR_SAVE_EXPO_MARK (expo);
@@ -431,7 +430,7 @@ mpfr_ai2 (mpfr_ptr y, mpfr_srcptr x, mpfr_rnd_t rnd)
   /* ZIV loop */
   for (;;)
     {
-      MPFR_LOG_MSG (("working precision: %Pu\n", wprec));
+      MPFR_LOG_MSG (("working precision: %Pd\n", wprec));
 
       for (j=0; j<=L; j++)
         mpfr_set_prec (z[j], wprec);
@@ -548,8 +547,8 @@ mpfr_ai2 (mpfr_ptr y, mpfr_srcptr x, mpfr_rnd_t rnd)
 
       /* err is the number of bits lost due to the evaluation error */
       /* wprec-(prec+1): number of bits lost due to the approximation error */
-      MPFR_LOG_MSG (("Roundoff error: %Pu\n", err));
-      MPFR_LOG_MSG (("Approxim error: %Pu\n", wprec - prec - 1));
+      MPFR_LOG_MSG (("Roundoff error: %Pd\n", err));
+      MPFR_LOG_MSG (("Approxim error: %Pd\n", wprec - prec - 1));
 
       if (wprec < err+1)
         correctBits = 0;

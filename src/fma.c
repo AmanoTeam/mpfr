@@ -1,6 +1,6 @@
 /* mpfr_fma -- Floating multiply-add
 
-Copyright 2001-2002, 2004, 2006-2022 Free Software Foundation, Inc.
+Copyright 2001-2002, 2004, 2006-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
@@ -26,6 +25,13 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 /* The fused-multiply-add (fma) of x, y and z is defined by:
    fma(x,y,z)= x*y + z
 */
+
+/* Warning! mpfr_fma may be called by mpfr_fms where z is aliased to s and
+   negated (in the case where s == z in the mpfr_fms call), i.e. s and z
+   may share their significand even if s != z as pointers. So one must be
+   careful in the code below. For instance, on mpfr_add(s,...,z,...) and
+   mpfr_set (s,z,...), one may have s != z while these MPFR numbers share
+   their significand. */
 
 /* this function deals with all cases where inputs are singular, i.e.,
    either NaN, Inf or zero */
@@ -109,11 +115,11 @@ mpfr_fma (mpfr_ptr s, mpfr_srcptr x, mpfr_srcptr y, mpfr_srcptr z,
   MPFR_GROUP_DECL(group);
 
   MPFR_LOG_FUNC
-    (("x[%Pu]=%.*Rg y[%Pu]=%.*Rg  z[%Pu]=%.*Rg rnd=%d",
+    (("x[%Pd]=%.*Rg y[%Pd]=%.*Rg  z[%Pd]=%.*Rg rnd=%d",
       mpfr_get_prec (x), mpfr_log_prec, x,
       mpfr_get_prec (y), mpfr_log_prec, y,
       mpfr_get_prec (z), mpfr_log_prec, z, rnd_mode),
-     ("s[%Pu]=%.*Rg inexact=%d",
+     ("s[%Pd]=%.*Rg inexact=%d",
       mpfr_get_prec (s), mpfr_log_prec, s, inexact));
 
   /* particular cases */

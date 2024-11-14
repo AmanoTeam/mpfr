@@ -1,6 +1,6 @@
 /* Uniform Interface to GMP.
 
-Copyright 2004-2022 Free Software Foundation, Inc.
+Copyright 2004-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #ifndef __GMPFR_GMP_H__
 #define __GMPFR_GMP_H__
@@ -61,7 +60,7 @@ extern "C" {
 #endif
 
 #if GMP_NAIL_BITS != 0
-# error "MPFR doesn't support nonzero values of GMP_NAIL_BITS"
+# error "MPFR doesn't support non-zero values of GMP_NAIL_BITS"
 #endif
 
 #if (GMP_NUMB_BITS<8) || (GMP_NUMB_BITS & (GMP_NUMB_BITS - 1))
@@ -326,9 +325,21 @@ void *alloca (size_t);
 # endif
 #endif
 
+#ifdef MPFR_USE_LOGGING
+#define MPFR_INCR_ALLOCA(N)                                     \
+  __extension__ ({                                              \
+      __gmpfr_log_alloca_size += (N);                           \
+      LOG_PRINT (MPFR_LOG_ALLOCA_F,                             \
+                 "%s: alloca size = %zu in the function\n",     \
+                 __func__, __gmpfr_log_alloca_size); })
+#else
+#define MPFR_INCR_ALLOCA(N) ((void) 0)
+#endif
+
 #define TMP_ALLOC(n) (MPFR_ASSERTD ((n) > 0),                      \
                       MPFR_LIKELY ((n) <= MPFR_ALLOCA_MAX) ?       \
-                      alloca (n) : mpfr_tmp_allocate (&tmp_marker, (n)))
+                      (MPFR_INCR_ALLOCA (n), alloca (n)) :         \
+                      mpfr_tmp_allocate (&tmp_marker, (n)))
 
 #else  /* MPFR_ALLOCA_MAX == 0, alloca() not needed */
 
@@ -468,14 +479,22 @@ void *alloca (size_t);
    and outputs may overlap.
 */
 #ifndef udiv_qr_3by2
-#define udiv_qr_3by2(q, r1, r0, n2, n1, n0, d1, d0, dinv)               \
+# ifdef MPFR_USE_MINI_GMP
+/* Avoid integer overflow on int in case of integer promotion
+   (when mp_limb_t is shorter than int). Note that unsigned long
+   may be longer than necessary, but GCC seems to optimize. */
+#  define OP_CAST (unsigned long)
+# else
+#  define OP_CAST
+# endif
+# define udiv_qr_3by2(q, r1, r0, n2, n1, n0, d1, d0, dinv)              \
   do {                                                                  \
     mp_limb_t _q0, _t1, _t0, _mask;                                     \
     umul_ppmm ((q), _q0, (n2), (dinv));                                 \
     add_ssaaaa ((q), _q0, (q), _q0, (n2), (n1));                        \
                                                                         \
     /* Compute the two most significant limbs of n - q'd */             \
-    (r1) = (n1) - (d1) * (q);                                           \
+    (r1) = (n1) - OP_CAST (d1) * (q);                                   \
     (r0) = (n0);                                                        \
     sub_ddmmss ((r1), (r0), (r1), (r0), (d1), (d0));                    \
     umul_ppmm (_t1, _t0, (d0), (q));                                    \

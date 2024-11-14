@@ -1,6 +1,6 @@
 /* mpfr.h -- Include file for mpfr.
 
-Copyright 1999-2022 Free Software Foundation, Inc.
+Copyright 1999-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,18 +16,17 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #ifndef __MPFR_H
 #define __MPFR_H
 
 /* Define MPFR version number */
 #define MPFR_VERSION_MAJOR 4
-#define MPFR_VERSION_MINOR 2
+#define MPFR_VERSION_MINOR 3
 #define MPFR_VERSION_PATCHLEVEL 0
-#define MPFR_VERSION_STRING "4.2.0-dev"
+#define MPFR_VERSION_STRING "4.3.0-dev"
 
 /* User macros:
    MPFR_USE_FILE:        Define it to make MPFR define functions dealing
@@ -53,6 +52,22 @@ MPFR_VERSION_NUM(MPFR_VERSION_MAJOR,MPFR_VERSION_MINOR,MPFR_VERSION_PATCHLEVEL)
 #include <gmp.h>
 #else
 #include <mini-gmp.h>
+#endif
+
+/* Define MPFR_USE_EXTENSION to avoid "gcc -pedantic" warnings. */
+/* TODO: MPFR_EXTENSION is used for
+     - extensions to ISO C90 (see MPFR_DECL_INIT macro, valid in C99);
+     - extensions to ISO C17 (declarations with _Decimal64, _Decimal128
+       and _Float128, which will be in ISO C23).
+   Define 2 different macros MPFR_EXTENSION_C90 and MPFR_EXTENSION_C17
+   in order to avoid __extension__ when the feature is standard in the
+   chosen version (see __STDC_VERSION__)? */
+#ifndef MPFR_EXTENSION
+# if defined(MPFR_USE_EXTENSION) && defined(__GNUC__)
+#  define MPFR_EXTENSION __extension__
+# else
+#  define MPFR_EXTENSION
+# endif
 #endif
 
 /* Avoid some problems with macro expansion if the user defines macros
@@ -471,12 +486,16 @@ __MPFR_DECLSPEC int mpfr_set_flt (mpfr_ptr, float, mpfr_rnd_t);
 #ifdef MPFR_WANT_DECIMAL_FLOATS
 /* _Decimal64 is not defined in C++,
    cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=51364 */
+MPFR_EXTENSION
 __MPFR_DECLSPEC int mpfr_set_decimal64 (mpfr_ptr, _Decimal64, mpfr_rnd_t);
+MPFR_EXTENSION
 __MPFR_DECLSPEC int mpfr_set_decimal128 (mpfr_ptr, _Decimal128, mpfr_rnd_t);
 #endif
 __MPFR_DECLSPEC int mpfr_set_ld (mpfr_ptr, long double, mpfr_rnd_t);
 #ifdef MPFR_WANT_FLOAT128
+MPFR_EXTENSION
 __MPFR_DECLSPEC int mpfr_set_float128 (mpfr_ptr, _Float128, mpfr_rnd_t);
+MPFR_EXTENSION
 __MPFR_DECLSPEC _Float128 mpfr_get_float128 (mpfr_srcptr, mpfr_rnd_t);
 #endif
 __MPFR_DECLSPEC int mpfr_set_z (mpfr_ptr, mpz_srcptr, mpfr_rnd_t);
@@ -505,7 +524,7 @@ __MPFR_DECLSPEC int mpfr_div_q (mpfr_ptr, mpfr_srcptr, mpq_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC int mpfr_add_q (mpfr_ptr, mpfr_srcptr, mpq_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC int mpfr_sub_q (mpfr_ptr, mpfr_srcptr, mpq_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC int mpfr_cmp_q (mpfr_srcptr, mpq_srcptr);
-__MPFR_DECLSPEC void mpfr_get_q (mpq_ptr q, mpfr_srcptr f);
+__MPFR_DECLSPEC void mpfr_get_q (mpq_ptr, mpfr_srcptr);
 #endif
 __MPFR_DECLSPEC int mpfr_set_str (mpfr_ptr, const char *, int, mpfr_rnd_t);
 __MPFR_DECLSPEC int mpfr_init_set_str (mpfr_ptr, const char *, int,
@@ -523,10 +542,15 @@ __MPFR_DECLSPEC mpfr_exp_t mpfr_get_z_2exp (mpz_ptr, mpfr_srcptr);
 __MPFR_DECLSPEC float mpfr_get_flt (mpfr_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC double mpfr_get_d (mpfr_srcptr, mpfr_rnd_t);
 #ifdef MPFR_WANT_DECIMAL_FLOATS
+MPFR_EXTENSION
 __MPFR_DECLSPEC _Decimal64 mpfr_get_decimal64 (mpfr_srcptr, mpfr_rnd_t);
+MPFR_EXTENSION
 __MPFR_DECLSPEC _Decimal128 mpfr_get_decimal128 (mpfr_srcptr, mpfr_rnd_t);
 #endif
 __MPFR_DECLSPEC long double mpfr_get_ld (mpfr_srcptr, mpfr_rnd_t);
+#ifndef _MPFR_NO_DEPRECATED_GET_D1 /* for the test of this function */
+MPFR_DEPRECATED
+#endif
 __MPFR_DECLSPEC double mpfr_get_d1 (mpfr_srcptr);
 __MPFR_DECLSPEC double mpfr_get_d_2exp (long*, mpfr_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC long double mpfr_get_ld_2exp (long*, mpfr_srcptr, mpfr_rnd_t);
@@ -536,7 +560,7 @@ __MPFR_DECLSPEC unsigned long mpfr_get_ui (mpfr_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC size_t mpfr_get_str_ndigits (int, mpfr_prec_t);
 __MPFR_DECLSPEC char * mpfr_get_str (char*, mpfr_exp_t*, int, size_t,
                                      mpfr_srcptr, mpfr_rnd_t);
-__MPFR_DECLSPEC int mpfr_get_z (mpz_ptr z, mpfr_srcptr f, mpfr_rnd_t);
+__MPFR_DECLSPEC int mpfr_get_z (mpz_ptr, mpfr_srcptr, mpfr_rnd_t);
 
 __MPFR_DECLSPEC void mpfr_free_str (char *);
 
@@ -564,6 +588,7 @@ __MPFR_DECLSPEC int mpfr_snprintf (char*, size_t, const char*, ...);
 __MPFR_DECLSPEC int mpfr_pow (mpfr_ptr, mpfr_srcptr, mpfr_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC int mpfr_powr (mpfr_ptr, mpfr_srcptr, mpfr_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC int mpfr_pow_si (mpfr_ptr, mpfr_srcptr, long, mpfr_rnd_t);
+__MPFR_DECLSPEC int mpfr_compound (mpfr_ptr, mpfr_srcptr, mpfr_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC int mpfr_compound_si (mpfr_ptr, mpfr_srcptr, long, mpfr_rnd_t);
 __MPFR_DECLSPEC int mpfr_pow_ui (mpfr_ptr, mpfr_srcptr, unsigned long,
                                  mpfr_rnd_t);
@@ -693,7 +718,6 @@ __MPFR_DECLSPEC int mpfr_fits_sshort_p (mpfr_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC int mpfr_fits_uintmax_p (mpfr_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC int mpfr_fits_intmax_p (mpfr_srcptr, mpfr_rnd_t);
 
-__MPFR_DECLSPEC void mpfr_extract (mpz_ptr, mpfr_srcptr, unsigned int);
 __MPFR_DECLSPEC void mpfr_swap (mpfr_ptr, mpfr_ptr);
 __MPFR_DECLSPEC void mpfr_dump (mpfr_srcptr);
 
@@ -837,18 +861,14 @@ __MPFR_DECLSPEC int mpfr_total_order_p (mpfr_srcptr, mpfr_srcptr);
 }
 #endif
 
-/* Define MPFR_USE_EXTENSION to avoid "gcc -pedantic" warnings. */
-#ifndef MPFR_EXTENSION
-# if defined(MPFR_USE_EXTENSION)
-#  define MPFR_EXTENSION __extension__
-# else
-#  define MPFR_EXTENSION
-# endif
-#endif
-
 /* Warning! This macro doesn't work with K&R C (e.g., compare the "gcc -E"
    output with and without -traditional) and shouldn't be used internally.
-   For public use only, but see the MPFR manual. */
+   For public use only, but see the MPFR manual.
+   This macro may not work either in ISO C90. For instance,
+   "gcc -std=c90 -pedantic" gives the warning
+     warning: initializer element is not computable at load time
+   concerning __gmpfr_local_tab_##_x.
+*/
 #define MPFR_DECL_INIT(_x, _p)                                        \
   MPFR_EXTENSION mp_limb_t __gmpfr_local_tab_##_x[((_p)-1)/GMP_NUMB_BITS+1]; \
   MPFR_EXTENSION mpfr_t _x = {{(_p),1,__MPFR_EXP_NAN,__gmpfr_local_tab_##_x}}
@@ -946,9 +966,9 @@ __MPFR_DECLSPEC int mpfr_total_order_p (mpfr_srcptr, mpfr_srcptr);
    implicit conversion in the macro allows the compiler to emit diagnostics
    when normally expected, for instance in the following call:
      mpfr_set_ui (x, "foo", MPFR_RNDN);
-   If this is not possible (for future macros), one of the tricks described
-   on http://groups.google.com/group/comp.std.c/msg/e92abd24bf9eaf7b could
-   be used. */
+   If this is not possible (for future macros), one of the tricks described on
+   https://groups.google.com/g/comp.std.c/c/9Jl0giNILfg/m/e6-evyS9KukJ?pli=1
+   could be used. */
 #if defined (__GNUC__) && !defined(__cplusplus)
 #if (__GNUC__ >= 2)
 
@@ -1064,7 +1084,7 @@ __MPFR_DECLSPEC int mpfr_total_order_p (mpfr_srcptr, mpfr_srcptr);
 #if __GNUC__ > 2 || __GNUC_MINOR__ >= 95
 #define mpfr_custom_get_kind(x)                                         \
   __extension__ ({                                                      \
-    mpfr_ptr _x = (x);                                                  \
+    mpfr_srcptr _x = (x);                                               \
     _x->_mpfr_exp >  __MPFR_EXP_INF ?                                   \
       (mpfr_int) MPFR_REGULAR_KIND * MPFR_SIGN (_x)                     \
       : _x->_mpfr_exp == __MPFR_EXP_INF ?                               \
@@ -1206,7 +1226,7 @@ __MPFR_DECLSPEC int mpfr_fprintf (FILE*, const char*, ...);
 #endif
 #define mpfr_fpif_export __gmpfr_fpif_export
 #define mpfr_fpif_import __gmpfr_fpif_import
-__MPFR_DECLSPEC int mpfr_fpif_export (FILE*, mpfr_ptr);
+__MPFR_DECLSPEC int mpfr_fpif_export (FILE*, mpfr_srcptr);
 __MPFR_DECLSPEC int mpfr_fpif_import (mpfr_ptr, FILE*);
 
 #if defined (__cplusplus)

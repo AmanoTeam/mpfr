@@ -1,4 +1,8 @@
-# Copyright 2000-2022 Free Software Foundation, Inc.
+# Copyright 2000-2024 Free Software Foundation, Inc.
+# Contributed by the AriC and Caramba projects, INRIA.
+
+# This file is part of the GNU MPFR Library.
+
 # This Makefile.am is free software; the Free Software Foundation
 # gives unlimited permission to copy and/or distribute it,
 # with or without modifications, as long as this notice is preserved.
@@ -18,20 +22,18 @@
 
 AUTOMAKE_OPTIONS = 1.6 gnu
 
-# For Git, output dash-separated information:
-#   * the detected branch;
-#   * the total commit count;
-#   * the commit id (hash).
-# Note: for the branch detection, in the case of a detached HEAD state,
-# the commit may appear in multiple branches, i.e. which diverge after
-# the commit; thus we exclude branches created after this commit, based
-# on <branch>-root tags (such a tag should be added by the user when
-# creating a branch, so that "git diff <branch>-root" shows commits done
-# in the branch since its creation, etc.). If $gitb contains multiple
-# branches, this means that something is probably wrong with the tags
-# or the branches (merged branches should be deleted).
-# Concerning the test "git rev-parse ...", if git is not installed, this
-# test should silently fail.
+# For Git:
+#   * To avoid escaping the MPFR source tree, we check whether
+#     $(top_srcdir)/.git is readable (note that this is not
+#     necessarily a directory: in case of a "linked worktree",
+#     this is a file; see the git-worktree(1) man page).
+#     In particular, if one extracts an MPFR tarball within a
+#     Git working tree (e.g. after "make dist"), then running
+#     "make check" in this extracted source tree will work as
+#     expected, giving correct version information.
+#   * Additional test with "git rev-parse ...", which should
+#     silently fail if git is not installed.
+#   * See version-ext.sh for information on its output.
 output_info = { \
   if [ -d $(top_srcdir)/.svn ]; then \
     output=`svnversion $(top_srcdir) 2> /dev/null`; \
@@ -39,7 +41,8 @@ output_info = { \
       echo "[svnversion] $$output"; \
     fi; \
   fi; \
-  if [ "x`git rev-parse --is-inside-work-tree 2> /dev/null`" = xtrue ]; then \
+  if [ -r $(top_srcdir)/.git ] && \
+     [ "x`git rev-parse --is-inside-work-tree 2> /dev/null`" = xtrue ]; then \
     gitv=`GREP=$(GREP) SED=$(SED) $(top_srcdir)/version-ext.sh`; \
     echo "[git] $$gitv"; \
   fi; \
@@ -52,8 +55,8 @@ TESTS_NO_TVERSION = tabort_prec_max tassert tabort_defalloc1            \
      tabs tacos tacosh tacosu tadd tadd1sp tadd_d tadd_ui tagm tai      \
      talloc-cache tasin tasinh tasinu tatan tatanh tatanu tatan2u taway \
      tbeta tbuildopt tcan_round tcbrt tcmp tcmp2 tcmp_d tcmp_ld tcmp_ui \
-     tcmpabs tcomparisons tcompound tconst_catalan tconst_euler         \
-     tconst_log2 tconst_pi                                              \
+     tcmpabs tcomparisons tcompound tcompound_si tconst_catalan         \
+     tconst_euler tconst_log2 tconst_pi                                 \
      tcopysign tcos tcosh tcosu tcot tcoth tcsc tcsch td_div td_sub     \
      tdigamma tdim tdiv tdiv_d tdiv_ui tdot teint teq terandom          \
      terandom_chisq terf texp texp10 texp2 texpm1 texp10m1 texp2m1      \
@@ -66,7 +69,7 @@ TESTS_NO_TVERSION = tabort_prec_max tassert tabort_defalloc1            \
      tlog_ui tmin_prec tminmax tmodf tmul tmul_2exp tmul_d tmul_ui      \
      tnext tnrandom tnrandom_chisq tout_str toutimpl tpow tpow3 tpowr   \
      tpow_all tpow_z tprec_round tprintf trandom trandom_deviate        \
-     trec_sqrt tremquo trint trndna troot trootn_si trootn_ui           \
+     trec_sqrt treldiff tremquo trint trndna troot trootn_si trootn_ui  \
      tsec tsech tset_d tset_f tset_float128 tset_ld tset_q              \
      tset_si tset_sj tset_str tset_z tset_z_2exp tsi_op tsin tsin_cos   \
      tsinh tsinh_cosh tsinu tsprintf tsqr tsqrt tsqrt_ui tstckintc      \
@@ -162,4 +165,16 @@ TESTS_ENVIRONMENT = env DISPLAY='' MPFR_QUIET=1 $(VALGRIND)
 #
 AM_LDFLAGS = -no-install -L$(top_builddir)/src/.libs
 
-.PHONY: tversion_special
+# Test for "make" conformance. "GNU make" needs the .POSIX special target.
+failuretest1:
+	@echo "This should be the only output line; failure expected."; \
+	false; \
+	echo "This line should not be output."
+
+# Test for "make" conformance.
+failuretest2:
+	@echo "This should be the only output line; failure expected."
+	@false
+	@echo "This line should not be output."
+
+.PHONY: tversion_special failuretest1 failuretest2

@@ -1,6 +1,6 @@
 /* auxiliary functions for MPFR tests.
 
-Copyright 1999-2022 Free Software Foundation, Inc.
+Copyright 1999-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #ifndef __MPFR_TEST_H__
 #define __MPFR_TEST_H__
@@ -103,8 +102,9 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
    However, at least when the function is not implemented as a macro (which
    is the case when MPFR_USE_NO_MACRO is defined), such tests with void *
    arguments are not valid in C++; therefore, we will not do the cast to
-   void * if the __cplusplus macro is defined. And with GCC compilers (and
-   compatible), we will ignore the -Wc++-compat option around these tests.
+   void * if the __cplusplus macro is defined. And with GCC 4.6+ compilers
+   (and compatible), we will ignore the -Wc++-compat option around these
+   tests.
 
    Note: in the future, inline functions could be used instead of macros,
    and such tests would become useless (except to detect compiler bugs).
@@ -113,7 +113,12 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 #define VOIDP_CAST(X) (X)
 #else
 #define VOIDP_CAST(X) ((void *) (X))
-#if defined (__GNUC__)
+/* Define IGNORE_CPP_COMPAT only for the GCC and Clang versions that
+   support it.
+   Note: GCC versions < 4.6 do not allow "#pragma GCC diagnostic" inside
+   functions, and Clang on Windows (clang-cl) does not define __GNUC__.
+   See https://sympa.inria.fr/sympa/arc/mpfr/2022-12/msg00007.html */
+#if __MPFR_GNUC(4,6) || defined (__clang__)
 #define IGNORE_CPP_COMPAT
 #endif
 #endif
@@ -178,11 +183,24 @@ extern "C" {
 
 #define FLIST mpfr_ptr, mpfr_srcptr, mpfr_rnd_t
 
+/* For ofuf_thresholds in tests.c (argument threshold) */
+#define POSOF (0+0)
+#define POSUF (0+1)
+#define NEGOF (2+0)
+#define NEGUF (2+1)
+
 int test_version (void);
 
 /* Memory handling */
 #define DEFAULT_MEMORY_LIMIT (1UL << 22)
 extern size_t tests_memory_limit;
+extern int tests_memory_disabled;
+void *tests_allocate (size_t);
+void *tests_reallocate (void *, size_t, size_t);
+void tests_free (void *, size_t);
+size_t tests_get_totalsize (void);
+size_t tests_get_maxsize (void);
+void tests_reset_maxsize (void);
 void tests_memory_start (void);
 void tests_memory_end (void);
 
@@ -218,6 +236,8 @@ void data_check (const char *, int (*) (FLIST), const char *);
 void bad_cases (int (*)(FLIST), int (*)(FLIST),
                 const char *, int, mpfr_exp_t, mpfr_exp_t,
                 mpfr_prec_t, mpfr_prec_t, mpfr_prec_t, int);
+void ofuf_thresholds (int (*)(FLIST), int (*)(FLIST), const char *,
+                      mpfr_prec_t, mpfr_prec_t, int, unsigned int);
 void flags_out (unsigned int);
 
 int mpfr_cmp_str (mpfr_srcptr x, const char *, int, mpfr_rnd_t);
@@ -293,6 +313,7 @@ mpfr_print_raw (mpfr_srcptr x)
 #endif
 
 extern char *locale;
+extern int tests_locale_enabled;
 
 /* Random */
 extern char             mpfr_rands_initialized;
@@ -314,12 +335,6 @@ extern gmp_randstate_t  mpfr_rands;
         gmp_randclear (mpfr_rands);    \
       }                                 \
   } while (0)
-
-/* Memory Allocation */
-extern int tests_memory_disabled;
-void *tests_allocate (size_t);
-void *tests_reallocate (void *, size_t, size_t);
-void tests_free (void *, size_t);
 
 #if defined (__cplusplus)
 }

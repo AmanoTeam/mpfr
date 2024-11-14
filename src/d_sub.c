@@ -1,7 +1,7 @@
 /* mpfr_d_sub -- subtract a multiple precision floating-point number
                  from a machine double precision float
 
-Copyright 2007-2022 Free Software Foundation, Inc.
+Copyright 2007-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -17,9 +17,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-impl.h"
 
@@ -32,8 +31,8 @@ mpfr_d_sub (mpfr_ptr a, double b, mpfr_srcptr c, mpfr_rnd_t rnd_mode)
   MPFR_SAVE_EXPO_DECL (expo);
 
   MPFR_LOG_FUNC (
-    ("b=%.20g c[%Pu]=%.*Rg rnd=%d", b, mpfr_get_prec (c), mpfr_log_prec, c, rnd_mode),
-    ("a[%Pu]=%.*Rg", mpfr_get_prec (a), mpfr_log_prec, a));
+    ("b=%.20g c[%Pd]=%.*Rg rnd=%d", b, mpfr_get_prec (c), mpfr_log_prec, c, rnd_mode),
+    ("a[%Pd]=%.*Rg", mpfr_get_prec (a), mpfr_log_prec, a));
 
   MPFR_SAVE_EXPO_MARK (expo);
 

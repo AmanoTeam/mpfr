@@ -1,6 +1,6 @@
 /* mpfr_pow_si -- power function x^y with y a signed int
 
-Copyright 2001-2022 Free Software Foundation, Inc.
+Copyright 2001-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H  /* for MPFR_INT_CEIL_LOG2 */
 #include "mpfr-impl.h"
@@ -43,9 +42,9 @@ int
 POW_S (mpfr_ptr y, mpfr_srcptr x, TYPE n, mpfr_rnd_t rnd)
 {
   MPFR_LOG_FUNC
-    (("x[%Pu]=%.*Rg n=%" FSPEC "d rnd=%d",
+    (("x[%Pd]=%.*Rg n=%" FSPEC "d rnd=%d",
       mpfr_get_prec (x), mpfr_log_prec, x, n, rnd),
-     ("y[%Pu]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y));
+     ("y[%Pd]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y));
 
   if (n >= 0)
     return POW_U (y, x, n, rnd);

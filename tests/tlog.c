@@ -1,6 +1,6 @@
 /* Test file for mpfr_log.
 
-Copyright 1999, 2001-2022 Free Software Foundation, Inc.
+Copyright 1999, 2001-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-test.h"
 
@@ -83,7 +82,7 @@ check3 (char *s, unsigned long prec, mpfr_rnd_t rnd)
 }
 
 /* examples from Jean-Michel Muller and Vincent Lefevre
-   Cf http://www.ens-lyon.fr/~jmmuller/Intro-to-TMD.htm
+   Cf http://perso.ens-lyon.fr/jean-michel.muller/Intro-to-TMD.htm
 */
 
 static void
@@ -176,6 +175,7 @@ special (void)
   mpfr_t x, y;
   int inex;
   mpfr_exp_t emin, emax;
+  int r;
 
   emin = mpfr_get_emin ();
   emax = mpfr_get_emax ();
@@ -237,6 +237,18 @@ special (void)
   MPFR_ASSERTN (inex == 0);
   MPFR_ASSERTN (mpfr_inf_p (y));
   MPFR_ASSERTN (mpfr_sgn (y) < 0);
+
+  /* check log(1) is +0 whatever the rounding mode */
+  mpfr_set_ui (x, 1, MPFR_RNDN);
+  RND_LOOP (r)
+    {
+      mpfr_clear_flags ();
+      inex = test_log (y, x, (mpfr_rnd_t) r);
+      MPFR_ASSERTN (__gmpfr_flags == 0);
+      MPFR_ASSERTN (inex == 0);
+      MPFR_ASSERTN (MPFR_IS_ZERO (y));
+      MPFR_ASSERTN (MPFR_IS_POS (y));
+    }
 
   mpfr_clear (x);
   mpfr_clear (y);

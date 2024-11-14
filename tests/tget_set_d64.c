@@ -1,6 +1,6 @@
 /* Test file for mpfr_get_decimal64 and mpfr_set_decimal64.
 
-Copyright 2006-2022 Free Software Foundation, Inc.
+Copyright 2006-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 /* Needed due to the test on MPFR_WANT_DECIMAL_FLOATS */
 #ifdef HAVE_CONFIG_H
@@ -327,14 +326,20 @@ check_native (void)
   /* check important constants are correctly converted */
   mpfr_set_ui (x, 17, MPFR_RNDN);
   d = mpfr_get_decimal64 (x, MPFR_RNDN);
-  MPFR_ASSERTN(d == 17.0dd);
+  MPFR_ASSERTN(d == 17.dd);
 
   mpfr_set_ui (x, 42, MPFR_RNDN);
   d = mpfr_get_decimal64 (x, MPFR_RNDN);
-  MPFR_ASSERTN(d == 42.0dd);
+  MPFR_ASSERTN(d == 42.dd);
+
+  mpfr_set_decimal64 (x, 17.dd, MPFR_RNDN);
+  MPFR_ASSERTN(mpfr_cmp_ui (x, 17) == 0);
 
   mpfr_set_decimal64 (x, 17.0dd, MPFR_RNDN);
   MPFR_ASSERTN(mpfr_cmp_ui (x, 17) == 0);
+
+  mpfr_set_decimal64 (x, 42.dd, MPFR_RNDN);
+  MPFR_ASSERTN(mpfr_cmp_ui (x, 42) == 0);
 
   mpfr_set_decimal64 (x, 42.0dd, MPFR_RNDN);
   MPFR_ASSERTN(mpfr_cmp_ui (x, 42) == 0);
@@ -493,7 +498,7 @@ noncanonical (void)
      on the simple testcase at:
      https://gcc.gnu.org/bugzilla/show_bug.cgi?id=91226
   */
-  volatile _Decimal64 d = 9999999999999999.0dd;
+  volatile _Decimal64 d = 9999999999999999.dd;
   union mpfr_ieee_double_extract x;
   union ieee_double_decimal64 y;
 

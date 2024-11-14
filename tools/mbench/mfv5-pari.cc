@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2009 Free Software Foundation, Inc.
+Copyright 2005-2022 Free Software Foundation, Inc.
 Contributed by Patrick Pelissier, INRIA.
 
 This file is part of the MPFR Library.
@@ -15,9 +15,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mfv5.h"
 #include "timp.h"
@@ -113,7 +112,7 @@ bool pari_test<T>::test (const vector<string> &base, const option_test &opt) {
     mpaff (table[i], b);
     mpaff (table[i+1], c);
     TIMP_OVERHEAD ();
-    m = TIMP_MEASURE(f.func (a, b, c) ); 
+    m = TIMP_MEASURE(f.func (a, b, c) );
     cont = tim->update (i, m) || cont;
   }
   avma = (ulong) stck;

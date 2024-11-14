@@ -1,6 +1,6 @@
 /* mpfr_set_uj -- set a MPFR number from a huge machine unsigned integer
 
-Copyright 2004-2022 Free Software Foundation, Inc.
+Copyright 2004-2024 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -16,9 +16,8 @@ or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
+along with the GNU MPFR Library; see the file COPYING.LESSER.
+If not, see <https://www.gnu.org/licenses/>. */
 
 #define MPFR_NEED_LONGLONG_H
 #define MPFR_NEED_INTMAX_H
@@ -26,7 +25,7 @@ https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 
 #ifdef _MPFR_H_HAVE_INTMAX_T
 
-#define uintmaxpml (sizeof(uintmax_t) / sizeof(mp_limb_t))
+#define uintmaxpml (sizeof(uintmax_t) / MPFR_BYTES_PER_MP_LIMB)
 
 int
 mpfr_set_uj (mpfr_ptr x, uintmax_t j, mpfr_rnd_t rnd)
@@ -57,7 +56,7 @@ mpfr_set_uj_2exp (mpfr_ptr x, uintmax_t j, intmax_t e, mpfr_rnd_t rnd)
   if (MPFR_UNLIKELY(e >= __gmpfr_emax))
     return mpfr_overflow (x, rnd, MPFR_SIGN_POS);
 
-  MPFR_ASSERTN (sizeof(uintmax_t) % sizeof(mp_limb_t) == 0);
+  MPFR_ASSERTN (sizeof(uintmax_t) % MPFR_BYTES_PER_MP_LIMB == 0);
 
   /* Create an auxiliary var */
   MPFR_TMP_INIT1 (yp, y, uintmax_bit_size);
