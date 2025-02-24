@@ -20,8 +20,65 @@ along with the GNU MPFR Library; see the file COPYING.LESSER.
 If not, see <https://www.gnu.org/licenses/>. */
 
 #include <float.h>
+#include <fenv.h>
 
 #include "mpfr-test.h"
+
+/* check that mpfr_set_d does not have side effects on the fenv.h flags */
+static void
+test_flags (void)
+{
+  mpfr_t x;
+
+  mpfr_init2 (x, 53);
+
+  /* check the FE_DIVBYZERO flag is not raised */
+  feclearexcept (FE_DIVBYZERO);
+  mpfr_set_d (x, 0x1p512, MPFR_RNDN);
+  if (fetestexcept (FE_DIVBYZERO))
+    {
+      printf ("Error, FE_DIVBYZERO is raised by mpfr_set_d\n");
+      exit (1);
+    }
+
+  /* check the FE_INEXACT flag is not raised */
+  feclearexcept (FE_INEXACT);
+  mpfr_set_d (x, 0x1p512, MPFR_RNDN);
+  if (fetestexcept (FE_INEXACT))
+    {
+      printf ("Error, FE_INEXACT is raised by mpfr_set_d\n");
+      exit (1);
+    }
+
+  /* check the FE_INVALID flag is not raised */
+  feclearexcept (FE_INVALID);
+  mpfr_set_d (x, 0x1p512, MPFR_RNDN);
+  if (fetestexcept (FE_INVALID))
+    {
+      printf ("Error, FE_INVALID is raised by mpfr_set_d\n");
+      exit (1);
+    }
+
+  /* check the FE_OVERFLOW flag is not raised */
+  feclearexcept (FE_OVERFLOW);
+  mpfr_set_d (x, 0x1p512, MPFR_RNDN);
+  if (fetestexcept (FE_OVERFLOW))
+    {
+      printf ("Error, FE_OVERFLOW is raised by mpfr_set_d\n");
+      exit (1);
+    }
+
+  /* check the FE_UNDERFLOW flag is not raised */
+  feclearexcept (FE_UNDERFLOW);
+  mpfr_set_d (x, 0x1p512, MPFR_RNDN);
+  if (fetestexcept (FE_UNDERFLOW))
+    {
+      printf ("Error, FE_UNDERFLOW is raised by mpfr_set_d\n");
+      exit (1);
+    }
+
+  mpfr_clear (x);
+}
 
 int
 main (int argc, char *argv[])
@@ -33,6 +90,8 @@ main (int argc, char *argv[])
 
   tests_start_mpfr ();
   mpfr_test_init ();
+
+  test_flags ();
 
 #ifndef MPFR_DOUBLE_SPEC
   printf ("Warning! The MPFR_DOUBLE_SPEC macro is not defined. This means\n"

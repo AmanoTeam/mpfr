@@ -306,15 +306,12 @@ dnl For the binary32 format, the smallest normal number is 2^(-126).
 dnl Do not use the corresponding HAVE_SUBNORM_* macros as they
 dnl are not available when cross-compiling. For the tests, use
 dnl the have_subnorm_* functions if need be.
-dnl Note: "volatile" is needed to avoid -ffast-math optimizations
-dnl (default in icx 2021.2.0, which also sets the FZ and DAZ bits
-dnl of the x86-64 MXCSR register to disregard subnormals).
 AC_CACHE_CHECK([for subnormal double-precision numbers],
 mpfr_cv_have_subnorm_dbl, [
 AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <stdio.h>
 int main (void) {
-  volatile double x = 2.22507385850720138309e-308, y;
+  double x = 2.22507385850720138309e-308, y;
   y = x / 2.0;
   fprintf (stderr, "%e\n", y);
   return 2.0 * y != x;
@@ -393,10 +390,6 @@ fi
 dnl Check whether NAN != NAN (as required by the IEEE-754 standard,
 dnl but not by the ISO C standard). For instance, this is false with
 dnl MIPSpro 7.3.1.3m under IRIX64. By default, assume this is true.
-dnl Note that this test may not detect all issues. For instance, with
-dnl icx 2021.2.0 (and default fast-math), the result depends on whether
-dnl the identifier has internal or external linkage:
-dnl   https://community.intel.com/t5/Intel-oneAPI-Base-Toolkit/icx-2021-2-0-bug-incorrect-NaN-comparison-using-an-identifier/m-p/1286869
 dnl TODO: change "NAN == NAN" to "NaN is supported" and rename
 dnl the MPFR_NANISNAN macro?
 AC_CACHE_CHECK([if NAN == NAN], mpfr_cv_nanisnan, [
