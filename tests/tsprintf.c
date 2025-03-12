@@ -1705,6 +1705,7 @@ large_prec_for_g (void)
 static void
 check_null (void)
 {
+#ifndef MPFR_TESTS_SKIP_CHECK_NULL
   int i;
 
   for (i = 0; i < 2; i++)
@@ -1738,6 +1739,7 @@ check_null (void)
           exit (1);
         }
     }
+#endif
 }
 
 #if defined(HAVE_LOCALE_H) && defined(HAVE_SETLOCALE)
