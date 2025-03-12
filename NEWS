@@ -19,6 +19,15 @@ If not, see <https://www.gnu.org/licenses/>.
 
 ##############################################################################
 
+Changes from version 4.2.1 to version 4.2.2:
+- Bug fixes (see <https://www.mpfr.org/mpfr-4.2.1/#fixed> and/or the
+  ChangeLog file).
+- Improved MPFR manual.
+- Detect the use of GMP's buggy vsnprintf replacement at configure time.
+  With it, the tests of "%a" will be disabled to avoid an assertion failure
+  in the MPFR testsuite. A warning will be displayed in the configure output
+  in such a case.
+
 Changes from version 4.2.0 to version 4.2.1:
 - Bug fixes (see <https://www.mpfr.org/mpfr-4.2.0/#fixed> and/or the
   ChangeLog file).
@@ -26,10 +35,6 @@ Changes from version 4.2.0 to version 4.2.1:
 - Configure tests: replaced the test of the link with GMP, in order to
   avoid the use of a function without a prototype (Autoconf issue), as
   this is obsolescent in ISO C. The new test should be more robust.
-- Detect the use of GMP's buggy vsnprintf replacement at configure time.
-  With it, the tests of "%a" will be disabled to avoid an assertion failure
-  in the MPFR testsuite. A warning will be displayed in the configure output
-  in such a case.
 
 Changes from versions 4.1.* to version 4.2.0:
 - The "fondue savoyarde" release.
