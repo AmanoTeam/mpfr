@@ -4,7 +4,7 @@
 @documentencoding UTF-8
 @c Note that the 5 occurrences of the version string in this file
 @c should be updated by the tools/update-version script.
-@set VERSION 4.2.2-dev
+@set VERSION 4.2.2-rc1
 @set UPDATED-MONTH March 2025
 @settitle GNU MPFR @value{VERSION}
 @synindex tp fn

@@ -24,5 +24,5 @@ If not, see <https://www.gnu.org/licenses/>. */
 const char *
 mpfr_get_version (void)
 {
-  return "4.2.2-dev";
+  return "4.2.2-rc1";
 }
