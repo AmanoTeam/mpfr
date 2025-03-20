@@ -25,7 +25,7 @@ If not, see <https://www.gnu.org/licenses/>.
 ])
 
 dnl Add check-news when it checks for more than 15 lines
-AC_INIT([MPFR],[4.2.2])
+AC_INIT([MPFR],[4.2.3-dev])
 
 dnl AC_CANONICAL_HOST is needed by this configure.ac file.
 dnl AC_CANONICAL_TARGET is not explicitly needed, but may be required by

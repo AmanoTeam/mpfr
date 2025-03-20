@@ -25,8 +25,8 @@ If not, see <https://www.gnu.org/licenses/>. */
 /* Define MPFR version number */
 #define MPFR_VERSION_MAJOR 4
 #define MPFR_VERSION_MINOR 2
-#define MPFR_VERSION_PATCHLEVEL 2
-#define MPFR_VERSION_STRING "4.2.2"
+#define MPFR_VERSION_PATCHLEVEL 3
+#define MPFR_VERSION_STRING "4.2.3-dev"
 
 /* User macros:
    MPFR_USE_FILE:        Define it to make MPFR define functions dealing
