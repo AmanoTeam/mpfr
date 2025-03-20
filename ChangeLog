@@ -1,4 +1,23 @@
+2025-03-20  Vincent Lefevre  <vincent@vinc17.net>
+
+	Updated version to 4.2.2.
+
 2025-03-14  Vincent Lefevre  <vincent@vinc17.net>
+
+	Corrected documentation about the failing check_null() tests (bug in GMP)
+
+	following commit e545a46332bc41f15eab7de7e19c851f311762ff.
+
+	This is not specific to Visual C++ under MS Windows, but due to a bug
+	in GMP's vsnprintf replacement (now fixed in its development branch).
+
+	* INSTALL: moved and updated text about failures in the testsuite.
+	  New section: "tfprintf and tsprintf failures in check_null".
+	* doc/README.dev: updated MPFR_TESTS_SKIP_CHECK_NULL description.
+
+2025-03-14  Vincent Lefevre  <vincent@vinc17.net>
+
+	ChangeLog update with tools/update-changelog
 
 	Updated version to 4.2.2-rc1.
 
