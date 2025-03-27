@@ -35,21 +35,36 @@ If not, see <https://www.gnu.org/licenses/>. */
    Just round it again and merge the ternary values.
 
    Set the inexact flag if the returned ternary value is non-zero.
-   Set the underflow flag if the first rounding (input of mpfr_subnormalize,
-   with unbounded exponent range and default precision) was in the subnormal
-   range and is not exact. This corresponds to "underflow after rounding".
+   Set the underflow flag if a second rounding occurred (whether this
+   rounding is exact or not). See
+     https://sympa.inria.fr/sympa/arc/mpfr/2009-06/msg00000.html
+     https://sympa.inria.fr/sympa/arc/mpfr/2009-06/msg00008.html
+     https://sympa.inria.fr/sympa/arc/mpfr/2009-06/msg00010.html
 
+   FIXME: This specification for the underflow flag is a bad idea because
+   it yields an inconsistency, as described below, assuming rounding to
+   nearest or toward +infinity (or away from zero).
    1. Assume that the smallest positive subnormal is obtained from below
    during the first rounding. Due to the choice of the exponent range, MPFR
-   will not raise the underflow flag, and mpfr_subnormalize will do nothing
-   in this case.
-
+   will not raise the underflow flag (note that this is not due to the fact
+   that MPFR considers underflow after rounding, i.e. this would be the
+   same behavior if MPFR were considering underflow before rounding), and
+   mpfr_subnormalize will do nothing in this case. So the underflow flag
+   will not be set. The behavior in this case corresponds to underflow
+   after rounding.
    2. Now assume that the value obtained after the first rounding is the
    MPFR number preceding the smallest positive subnormal. This number has
    one more bit than required (it has p bits "1", while just below the
    smallest positive subnormal, the actual precision is p-1), so that
-   mpfr_subnormalize will round it to the smallest positive subnormal.
-   Since the first rounding was subnormal, the underflow flag will be set.
+   mpfr_subnormalize will round it to the smallest positive subnormal,
+   and due to this rounding, according to the above specification of
+   mpfr_subnormalize, the underflow flag will be set, which corresponds
+   to underflow before rounding.
+   In short, we have neither underflow after rounding nor underflow before
+   rounding, but a mix of them. We can change the specification to emulate
+   either of them, but the most efficient choice would be after rounding
+   (the current "do nothing" case would still be fast). If need be, we
+   could add mpfr_subnormalize_br to emulate underflow before rounding.
 */
 
 int
@@ -74,14 +89,9 @@ mpfr_subnormalize (mpfr_ptr y, int old_inexact, mpfr_rnd_t rnd)
          It handles cases when |y| = 0.5 * 2^emin */
       if (mpfr_powerof2_raw (y))
         {
-          if (old_inexact) /* don't raise underflow for exact results */
-            MPFR_SET_UNDERFLOW ();
+          MPFR_SET_UNDERFLOW ();
           MPFR_RET (old_inexact);
         }
-
-      /* since we round to 1 bit precision, and the result is not a power of 2,
-         it is not exact, thus we have underflow */
-      MPFR_SET_UNDERFLOW ();
 
       /* We keep the same sign for y.
          Assuming Y is the real value and y the approximation
@@ -119,6 +129,7 @@ mpfr_subnormalize (mpfr_ptr y, int old_inexact, mpfr_rnd_t rnd)
       else if (MPFR_IS_LIKE_RNDZ (rnd, MPFR_IS_NEG (y)))
         {
         set_min:
+          MPFR_SET_UNDERFLOW ();
           mpfr_setmin (y, __gmpfr_emin);
           MPFR_RET (-sign);
         }
@@ -127,6 +138,8 @@ mpfr_subnormalize (mpfr_ptr y, int old_inexact, mpfr_rnd_t rnd)
         set_min_p1:
           /* Note: mpfr_setmin will abort if __gmpfr_emax == __gmpfr_emin. */
           mpfr_setmin (y, __gmpfr_emin + 1);
+          if (2 < MPFR_PREC(y))
+            MPFR_SET_UNDERFLOW ();
           MPFR_RET (sign);
         }
     }
@@ -152,8 +165,6 @@ mpfr_subnormalize (mpfr_ptr y, int old_inexact, mpfr_rnd_t rnd)
       MPFR_RNDRAW_EVEN (inexact, dest,
                         MPFR_MANT (y), MPFR_PREC (y), rnd2, sign,
                         MPFR_SET_EXP (dest, MPFR_GET_EXP (dest) + 1));
-      if (old_inexact || inexact)
-        MPFR_SET_UNDERFLOW ();
       if (MPFR_LIKELY (old_inexact != 0))
         {
           if (MPFR_UNLIKELY (rnd2 == MPFR_RNDN &&
@@ -194,6 +205,8 @@ mpfr_subnormalize (mpfr_ptr y, int old_inexact, mpfr_rnd_t rnd)
         }
 
       inex2 = mpfr_set (y, dest, rnd);
+      if (MPFR_GET_EXP(y) < __gmpfr_emin + (mpfr_exp_t) MPFR_PREC (y) - 1)
+        MPFR_SET_UNDERFLOW ();
       MPFR_ASSERTN (inex2 == 0);
       MPFR_ASSERTN (MPFR_IS_PURE_FP (y));
       mpfr_clear (dest);
