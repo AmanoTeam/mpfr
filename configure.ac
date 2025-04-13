@@ -888,6 +888,10 @@ if test -n "$dev_version"; then
     $srcdir/tests/*.c\``
 fi
 
+dnl Check the size of unsigned and unsigned long
+AC_CHECK_SIZEOF([unsigned int])
+AC_CHECK_SIZEOF([unsigned long])
+
 dnl Output
 AC_CONFIG_FILES([Makefile mpfr.pc doc/Makefile src/Makefile tests/Makefile tune/Makefile src/mparam.h:src/mparam_h.in tools/bench/Makefile])
 AC_OUTPUT

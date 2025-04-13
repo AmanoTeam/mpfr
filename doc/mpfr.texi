@@ -3730,7 +3730,16 @@ Return a string saying which thresholds file has been used at compile time.
 This file is normally selected from the processor type.
 @end deftypefun
 
-@node Exception Related Functions
+@deftypefun {mpfr_digest_t} mpfr_hash (const mpfr_t @var{x})
+Return a mpfr_digest_t that represents the 32-bit hash digest of the
+number @var{x}. This function maintains the consistency with @code{mpfr_cmp3},
+meaning that if two numbers are considered equal by @code{mpfr_cmp3}, they should
+have the same hash digest. Notably, +0.0 and -0.0 have the same digest.
+For more details on the way the hash digest is computed, see doc/algorithms.pdf
+@end deftypefun
+
+@node Exception Related Functions, Memory Handling Functions, Miscellaneous Functions, MPFR Interface
+@comment  node-name,  next,  previous,  up
 @cindex Exception related functions
 @section Exception Related Functions
 
@@ -4510,6 +4519,8 @@ Thus code that needs to work with both MPFR@tie{}2.x and MPFR@tie{}3.x should
 use @code{mpfr_get_z_exp}.
 
 @item @code{mpfr_grandom} in MPFR@tie{}3.1.
+
+@item @code{mpfr_hash} in MPFR@tie{}4.3.
 
 @item @code{mpfr_j0}, @code{mpfr_j1} and @code{mpfr_jn} in MPFR@tie{}2.3.
 

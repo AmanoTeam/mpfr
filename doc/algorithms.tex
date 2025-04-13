@@ -892,7 +892,7 @@ happen in the common case when input and output have the same precision.
 The inverse square root (function \texttt{mpfr\_rec\_sqrt}) is based on
 Ziv's strategy and the \texttt{mpfr\_mpn\_rec\_sqrt} function, which given
 a precision $p$, and an input $1 \leq a < 4$,
-returns an approximation $x$ satisfying 
+returns an approximation $x$ satisfying
 \[ x - \frac{1}{2} \cdot 2^{-p} \leq a^{-1/2} \leq x + 2^{-p}. \]
 
 The \texttt{mpfr\_mpn\_rec\_sqrt} function is based on Newton's iteration
@@ -4608,6 +4608,94 @@ independently by Mark Dickinson:
 \end{tabular}
 \end{center}
 The smallest bound is $e=186564318007$ for $b=7$ and $b=49$.
+
+\subsection{Hash}
+
+The \texttt{mpfr\_hash} function takes the constant pointer to an MPFR number and
+returns its 32--bit unsigned integer digest.
+
+This hash function maintains the consistency with \texttt{mpfr\_cmp3}, so
+the following holds:
+\begin{equation} \label{eq:hash-cmp}
+  \mathrm{mpfr\_cmp3} (x, y, 1) = 0~\Longrightarrow{}~H(x) = H(y)
+\end{equation}
+As a consequence, the hash function will associate both +0.0 and -0.0 to the same digest.
+
+In Algorithm \ref{algo:fnv32} we can see the core hash function that produces a 32-bit
+digest: Fowler-Noll-Vo function (from now on FNV). It's a \textit{non-cryptographic}
+hash function, mainly indicated for hash tables or checksums. For further information
+and theoretical details, refer to \cite{fnv-17}.
+
+\begin{algorithm}[H]
+  \caption{\texttt{fnv32}}
+  \label{algo:fnv32}
+  \KwData{unsigned char *buffer, size\_t buffer\_size}
+  \KwResult{unsigned 32-bit integer}
+  \BlankLine
+  assert(buffer not NULL)\;
+  fnv32\_prime $\gets$ 0x01000193\;
+  fnv32\_basis $\gets$ 0x811C9DC5\;
+  hash $\gets$ fvn32\_basis\;
+  \For{$\ivar\gets 0$ \KwTo buffer\_size}{
+    byte $\gets$ buffer[i]\;
+    hash $\gets$ hash XOR byte\;
+    hash $\gets$ hash * fvn32\_prime\;
+  }
+  \Return hash\;
+  \BlankLine
+\end{algorithm}
+\vspace{.5cm}
+
+We can see in Algorithm \ref{algo:hash} below how we are going to
+handle special cases.
+
+\begin{algorithm}[H]
+  \caption{\texttt{hash32} special cases}
+  \label{algo:hash}
+  \KwData{mpfr\_srcptr x}
+  \KwResult{unsigned 32-bit integer}
+  \BlankLine
+  assert(x not NULL)\;
+  \BlankLine
+  \tcc{Constants to represent special numbers}
+  $\mathrm{default\_zero} \gets \{ 0x00, 0x01, 0x80 \}$\;
+  $\mathrm{default\_nan}  \gets \{ 0x00, 0x02, 0x80 \}$\;
+  $\mathrm{default\_pos\_inf} \gets \{ 0x00, 0x03, 0x80 \}$\;
+  $\mathrm{default\_neg\_inf} \gets \{ 0x01, 0x03, 0x80 \}$\;
+  \BlankLine
+  \lIf{\emph{MPFR\_IS\_ZERO(x)}}{
+    \\
+    $\quad$\Return fnv32(default\_zero, size(default\_zero))\;
+  }
+  \lIf{\emph{MPFR\_IS\_NAN(x)}}{
+    \\
+    $\quad$\Return fnv32(default\_nan, size(default\_nan))\;
+  }
+  \lIf{\emph{MPFR\_IS\_INF(x) \textbf{and} MPFR\_IS\_POS(x)}}{
+	\\
+    $\quad$\Return fnv32(default\_pos\_inf, size(default\_pos\_inf))\;
+  }
+  \lIf{\emph{MPFR\_IS\_INF(x) \textbf{and} MPFR\_IS\_NEG(x)}}{
+	\\
+    $\quad$\Return fnv32(default\_neg\_inf, size(default\_neg\_inf))\;
+  }
+  \BlankLine
+\end{algorithm}
+\vspace{.5cm}
+
+In Algorithm \ref{algo:hash}, a little mention deserves the way special numbers are
+treated. Since all the functions that operate on these numbers actually use only the
+exponent (MPFR\_IS\_NAN(x), MPFR\_SET\_NAN(x), \dots), it is clear that we cannot
+compute the hash of the numbers as they are, since a user (or a third-party library)
+may have changed their sign or theirsignificand. For Property (\ref{eq:hash-cmp}) to
+hold, we have to set constant special numbers and always compute the hash of those.
+For performance optimization, they are all hard-coded with 1-byte sign, 1-byte
+exponent and 1-byte significand.
+
+Both 0 and NAN are encoded with the positive sign (bit ``0''), while there are two
+constants for Infinities. Since $\mathrm{mpfr\_min\_prec} (x) = 0$ where
+$x \in \{\pm{}0,\mathrm{NAN},\pm\infty\}$, neither of those constants contains the
+significand nor the precision.
 
 \subsection{Summary}
 

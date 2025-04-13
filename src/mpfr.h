@@ -390,6 +390,15 @@ typedef enum {
 # define MPFR_RETURNS_NONNULL
 #endif
 
+#ifndef _MPFR_DIGEST
+#define _MPFR_DIGEST
+#if SIZEOF_UNSIGNED_INT == 4
+typedef unsigned mpfr_digest_t;
+#elif SIZEOF_UNSIGNED_LONG == 4
+typedef unsigned long mpfr_digest_t;
+#endif /* SIZEOF_UNSIGNED_INT */
+#endif /* _MPFR_DIGEST */
+
 /* Note: In order to be declared, some functions need a specific
    system header to be included *before* "mpfr.h". If the user
    forgets to include the header, the MPFR function prototype in
@@ -871,6 +880,8 @@ __MPFR_DECLSPEC int mpfr_custom_get_kind (mpfr_srcptr);
 
 __MPFR_DECLSPEC int mpfr_total_order_p (mpfr_srcptr, mpfr_srcptr);
 
+__MPFR_DECLSPEC mpfr_digest_t mpfr_hash (mpfr_srcptr);
+
 #if defined (__cplusplus)
 }
 #endif
@@ -1219,7 +1230,6 @@ __MPFR_DECLSPEC int mpfr_pow_sj (mpfr_ptr, mpfr_srcptr, intmax_t, mpfr_rnd_t);
 
 # endif /* _MPFR_H_HAVE_INTMAX_T */
 #endif
-
 
 /* Check if <stdio.h> has been included or if the user wants FILE */
 #if defined (_GMP_H_HAVE_FILE) || defined (MPFR_USE_FILE)
