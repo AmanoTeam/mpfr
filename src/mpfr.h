@@ -871,6 +871,8 @@ __MPFR_DECLSPEC int mpfr_custom_get_kind (mpfr_srcptr);
 
 __MPFR_DECLSPEC int mpfr_total_order_p (mpfr_srcptr, mpfr_srcptr);
 
+__MPFR_DECLSPEC int mpfr_legendre (mpfr_ptr, int, mpfr_srcptr, mpfr_rnd_t);
+
 #if defined (__cplusplus)
 }
 #endif

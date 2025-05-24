@@ -4609,6 +4609,111 @@ independently by Mark Dickinson:
 \end{center}
 The smallest bound is $e=186564318007$ for $b=7$ and $b=49$.
 
+\subsection{Legendre polynomials}
+
+Legendre polynomials are calculated using a generating and recursive function known as
+Bonnet's recursion. Here's the recursion step
+\begin{equation} \label{eq:bonnet-recursion}
+n P_n(x) = (2n - 1)\, x \, P_{n-1}(x) - (n - 1)\, P_{n-2}(x)
+\end{equation}
+with two base cases: $P_0(x) = 1$ and $P_1(x) = x$. Some values of x and n are treated
+as special cases. These cases are:
+\begin{itemize}
+\item[(a)] The base cases $P_0$ and $P_1$.
+\item[(b)] $P_n(1) = 1$.
+\item[(c)] $P_n(-1) = (-1)^n$.
+\item[(d)] If $n$ is an odd number greater than 1, then $P_n(0) = 0$.
+\end{itemize}
+
+\noindent Equations in (b)--(d) are simple consequences of well known properties of
+Legendre polynomials. In particular, (d) is a straightforward consequence of Equation
+\ref{eq:legendre-parity-eq}, that establish the parity rule of Legendre polynomials.
+\begin{equation} \label{eq:legendre-parity-eq}
+  P_n(-x) = (-1)^nP_n(x)
+\end{equation}
+Equations (b) and (c) can be proven by induction from Bonnet recursion formula
+(Equation \ref{eq:bonnet-recursion}).
+
+In Algorithm \ref{algo:legendre-special} below, we find the pseudo--language input
+parameters validation and special cases (a)--(d).
+\vspace{.5cm}
+
+\begin{algorithm}[H]
+  \caption{\texttt{mpfr\_legendre} special cases}
+  \label{algo:legendre-special}
+  \KwData{mpfr\_ptr res, int n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
+  \KwResult{int}
+  \BlankLine
+  assert(res not NULL)\;
+  assert(x not NULL)\;
+  \BlankLine
+  \tcc{First we have to check the parameters.}
+  \lIf{$~~(n<0)~~$}{
+    res $\gets$ NaN;
+    \Return 0\;
+  }
+  \lIf{$~~(x<-1~\mathbf{or}~x>1)~~$}{
+    res $\gets$ NaN;
+    \Return 0\;
+  }
+  \tcc{The following are the hard-coded special cases}
+  \lIf{$~~(x=1)~~$}{
+    res $\gets$ 1;
+    \Return 0\;
+  }
+  \lIf{$~~(x=-1)~~$}{
+    res $\gets$ ((n\&1) = 0) ? 1 : -1;
+    \Return 0\;
+  }
+  \lIf{$~~(n=0)~~$}{
+    res $\gets$ 1;
+    \Return 0\;
+  }
+  \lIf{$~~(n=1)~~$}{
+    res $\gets$ x;
+    \Return 0\;
+  }
+  \lIf{$~~(x=0~\mathbf{and}~(n\&1) = 1)~~$}{
+    res $\gets$ 0;
+    \Return 0\;
+  }
+  \BlankLine
+\end{algorithm}
+\vspace{.5cm}
+
+\noindent In Algorithm \ref{algo:legendre-bonnet} below, we can find the pseudo--code
+implementation of the Bonnet's recursion with final rounding.
+\vspace{.5cm}
+
+\begin{algorithm}[H]
+  \caption{\texttt{mpfr\_legendre} Bonnet's recursion}
+  \label{algo:legendre-bonnet}
+  mpfr\_init2 (first\_term, realprec)\;
+  mpfr\_init2 (second\_term, realprec)\;
+  mpfr\_init2 ($p_2$, realprec)\;
+  mpfr\_init2 ($p_1$, realprec)\;
+  mpfr\_init2 ($p_n$, realprec)\;
+  \BlankLine
+  \tcc{Initializing the two base cases}
+  $p_2~\gets{}~1$\;
+  $p_1~\gets~\nabla(x)$\;
+  \BlankLine
+  $i~\gets~2$\;
+  \While{$i\leq{}n$}{
+    $\mathrm{first\_term}~\gets~\nabla{}(2\cdot{}i\cdot{}x-1)$\;
+    $\mathrm{second\_term}~\gets~\nabla{}(p_2\cdot{}i-1)$\;
+    $p_n~\gets~\nabla{}(\mathrm{first\_term}\cdot{}p_1 - \mathrm{second\_term})$\;
+    $p_n~\gets~\nabla{}(p_n/i)$\;
+    \BlankLine
+    $p_2~\gets~p_1$\;
+    $p_1~\gets~\nabla{}(p_n)$\;
+    $i++$\;
+  }
+  $\mathrm{round}(\circ(p_n), \mathrm{prec}(\mathrm{res}))$\;
+  $\mathrm{res}~\gets~\circ{}(p_n)$\;
+  \BlankLine
+\end{algorithm}
+
 \subsection{Summary}
 
 Table ~\ref{table:genericError} presents the generic error for several operations, assuming all variables have a

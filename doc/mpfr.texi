@@ -2198,6 +2198,13 @@ This function is experimental, and does not yet handle intermediate overflows
 and underflows.
 @end deftypefun
 
+@deftypefun int mpfr_legendre (mpfr_t @var{res}, int @var{n}, const mpfr_t @var{x}, mpfr_rnd_t @var{rnd})
+@var{res} is set with the value of Legendre's polynomial P_@var{n}(@var{x}),
+rounded in the direction of @var{rnd}, where @var{n} stands for the degree of
+the polynomial. If the input variable @var{x} is outside the [-1,1] domain,
+@var{res} is set to NaN and 0 is returned. The same happens for @var{n} < 0.
+@end deftypefun
+
 For the power functions (with an integer exponent or not), see @ref{mpfr_pow}
 in @ref{Transcendental Functions}.
 
@@ -4512,6 +4519,8 @@ use @code{mpfr_get_z_exp}.
 @item @code{mpfr_grandom} in MPFR@tie{}3.1.
 
 @item @code{mpfr_j0}, @code{mpfr_j1} and @code{mpfr_jn} in MPFR@tie{}2.3.
+
+@item @code{mpfr_legendre} in MPFR@tie{}4.3.
 
 @item @code{mpfr_log2p1} and @code{mpfr_log10p1} in MPFR@tie{}4.2.
 
