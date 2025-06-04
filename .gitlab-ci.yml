@@ -7,13 +7,10 @@ linux_gmp:
     - autoreconf -i
     - ./configure
     - make
-    - make check
+    # copied from https://gitlab.com/hepcedar/rivet/-/blob/release-3-1-x/.gitlab-ci.yml
+    - make check || (cat tests/test-suite.log && false)
   tags:
     - linux
-  artifacts:
-    paths:
-      - tests/test-suite.log
-    expire_in: 30 days
 
 linux_gmp_cxx:
   stage: build
