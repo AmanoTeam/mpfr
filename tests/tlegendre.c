@@ -418,6 +418,49 @@ test_round (unsigned prec)
   mpfr_free_cache ();
 }
 
+/* perform K random tests with degree n and precision p */
+static void
+test_random (int n, mpfr_prec_t p, unsigned long K)
+{
+  mpfr_t x, y, z, t;
+  unsigned long k;
+  int rnd;
+  mpfr_init2 (x, p);
+  mpfr_init2 (y, p);
+  mpfr_init2 (z, p + 20);
+  mpfr_init2 (t, p);
+  for (k = 0; k < K; k++)
+    {
+      mpfr_urandomb (x, RANDS); /* x is in [0,1] */
+      mpfr_mul_ui (x, x, 2, MPFR_RNDN);
+      mpfr_sub_ui (x, x, 1, MPFR_RNDN); /* now x is in [-1,1] */
+      RND_LOOP_NO_RNDF (rnd)
+        {
+          mpfr_legendre (y, n, x, (mpfr_rnd_t) rnd);
+          mpfr_legendre (z, n, x, MPFR_RNDN);
+          if (mpfr_can_round (z, p + 20, MPFR_RNDN, (mpfr_rnd_t) rnd, p)) {
+            mpfr_set (t, z, (mpfr_rnd_t) rnd);
+            if (mpfr_cmp (y, t))
+              {
+                printf ("Error in mpfr_legendre for n=%d x=", n);
+                mpfr_out_str (stdout, 10, 0, x, MPFR_RNDN);
+                printf (" rnd=%s\n", mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                printf ("expected ");
+                mpfr_out_str (stdout, 10, 0, t, MPFR_RNDN);
+                printf ("\ngot ");
+                mpfr_out_str (stdout, 10, 0, y, MPFR_RNDN);
+                printf ("\n");
+                exit (1);
+              }
+          }
+        }
+    }
+  mpfr_clear (x);
+  mpfr_clear (y);
+  mpfr_clear (z);
+  mpfr_clear (t);
+}
+
 int
 main (void)
 {
@@ -465,6 +508,11 @@ main (void)
   test_round (IEEE754_DOUBLE_PREC);
   test_round (MPFR_PREC_100);
   test_round (MPFR_PREC_200);
+
+  test_random (2, 53, 1000000);
+  test_random (3, 53, 1000000);
+  test_random (4, 53, 1000000);
+  test_random (5, 53, 1000000);
 
   tests_end_mpfr ();
 
