@@ -4616,7 +4616,7 @@ Bonnet's recursion. Here's the recursion step
 \begin{equation} \label{eq:bonnet-recursion}
 n P_n(x) = (2n - 1)\, x \, P_{n-1}(x) - (n - 1)\, P_{n-2}(x)
 \end{equation}
-with two base cases: $P_0(x) = 1$ and $P_1(x) = x$. Some values of x and n are treated
+with two base cases: $P_0(x) = 1$ and $P_1(x) = x$. Some values of $x$ and $n$ are treated
 as special cases. These cases are:
 \begin{itemize}
 \item[(a)] The base cases $P_0$ and $P_1$.
@@ -4625,14 +4625,14 @@ as special cases. These cases are:
 \item[(d)] If $n$ is an odd number greater than 1, then $P_n(0) = 0$.
 \end{itemize}
 
-\noindent Equations in (b)--(d) are simple consequences of well known properties of
+\noindent Equations (b)--(d) are simple consequences of well known properties of
 Legendre polynomials. In particular, (d) is a straightforward consequence of Equation
-\ref{eq:legendre-parity-eq}, that establish the parity rule of Legendre polynomials.
+(\ref{eq:legendre-parity-eq}), that establishes the parity rule of Legendre polynomials.
 \begin{equation} \label{eq:legendre-parity-eq}
   P_n(-x) = (-1)^nP_n(x)
 \end{equation}
-Equations (b) and (c) can be proven by induction from Bonnet recursion formula
-(Equation \ref{eq:bonnet-recursion}).
+Equations (b) and (c) can be proven by induction from Bonnet recursion formula,
+i.e.~Equation (\ref{eq:bonnet-recursion}).
 
 In Algorithm \ref{algo:legendre-special} below, we find the pseudo--language input
 parameters validation and special cases (a)--(d).
