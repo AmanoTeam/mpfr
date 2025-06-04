@@ -10,6 +10,10 @@ linux_gmp:
     - make check
   tags:
     - linux
+  artifacts:
+    paths:
+      - tests/test-suite.log
+    expire_in: 30 days
 
 linux_gmp_cxx:
   stage: build
