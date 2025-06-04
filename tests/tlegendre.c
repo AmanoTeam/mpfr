@@ -60,10 +60,10 @@ test_domain (void)
   mpfr_init2 (res, 200);
 
   /* init the constants to (respectively):
-       -  the upper bound of the domain
+       - the upper bound of the domain
        - the lower bound of the domain
        - a number within the dmain
-       - a nomber outside of the domain */
+       - a number outside of the domain */
   mpfr_init2 (upper, 10);
   mpfr_set_ui (upper, 1, MPFR_RNDD);
   mpfr_init2 (lower, 200);
