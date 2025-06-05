@@ -4611,13 +4611,27 @@ The smallest bound is $e=186564318007$ for $b=7$ and $b=49$.
 
 \subsection{Legendre polynomials}
 
-Legendre polynomials are calculated using a generating and recursive function known as
-Bonnet's recursion. Here's the recursion step
+Legendre polynomials $P_n(x)$, with $n \geq 0$ and $\vert x \vert \leq 1$, form
+a sequence of orthogonal polynomials that have many applications in physics and
+engineering. While they are typically defined on the interval $[-1,1]$,
+where their orthogonality holds with respect to the standard inner product,
+the recurrence relation and closed-form expressions also allow their
+evaluation outside this interval. However, extending them beyond
+$\vert x \vert \leq 1$ comes at the cost of losing some of their most
+useful properties, most notably orthogonality, which is crucial in
+approximation and expansion methods. These polynomials are computed by MPFR
+through Bonnet's recursion, a simple recursive formula that
+expresses $P_n(x)$ in terms of lower-degree polynomials.
+Here's the recursion step:
 \begin{equation} \label{eq:bonnet-recursion}
-n P_n(x) = (2n - 1)\, x \, P_{n-1}(x) - (n - 1)\, P_{n-2}(x)
+  \begin{cases}
+      P_0(x) = 1\\
+      P_1(x) = x\\
+      P_n(x) = \frac{(2n - 1)\, x \, P_{n-1}(x) - (n - 1)\, P_{n-2}(x)}{n}
+  \end{cases}
 \end{equation}
-with two base cases: $P_0(x) = 1$ and $P_1(x) = x$. Some values of $x$ and $n$ are treated
-as special cases. These cases are:
+Some values of $x$ and $n$ are
+treated as special cases. These cases are:
 \begin{itemize}
 \item[(a)] The base cases $P_0$ and $P_1$.
 \item[(b)] $P_n(1) = 1$.
@@ -4642,16 +4656,13 @@ parameters validation and special cases (a)--(d).
   \caption{\texttt{mpfr\_legendre} special cases}
   \label{algo:legendre-special}
   \KwData{mpfr\_ptr res, int n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
-  \KwResult{int}
+  \KwResult{ternary value}
   \BlankLine
-  assert(res not NULL)\;
-  assert(x not NULL)\;
-  \BlankLine
-  \tcc{First we have to check the parameters.}
   \lIf{$~~(n<0)~~$}{
     res $\gets$ NaN;
     \Return 0\;
   }
+  \tcc{We have to check the domain bounds of the parameter $x$}
   \lIf{$~~(x<-1~\mathbf{or}~x>1)~~$}{
     res $\gets$ NaN;
     \Return 0\;
@@ -4670,8 +4681,7 @@ parameters validation and special cases (a)--(d).
     \Return 0\;
   }
   \lIf{$~~(n=1)~~$}{
-    res $\gets$ x;
-    \Return 0\;
+    \Return mpfr\_set(res, x, rnd\_mode)\;
   }
   \lIf{$~~(x=0~\mathbf{and}~(n\&1) = 1)~~$}{
     res $\gets$ 0;
@@ -4679,40 +4689,45 @@ parameters validation and special cases (a)--(d).
   }
   \BlankLine
 \end{algorithm}
-\vspace{.5cm}
-
-\noindent In Algorithm \ref{algo:legendre-bonnet} below, we can find the pseudo--code
-implementation of the Bonnet's recursion with final rounding.
-\vspace{.5cm}
+\vspace{.3cm}
 
 \begin{algorithm}[H]
   \caption{\texttt{mpfr\_legendre} Bonnet's recursion}
   \label{algo:legendre-bonnet}
+  \KwData{mpfr\_ptr res, int n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
+  \KwResult{ternary value}
+  \BlankLine
+  realprec $\gets$ mpfr\_get\_prec(res) + 8\;
   mpfr\_init2 (first\_term, realprec)\;
   mpfr\_init2 (second\_term, realprec)\;
   mpfr\_init2 ($p_2$, realprec)\;
   mpfr\_init2 ($p_1$, realprec)\;
-  mpfr\_init2 ($p_n$, realprec)\;
-  \BlankLine
+  mpfr\_init2 ($p_i$, realprec)\;
   \tcc{Initializing the two base cases}
   $p_2~\gets{}~1$\;
   $p_1~\gets~\nabla(x)$\;
-  \BlankLine
   $i~\gets~2$\;
+  \tcc{Loop from 2 to $n$, where $n$ is the degree of the polynomial}
   \While{$i\leq{}n$}{
-    $\mathrm{first\_term}~\gets~\nabla{}(2\cdot{}i\cdot{}x-1)$\;
-    $\mathrm{second\_term}~\gets~\nabla{}(p_2\cdot{}i-1)$\;
-    $p_n~\gets~\nabla{}(\mathrm{first\_term}\cdot{}p_1 - \mathrm{second\_term})$\;
-    $p_n~\gets~\nabla{}(p_n/i)$\;
-    \BlankLine
+    $\mathrm{first\_term}~\gets~\nabla{}(x\cdot{}(2i - 1))$\;
+    $\mathrm{second\_term}~\gets~\nabla{}(p_2\cdot{}(i - 1))$\;
+    \tcc{Here we perform a fused multiplication and subtraction, to minimize the rounding error}
+    $p_i~\gets~\nabla{}(\mathrm{first\_term}\cdot{}p_1 - \mathrm{second\_term})$\;
+    $p_i~\gets~\nabla{}(p_i/i)$\;
+    \tcc{Here we use mpfr\_swap to avoid unnecessary copies}
     $p_2~\gets~p_1$\;
-    $p_1~\gets~\nabla{}(p_n)$\;
+    $p_1~\gets~p_i$\;
     $i++$\;
   }
-  $\mathrm{round}(\circ(p_n), \mathrm{prec}(\mathrm{res}))$\;
-  $\mathrm{res}~\gets~\circ{}(p_n)$\;
+  \tcc{Final rounding of the result with the input rounding mode}
+  ret $\gets$ mpfr\_set(res, p\_i, rnd\_mode)\;
+  \Return ret;
   \BlankLine
 \end{algorithm}
+\vspace{.3cm}
+
+\noindent In Algorithm \ref{algo:legendre-bonnet} above, you can find the pseudo-code
+implementation of the \textit{iterative} Bonnet's recursion with final rounding.
 
 \subsection{Summary}
 

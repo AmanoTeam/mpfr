@@ -21,11 +21,24 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-test.h"
 
+#include <time.h>
+
 #define ARBITRARILY_LOW_PREC 10
 #define IEEE754_SINGLE_PREC  24
 #define IEEE754_DOUBLE_PREC  53
 #define MPFR_PREC_100        100
 #define MPFR_PREC_200        200
+
+#define RANDOM_TESTS_BATCH 5000
+
+#define DUMP_NUMBERS(expected, got)   \
+          do                          \
+            {                         \
+              printf ("expected: ");  \
+              mpfr_dump (expected);   \
+              printf ("got:      ");  \
+              mpfr_dump (got);        \
+            } while (0)
 
 static const unsigned degrees[] =
 {
@@ -55,6 +68,7 @@ static const int n_degrees_test = sizeof(degrees)/sizeof(unsigned);
 static void
 test_domain (void)
 {
+  int ret;
   mpfr_t res, upper, lower, inner, outer;
 
   mpfr_init2 (res, 200);
@@ -80,9 +94,9 @@ test_domain (void)
       mpfr_legendre (res, i, upper, MPFR_RNDN);
       if (MPFR_IS_NAN (res))
         {
-          fprintf (stderr, "Upper bound input value ");
-          mpfr_out_str (stderr, 10, 0, upper, MPFR_RNDD);
-          fprintf (stderr, " should *not* lead to a NAN result (degree: %d)\n", i);
+          printf ("Upper bound input value ");
+          mpfr_out_str (stdout, 10, 0, upper, MPFR_RNDD);
+          printf (" should *not* lead to a NAN result (degree: %d)\n", i);
           exit (1);
         }
     }
@@ -92,9 +106,9 @@ test_domain (void)
       mpfr_legendre (res, i, lower, MPFR_RNDN);
       if (MPFR_IS_NAN (res))
         {
-          fprintf (stderr, "Lower bound input value ");
-          mpfr_out_str (stderr, 10, 0, lower, MPFR_RNDD);
-          fprintf (stderr, " should *not* lead to a NAN result (degree: %d)\n", i);
+          printf ("Lower bound input value ");
+          mpfr_out_str (stdout, 10, 0, lower, MPFR_RNDD);
+          printf (" should *not* lead to a NAN result (degree: %d)\n", i);
           exit (1);
         }
     }
@@ -104,21 +118,28 @@ test_domain (void)
       mpfr_legendre (res, i, inner, MPFR_RNDN);
       if (MPFR_IS_NAN (res))
         {
-          fprintf (stderr, "input number ");
-          mpfr_out_str (stderr, 10, 0, inner, MPFR_RNDD);
-          fprintf (stderr, " should *not* lead to a NAN result (degree: %d)\n", i);
+          printf ("input number ");
+          mpfr_out_str (stdout, 10, 0, inner, MPFR_RNDD);
+          printf (" should *not* lead to a NAN result (degree: %d)\n", i);
           exit (1);
         }
     }
 
   for (i = 0; i < 10; i++)
     {
-      mpfr_legendre (res, i, outer, MPFR_RNDN);
+      ret = mpfr_legendre (res, i, outer, MPFR_RNDN);
       if (!MPFR_IS_NAN (res))
         {
-          fprintf (stderr, "input number ouside of the domain ");
-          mpfr_out_str (stderr, 10, 0, outer, MPFR_RNDD);
-          fprintf (stderr, " should lead to a NAN result (degree: %d)\n", i);
+          printf ("input number ouside of the domain ");
+          mpfr_out_str (stdout, 10, 0, outer, MPFR_RNDD);
+          printf (" should lead to a NAN result (degree: %d)\n", i);
+          exit (1);
+        }
+
+      if (ret)
+        {
+          printf ("NaN result, should lead to an exact return value. "
+                  "got: %d\n", ret);
           exit (1);
         }
     }
@@ -150,36 +171,36 @@ test_domain_bounds (void)
   if (mpfr_legendre (res, even_degree, one, MPFR_RNDD) != 0
       || !mpfr_equal_p (one, res))
     {
-      fprintf (stderr, "P%d(1) should be 1; got ", even_degree);
-      mpfr_out_str (stderr, 10, 0, res, MPFR_RNDD);
-      fprintf (stderr, "\n");
+      printf ("P%d(1) should be 1; got ", even_degree);
+      mpfr_out_str (stdout, 10, 0, res, MPFR_RNDD);
+      printf ("\n");
       exit (1);
     }
 
   if (mpfr_legendre (res, odd_degree, one, MPFR_RNDD) != 0
       || !mpfr_equal_p (one, res))
     {
-      fprintf (stderr, "P%d(1) should be 1; got ", odd_degree);
-      mpfr_out_str (stderr, 10, 0, res, MPFR_RNDD);
-      fprintf (stderr, "\n");
+      printf ("P%d(1) should be 1; got ", odd_degree);
+      mpfr_out_str (stdout, 10, 0, res, MPFR_RNDD);
+      printf ("\n");
       exit (1);
     }
 
   if (mpfr_legendre (res, even_degree, minus_one, MPFR_RNDD) != 0
       || !mpfr_equal_p (one, res))
     {
-      fprintf (stderr, "P%d(-1) should be 1; got ", even_degree);
-      mpfr_out_str (stderr, 10, 0, res, MPFR_RNDD);
-      fprintf (stderr, "\n");
+      printf ("P%d(-1) should be 1; got ", even_degree);
+
+      printf ("\n");
       exit (1);
     }
 
   if (mpfr_legendre (res, odd_degree, minus_one, MPFR_RNDD) != 0
       || !mpfr_equal_p (minus_one, res))
     {
-      fprintf (stderr, "P%d(-1) should be -1; got ", odd_degree);
-      mpfr_out_str (stderr, 10, 0, res, MPFR_RNDD);
-      fprintf (stderr, "\n");
+      printf ("P%d(-1) should be -1; got ", odd_degree);
+      mpfr_out_str (stdout, 10, 0, res, MPFR_RNDD);
+      printf ("\n");
       exit (1);
     }
 
@@ -209,9 +230,9 @@ test_first_iteration (void)
   /* The first iteration should always be 1 */
   if (ret != 0 || !mpfr_equal_p (res, one))
     {
-      fprintf (stderr, "The first legendre polynomial P_0 should be exactly 1.\ngot: ");
+      printf ("The first legendre polynomial P_0 should be exactly 1.\ngot: ");
       mpfr_dump (res);
-      fprintf (stderr, "With return value: %d\n", ret);
+      printf ("With return value: %d\n", ret);
       exit (1);
     }
 
@@ -221,18 +242,18 @@ test_first_iteration (void)
   ret = mpfr_legendre (res, 0, x, MPFR_RNDN);
   if (ret != 0 || !mpfr_equal_p (res, one))
     {
-      fprintf (stderr, "P_0 should be 1, if x = +0.0\n got: ");
+      printf ("P_0 should be 1, if x = +0.0\n got: ");
       mpfr_dump (res);
-      fprintf (stderr, "With return value: %d\n", ret);
+      printf ("With return value: %d\n", ret);
       exit (1);
     }
   mpfr_set_zero (x, -1);
   ret = mpfr_legendre (res, 0, x, MPFR_RNDN);
   if (ret != 0 || !mpfr_equal_p (res, one))
     {
-      fprintf (stderr, "P_0 should be 1, if x = -0.0\ngot: ");
+      printf ("P_0 should be 1, if x = -0.0\ngot: ");
       mpfr_dump (res);
-      fprintf (stderr, "With return value: %d\n", ret);
+      printf ("With return value: %d\n", ret);
       exit (1);
     }
 
@@ -242,27 +263,27 @@ test_first_iteration (void)
   ret = mpfr_legendre (res, 0, x, MPFR_RNDN);
   if (ret != 0 || !mpfr_nan_p (res))
     {
-      fprintf (stderr, "For x = NAN, P_0 should be NAN\ngot: ");
+      printf ("For x = NAN, P_0 should be NAN\ngot: ");
       mpfr_dump (res);
-      fprintf (stderr, "With return value: %d\n", ret);
+      printf ("With return value: %d\n", ret);
       exit (1);
     }
   mpfr_set_inf(x, 1);
   ret = mpfr_legendre (res, 0, x, MPFR_RNDN);
   if (ret != 0 || !mpfr_nan_p (res))
     {
-      fprintf (stderr, "For x = +Inf, P_0 should be NAN\ngot: ");
+      printf ("For x = +Inf, P_0 should be NAN\ngot: ");
       mpfr_dump (res);
-      fprintf (stderr, "With return value: %d\n", ret);
+      printf ("With return value: %d\n", ret);
       exit (1);
     }
   mpfr_set_inf(x, -1);
   ret = mpfr_legendre (res, 0, x, MPFR_RNDN);
   if (ret != 0 || !mpfr_nan_p (res))
     {
-      fprintf (stderr, "For x = -Inf, P_0 should be NAN\ngot: ");
+      printf ("For x = -Inf, P_0 should be NAN\ngot: ");
       mpfr_dump (res);
-      fprintf (stderr, "With return value: %d\n", ret);
+      printf ("With return value: %d\n", ret);
       exit (1);
     }
 
@@ -284,13 +305,14 @@ test_second_iteration (void)
 
   mpfr_set_d (x, 1.0/3.0, MPFR_RNDD);
 
-  /* The second iteration should return x */
+  /* The second iteration should return x itself. Since prec(res) = prec(x),
+     ret should be 0 */
   ret = mpfr_legendre (res, 1, x, MPFR_RNDN);
   if (ret != 0 || !mpfr_equal_p (res, x))
     {
-      fprintf (stderr, "P_1 should be x itself\ngot: ");
+      printf ("P_1 should be exactly x itself\ngot: ");
       mpfr_dump (res);
-      fprintf (stderr, "With return value: %d\n", ret);
+      printf ("With return value: %d\n", ret);
       exit (1);
     }
 
@@ -298,29 +320,47 @@ test_second_iteration (void)
      should be NAN as well */
   mpfr_set_nan (x);
   ret = mpfr_legendre (res, 1, x, MPFR_RNDN);
-  if (ret != 0 || !mpfr_nan_p (res))
+  if (!mpfr_nan_p (res))
     {
-      fprintf (stderr, "For x = NAN, P_1 should be NAN\n got: ");
+      printf ("For x = NAN, P_1 should be NAN\n got: ");
       mpfr_dump (res);
-      fprintf (stderr, "With return value: %d\n", ret);
+      printf ("With return value: %d\n", ret);
+      exit (1);
+    }
+  if (ret != 0)
+    {
+      printf ("NaN result, should lead to an exact return value. "
+              "got: %d\n", ret);
       exit (1);
     }
   mpfr_set_inf(x, 1);
   ret = mpfr_legendre (res, 1, x, MPFR_RNDN);
-  if (ret != 0 || !mpfr_nan_p (res))
+  if (!mpfr_nan_p (res))
     {
-      fprintf (stderr, "For x = +Inf, P_1 should be NAN\ngot: ");
+      printf ("For x = +Inf, P_1 should be NAN\ngot: ");
       mpfr_dump (res);
-      fprintf (stderr, "With return value: %d\n", ret);
+      printf ("With return value: %d\n", ret);
+      exit (1);
+    }
+  if (ret != 0)
+    {
+      printf ("NaN result, should lead to an exact return value. "
+              "got: %d\n", ret);
       exit (1);
     }
   mpfr_set_inf(x, -1);
   ret = mpfr_legendre (res, 1, x, MPFR_RNDN);
-  if (ret !=0 || !mpfr_nan_p (res))
+  if (!mpfr_nan_p (res))
     {
-      fprintf (stderr, "For x = -Inf, P_1 should be NAN\ngot: ");
+      printf ("For x = -Inf, P_1 should be NAN\ngot: ");
       mpfr_dump (res);
-      fprintf (stderr, "With return value: %d\n", ret);
+      printf ("With return value: %d\n", ret);
+      exit (1);
+    }
+  if (ret != 0)
+    {
+      printf ("NaN result, should lead to an exact return value. "
+              "got: %d\n", ret);
       exit (1);
     }
 
@@ -332,7 +372,7 @@ test_second_iteration (void)
 static void
 test_sample_with_precision (unsigned x_prec, unsigned res_prec)
 {
-  int ret;
+  unsigned i;
   mpfr_t res, x, expected;
   const char *x_val = "0.5";
 
@@ -342,27 +382,16 @@ test_sample_with_precision (unsigned x_prec, unsigned res_prec)
 
   mpfr_set_str (x, x_val, 10, MPFR_RNDN);
 
-  unsigned i = 0;
-  for (; i < n_degrees_test; i++)
+  for (i = 0; i < n_degrees_test; i++)
     {
       mpfr_set_str (expected, expected_vals[i], 2, MPFR_RNDN);
-      ret = mpfr_legendre (res, degrees[i], x, MPFR_RNDN);
-
-      if (ret != 0)
-        {
-          fprintf (stderr, "P%d(%s) should be exact. Got `%d` as ternary value\n",
-                   degrees[i], x_val, ret);
-          exit (1);
-        }
+      mpfr_legendre (res, degrees[i], x, MPFR_RNDN);
 
       if (!mpfr_eq (res, expected,  mpfr_min_prec (expected)))
         {
-          fprintf (stderr, "Wrong value for P%d(%s) [prec(x)=%u prec(res)=%u]\n",
+          printf ("Wrong value for P%d(%s) [prec(x)=%u prec(res)=%u]\n",
                   degrees[i], x_val, x_prec, res_prec);
-          fprintf (stderr, "expected ");
-          mpfr_dump (expected);
-          fprintf (stderr, "got      ");
-          mpfr_dump (res);
+          DUMP_NUMBERS (expected, res);
           exit (1);
         }
     }
@@ -374,47 +403,51 @@ test_sample_with_precision (unsigned x_prec, unsigned res_prec)
 }
 
 static void
-test_round (unsigned prec)
+test_round (void)
 {
-  const mpfr_rnd_t rounding_modes[] =
+  mpfr_t res, x;
+  int ret, rnd;
+
+  mpfr_init2 (x, IEEE754_DOUBLE_PREC);
+  mpfr_init2 (res, IEEE754_SINGLE_PREC);
+
+  mpfr_set_d(x, 1.0/3.0, MPFR_RNDD);
+
+  /* */
+
+  RND_LOOP_NO_RNDF (rnd)
     {
-      MPFR_RNDN,
-      MPFR_RNDZ,
-      MPFR_RNDU,
-      MPFR_RNDD,
-      MPFR_RNDA,
-      MPFR_RNDF,
-    };
-  mpfr_t res, x, expected;
-  const char *x_val = "0.5";
-  int ret;
-
-  mpfr_init2 (x, prec);
-  mpfr_init2 (expected, prec);
-  mpfr_init2 (res, prec);
-
-  mpfr_set_str (x, x_val, 10, MPFR_RNDN);
-
-  unsigned i = 0, j = 0;
-  for (; j < sizeof(rounding_modes) / sizeof(int); j++)
-    {
-      for (; i < n_degrees_test; i++)
+      ret = mpfr_legendre (res, 1, x, (mpfr_rnd_t) rnd);
+      switch (rnd)
         {
-          mpfr_set_str (expected, expected_vals[i], 2, MPFR_RNDN);
-          ret = mpfr_legendre (res, degrees[i], x, rounding_modes[j]);
-
-          if (ret != 0)
-            {
-              fprintf (stderr, "Wrong rounding [%s] for P%d(%s) [prec(x)=prec(res)=%u]\n",
-                       mpfr_print_rnd_mode (rounding_modes[j]), degrees[i], x_val, prec);
-              exit (1);
-            }
+          case MPFR_RNDN:
+          case MPFR_RNDU:
+          case MPFR_RNDA:
+            if (ret <= 0)
+              {
+                printf ("For rnd=%s, P1(x), with x=1/3, mpfr_legendre should "
+                        "return a positive ternary value, got: %d instead\n",
+                        mpfr_print_rnd_mode ((mpfr_rnd_t) rnd), ret);
+                exit (1);
+              }
+            break;
+          case MPFR_RNDZ:
+          case MPFR_RNDD:
+            if (ret >= 0)
+              {
+                printf ("For rnd=%s, P1(x), with x=1/3, mpfr_legendre should "
+                        "return a negative ternary value, got: %d instead\n",
+                        mpfr_print_rnd_mode ((mpfr_rnd_t) rnd), ret);
+                exit (1);
+              }
+            break;
+          default:
+            break;
         }
     }
 
   mpfr_clear (res);
   mpfr_clear (x);
-  mpfr_clear (expected);
   mpfr_free_cache ();
 }
 
@@ -438,27 +471,67 @@ test_random (int n, mpfr_prec_t p, unsigned long K)
         {
           mpfr_legendre (y, n, x, (mpfr_rnd_t) rnd);
           mpfr_legendre (z, n, x, MPFR_RNDN);
-          if (mpfr_can_round (z, p + 20, MPFR_RNDN, (mpfr_rnd_t) rnd, p)) {
-            mpfr_set (t, z, (mpfr_rnd_t) rnd);
-            if (mpfr_cmp (y, t))
-              {
-                printf ("Error in mpfr_legendre for n=%d x=", n);
-                mpfr_out_str (stdout, 10, 0, x, MPFR_RNDN);
-                printf (" rnd=%s\n", mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
-                printf ("expected ");
-                mpfr_out_str (stdout, 10, 0, t, MPFR_RNDN);
-                printf ("\ngot ");
-                mpfr_out_str (stdout, 10, 0, y, MPFR_RNDN);
-                printf ("\n");
-                exit (1);
-              }
-          }
+          if (mpfr_can_round (z, p + 20, MPFR_RNDN, (mpfr_rnd_t) rnd, p))
+            {
+              mpfr_set (t, z, (mpfr_rnd_t) rnd);
+              if (mpfr_cmp (y, t))
+                {
+                  printf ("Error in mpfr_legendre for n=%d x=", n);
+                  mpfr_out_str (stdout, 10, 0, x, MPFR_RNDN);
+                  printf (" rnd=%s\n", mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                  DUMP_NUMBERS (t, y);
+                  exit (1);
+                }
+            }
         }
     }
   mpfr_clear (x);
   mpfr_clear (y);
   mpfr_clear (z);
   mpfr_clear (t);
+}
+
+static void
+random_array (int *array, int size, int inf, int sup)
+{
+  int i, tmp;
+  for (i = 0; i < size; i++)
+    {
+      if (inf > sup)
+        {
+          tmp = inf;
+          inf = sup;
+          sup = tmp;
+        }
+      array[i] = inf + rand() % (sup - inf + 1);
+    }
+}
+
+static void
+random_test_suite (int num_degrees, int num_tests)
+{
+  /* we set the minimum degree to 2 to skip the two base cases P0 and P1,
+     and the maximum degree to 128 to limit the range of degrees tested
+     to the same limit of the C++ standard */
+  int min_degree = 2, max_degree = 128;
+  int *test_degrees;
+
+  srand(time(NULL));
+
+  test_degrees = (int *) malloc (num_degrees * sizeof(int));
+  if (!test_degrees)
+    {
+      printf ("Could not allocate memory for random tests\n");
+      exit (1);
+    }
+
+  random_array (test_degrees, num_degrees, min_degree, max_degree);
+
+  for (int i = 0; i < num_degrees; i++)
+    {
+      test_random (test_degrees[i], IEEE754_DOUBLE_PREC, num_tests);
+    }
+  free (test_degrees);
 }
 
 int
@@ -477,6 +550,9 @@ main (void)
      cases of the Bonnet’s recursion algorithm used by mpfr_legendre */
   test_first_iteration ();
   test_second_iteration ();
+
+  /* This test checks the ternary value returned by mpfr_legendre */
+  test_round ();
 
   /* res precision si arbitrarily low. ARBITRARILY_LOW_PREC should be lower
      than any other precision */
@@ -501,20 +577,9 @@ main (void)
   test_sample_with_precision (MPFR_PREC_100, MPFR_PREC_200);
   test_sample_with_precision (MPFR_PREC_200, MPFR_PREC_200);
 
-  /* This procedure test the rouding of the Legendre algorithm with
-     different precisions. There's no need to include special cases
-     in the following tests, because they tests their own rounding */
-  test_round (IEEE754_SINGLE_PREC);
-  test_round (IEEE754_DOUBLE_PREC);
-  test_round (MPFR_PREC_100);
-  test_round (MPFR_PREC_200);
-
-  test_random (2, 53, 1000000);
-  test_random (3, 53, 1000000);
-  test_random (4, 53, 1000000);
-  test_random (5, 53, 1000000);
+  /* Random tests */
+  random_test_suite (100, RANDOM_TESTS_BATCH);
 
   tests_end_mpfr ();
-
   return 0;
 }
