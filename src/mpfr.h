@@ -390,6 +390,11 @@ typedef enum {
 # define MPFR_RETURNS_NONNULL
 #endif
 
+typedef struct {
+  unsigned char *content;
+  size_t len;
+} mpfr_bytes_t;
+
 #ifndef _MPFR_DIGEST
 #define _MPFR_DIGEST
 #if SIZEOF_UNSIGNED_INT == 4
@@ -881,6 +886,8 @@ __MPFR_DECLSPEC int mpfr_custom_get_kind (mpfr_srcptr);
 __MPFR_DECLSPEC int mpfr_total_order_p (mpfr_srcptr, mpfr_srcptr);
 
 __MPFR_DECLSPEC mpfr_digest_t mpfr_hash (mpfr_srcptr);
+
+__MPFR_DECLSPEC mpfr_bytes_t mpfr_unique_bytes (mpfr_srcptr x);
 
 #if defined (__cplusplus)
 }

@@ -37,6 +37,7 @@ If not, see <https://www.gnu.org/licenses/>. */
    contain the 16-bit little endian exponent. Neither precision nor
    significand are encoded for these numbers, because mpfr_min_prec (x) = 0
    where x in {+/-0,NAN,+Inf,-Inf} */
+#define MPFR_SINGULAR_ENCODING_BYTE_SIZE 3
 static const unsigned char default_zero[]    = { 0x00, 0x01, 0x80 };
 static const unsigned char default_nan[]     = { 0x00, 0x02, 0x80 };
 static const unsigned char default_pos_inf[] = { 0x00, 0x03, 0x80 };
@@ -103,25 +104,34 @@ fnv32 (const unsigned char *bytes, size_t bytes_len)
   return hash32;
 }
 
-mpfr_digest_t
-mpfr_hash (mpfr_srcptr x)
+static const unsigned char *
+get_singular_number (mpfr_srcptr x)
 {
+  if (MPFR_IS_ZERO (x))
+    return default_zero;
+
+  if (MPFR_IS_NAN (x))
+    return default_nan;
+
+  if (MPFR_IS_POS (x))
+    return default_pos_inf;
+
+  return default_neg_inf;
+}
+
+mpfr_bytes_t
+mpfr_unique_bytes (mpfr_srcptr x)
+{
+  mpfr_bytes_t bytes = { 0 };
   MPFR_ASSERTN (x != NULL);
 
-  if (MPFR_IS_ZERO (x))
+  if (MPFR_IS_SINGULAR (x))
     {
-      return fnv32 (default_zero, sizeof (default_zero));
-    }
-  else if (MPFR_IS_NAN (x))
-    {
-      return fnv32 (default_nan, sizeof (default_nan));
-    }
-  else if (MPFR_IS_INF (x))
-    {
-      if (MPFR_IS_POS (x))
-        return fnv32 (default_pos_inf, sizeof (default_pos_inf));
-
-      return fnv32 (default_neg_inf, sizeof (default_neg_inf));
+      bytes.content = (unsigned char *) malloc (MPFR_SINGULAR_ENCODING_BYTE_SIZE);
+      bytes.len = MPFR_SINGULAR_ENCODING_BYTE_SIZE;
+      const unsigned char *num = get_singular_number (x);
+      memcpy(bytes.content, num, MPFR_SINGULAR_ENCODING_BYTE_SIZE);
+      return bytes;
     }
 
   int i, j;
@@ -168,9 +178,18 @@ mpfr_hash (mpfr_srcptr x)
           limb_bytes++;
         }
     }
+  bytes.content = mpfr_bytes;
+  bytes.len = written_bytes;
 
-  mpfr_digest_t hash = fnv32 (mpfr_bytes, written_bytes);
-  free (mpfr_bytes);
+  return bytes;
+}
+
+mpfr_digest_t
+mpfr_hash (mpfr_srcptr x)
+{
+  mpfr_bytes_t bytes = mpfr_unique_bytes (x);
+  mpfr_digest_t hash = fnv32 (bytes.content, bytes.len);
+  free (bytes.content);
 
   return hash;
 }
