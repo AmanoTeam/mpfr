@@ -395,14 +395,7 @@ typedef struct {
   size_t len;
 } mpfr_bytes_t;
 
-#ifndef _MPFR_DIGEST
-#define _MPFR_DIGEST
-#if SIZEOF_UNSIGNED_INT == 4
-typedef unsigned mpfr_digest_t;
-#elif SIZEOF_UNSIGNED_LONG == 4
 typedef unsigned long mpfr_digest_t;
-#endif /* SIZEOF_UNSIGNED_INT */
-#endif /* _MPFR_DIGEST */
 
 /* Note: In order to be declared, some functions need a specific
    system header to be included *before* "mpfr.h". If the user

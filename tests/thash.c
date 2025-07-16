@@ -22,16 +22,10 @@ If not, see <https://www.gnu.org/licenses/>. */
 #include "mpfr-test.h"
 
 #define N_SAMPLES 200
-#define H_PI      126454210U
-#define H_LOG2    1348199468U
-#define H_EULER   3879845459U
-#define H_CATALAN 887850484U
-
-#if SIZEOF_UNSIGNED_INT == 4
-#define H_FORMAT "%u"
-#elif SIZEOF_UNSIGNED_LONG == 4
-#define H_FORMAT "%lu"
-#endif /* SIZEOF_UNSIGNED_INT */
+static const mpfr_digest_t H_PI      = 126454210;
+static const mpfr_digest_t H_LOG2    = 1348199468;
+static const mpfr_digest_t H_EULER   = 3879845459;
+static const mpfr_digest_t H_CATALAN = 887850484;
 
 static mpfr_t pos[N_SAMPLES], neg[N_SAMPLES];
 
@@ -62,7 +56,7 @@ test_zero (void)
   if (pZero_hash != nZero_hash)
     {
       fprintf (stderr, "hash for +0.0 and -0.0 should be equal."
-                       "H(+0.0) = " H_FORMAT "; H(-0.0) = " H_FORMAT "\n",
+                       "H(+0.0) = %lu; H(-0.0) = %lu\n",
                        pZero_hash, nZero_hash);
       exit (1);
     }
@@ -115,7 +109,7 @@ test_inf (void)
   if (pInf_hash == nInf_hash)
     {
       fprintf (stderr, "hash for +Inf and -Inf should not be equal."
-                       "H(+Inf) = " H_FORMAT "; H(-Inf) = " H_FORMAT "\n",
+                       "H(+Inf) = %lu; H(-Inf) = %lu\n",
                        pInf_hash, nInf_hash);
       exit (1);
     }
@@ -175,7 +169,7 @@ test_nan (void)
   if (nan_hash != unconventional_nan_hash)
     {
       fprintf (stderr, "hash for +NAN and -NAN should be equal."
-                       "H(+NAN) = " H_FORMAT "; H(-NAN) = " H_FORMAT "\n",
+                       "H(+NAN) = %lu; H(-NAN) = %lu\n",
                        nan_hash, unconventional_nan_hash);
       exit (1);
     }
@@ -305,7 +299,7 @@ test_constants (void)
   h_pi = mpfr_hash (pi);
   if (h_pi != H_PI)
     {
-      fprintf (stderr, "pi digest should be " H_FORMAT "; got " H_FORMAT "\n",
+      fprintf (stderr, "pi digest should be %lu; got %lu\n",
                H_PI, h_pi);
       exit (1);
     }
@@ -315,7 +309,7 @@ test_constants (void)
   h_log2 = mpfr_hash (log2);
   if (h_log2 != H_LOG2)
     {
-      fprintf (stderr, "log2 digest should be " H_FORMAT "; got " H_FORMAT "\n",
+      fprintf (stderr, "log2 digest should be %lu; got %lu\n",
                H_LOG2, h_log2);
       exit (1);
     }
@@ -325,7 +319,7 @@ test_constants (void)
   h_euler = mpfr_hash (euler);
   if (h_euler != H_EULER)
     {
-      fprintf (stderr, "euler digest should be " H_FORMAT "; got " H_FORMAT "\n",
+      fprintf (stderr, "euler digest should be %lu; got %lu\n",
                H_EULER, h_euler);
       exit (1);
     }
@@ -335,7 +329,7 @@ test_constants (void)
   h_catalan = mpfr_hash (catalan);
   if (h_catalan != H_CATALAN)
     {
-      fprintf (stderr, "catalan digest should be " H_FORMAT "; got " H_FORMAT "\n",
+      fprintf (stderr, "catalan digest should be %lu; got %lu\n",
               H_CATALAN, h_catalan);
       exit (1);
     }

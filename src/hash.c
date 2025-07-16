@@ -24,6 +24,18 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define FNV32_PRIME 0x01000193U
 #define FNV32_BASIS 0x811C9DC5U
 
+/* Defines the type fnv32_t for internal use. We need a number that is 
+   guaranteed to be exactly 4 bytes in order to perform bitwise operations
+   within fnv32 */
+#ifndef _MPFR_DIGEST
+#define _MPFR_DIGEST
+#if SIZEOF_UNSIGNED_INT == 4
+typedef unsigned fnv32_t;
+#elif SIZEOF_UNSIGNED_LONG == 4
+typedef unsigned long fnv32_t;
+#endif /* SIZEOF_UNSIGNED_INT */
+#endif /* _MPFR_DIGEST */
+
 /* To extract bytest from a limb we need to check for endianess */
 #if defined (HAVE_LITTLE_ENDIAN)
 #define limb_byte_index(b) (sizeof (mp_limb_t) - 1 - (b))
@@ -93,7 +105,8 @@ static mpfr_digest_t
 fnv32 (const unsigned char *bytes, size_t bytes_len)
 {
   size_t i;
-  mpfr_digest_t hash32 = FNV32_BASIS;
+  /* This is always a 4 bytes number */
+  fnv32_t hash32 = FNV32_BASIS;
 
   for (i = 0; i < bytes_len; i++)
     {
@@ -101,7 +114,7 @@ fnv32 (const unsigned char *bytes, size_t bytes_len)
       hash32 *= FNV32_PRIME;
     }
 
-  return hash32;
+  return (mpfr_digest_t) hash32;
 }
 
 static const unsigned char *
