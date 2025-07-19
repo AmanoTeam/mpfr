@@ -49,7 +49,7 @@ typedef unsigned long fnv32_t;
    contain the 16-bit little endian exponent. Neither precision nor
    significand are encoded for these numbers, because mpfr_min_prec (x) = 0
    where x in {+/-0,NAN,+Inf,-Inf} */
-#define MPFR_SINGULAR_ENCODING_BYTE_SIZE 3
+#define MPFR_SINGULAR_DIGEST_SIZE 3
 static const unsigned char default_zero[]    = { 0x00, 0x01, 0x80 };
 static const unsigned char default_nan[]     = { 0x00, 0x02, 0x80 };
 static const unsigned char default_pos_inf[] = { 0x00, 0x03, 0x80 };
@@ -132,39 +132,36 @@ get_singular_number (mpfr_srcptr x)
   return default_neg_inf;
 }
 
-mpfr_bytes_t
-mpfr_unique_bytes (mpfr_srcptr x)
+static int
+non_singular_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
 {
-  mpfr_bytes_t bytes = { 0 };
-  MPFR_ASSERTN (x != NULL);
-
-  if (MPFR_IS_SINGULAR (x))
-    {
-      bytes.content = (unsigned char *) malloc (MPFR_SINGULAR_ENCODING_BYTE_SIZE);
-      bytes.len = MPFR_SINGULAR_ENCODING_BYTE_SIZE;
-      const unsigned char *num = get_singular_number (x);
-      memcpy(bytes.content, num, MPFR_SINGULAR_ENCODING_BYTE_SIZE);
-      return bytes;
-    }
-
   int i, j;
-  size_t written_bytes = 0, limb_bytes = 0;
-  unsigned char sign = MPFR_IS_NEG (x) ? 1 : 0;
-  mpfr_exp_t exp = MPFR_EXP (x);
+  size_t written_bytes = 0, limb_bytes = 0, min_prec_byte_size = 0,
+         limb_size = 0, bytes_size = 0;
+  unsigned char *mpfr_bytes = NULL, *l_bytes = NULL;
+  unsigned char sign;
+  mpfr_exp_t exp;
+  mpfr_prec_t prec;
+  mp_limb_t *limbs = NULL;
+
+  sign = MPFR_IS_NEG (x) ? 1 : 0;
+  exp = MPFR_EXP (x);
 
   /* We only encode the minimum number of bits required to
      represent the number */
-  mpfr_prec_t prec = mpfr_min_prec (x);
+  prec = mpfr_min_prec (x);
   /* The minimum number of bytes required to represent prec+1 bits */
-  size_t min_prec_byte_size = bytes_for (prec + 1);
-  size_t limb_size = MPFR_LIMB_SIZE (x);
-  mp_limb_t *limbs = MPFR_MANT (x);
+  min_prec_byte_size = bytes_for (prec + 1);
+  limb_size = MPFR_LIMB_SIZE (x);
+  limbs = MPFR_MANT (x);
 
   /* The size of the byte array required to encode the number is
      always less (or equal) than `bytes_size`:
        min_prec_byte_size <= bytes_size */
-  size_t bytes_size = get_bytes_size (x);
-  unsigned char *mpfr_bytes = (unsigned char *) malloc (bytes_size);
+  bytes_size = get_bytes_size (x);
+  mpfr_bytes = (unsigned char *) malloc (bytes_size);
+  if (!mpfr_bytes)
+    return 0;
 
   /* We encode (sequentially):
        - the sign (written_bytes = 1);
@@ -183,7 +180,7 @@ mpfr_unique_bytes (mpfr_srcptr x)
      limbs' bytes from the last to the most significant. */
   for (i = limb_size - 1; i >= 0 && limb_bytes <= min_prec_byte_size; --i)
     {
-      unsigned char *l_bytes = (unsigned char *)&limbs[i];
+      l_bytes = (unsigned char *) (limbs + i);
 
       for (j = 0; j < sizeof(mp_limb_t) && limb_bytes < min_prec_byte_size; ++j)
         {
@@ -191,18 +188,54 @@ mpfr_unique_bytes (mpfr_srcptr x)
           limb_bytes++;
         }
     }
-  bytes.content = mpfr_bytes;
-  bytes.len = written_bytes;
+  bytes->content = mpfr_bytes;
+  bytes->len = written_bytes;
 
-  return bytes;
+  return 1;
+}
+
+int
+mpfr_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
+{
+  int ret = 1;
+  const unsigned char *singular_num;
+
+  MPFR_ASSERTN (x != NULL);
+
+  if (MPFR_IS_SINGULAR (x))
+    {
+      bytes->content = (unsigned char *) malloc (MPFR_SINGULAR_DIGEST_SIZE);
+      if (!bytes->content)
+        ret = 0;
+      bytes->len = MPFR_SINGULAR_DIGEST_SIZE;
+      singular_num = get_singular_number (x);
+      memcpy (bytes->content, singular_num, MPFR_SINGULAR_DIGEST_SIZE);
+      goto _ret;
+    }
+
+  ret = non_singular_unique_bytes (x, bytes);
+
+_ret:
+  return ret;
+}
+
+void
+mpfr_bytes_free (mpfr_bytes_t *bytes)
+{
+  free (bytes->content);
+  bytes->content = NULL;
+  bytes->len = 0;
 }
 
 mpfr_digest_t
 mpfr_hash (mpfr_srcptr x)
 {
-  mpfr_bytes_t bytes = mpfr_unique_bytes (x);
-  mpfr_digest_t hash = fnv32 (bytes.content, bytes.len);
-  free (bytes.content);
+  mpfr_bytes_t bytes;
+  mpfr_digest_t hash;
+  
+  mpfr_unique_bytes (x, &bytes);
+  hash = fnv32 (bytes.content, bytes.len);
+  mpfr_bytes_free (&bytes);
 
   return hash;
 }

@@ -242,7 +242,7 @@ test_precision (void)
       exit (1);
     }
 
-    mpfr_clear (high_prec);
+  mpfr_clear (high_prec);
 
   /* 80 bit precision:
       - 3 limbs for 32-bit archs;

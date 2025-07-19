@@ -880,7 +880,9 @@ __MPFR_DECLSPEC int mpfr_total_order_p (mpfr_srcptr, mpfr_srcptr);
 
 __MPFR_DECLSPEC mpfr_digest_t mpfr_hash (mpfr_srcptr);
 
-__MPFR_DECLSPEC mpfr_bytes_t mpfr_unique_bytes (mpfr_srcptr x);
+__MPFR_DECLSPEC int mpfr_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes);
+
+__MPFR_DECLSPEC void mpfr_bytes_free (mpfr_bytes_t *bytes);
 
 #if defined (__cplusplus)
 }
