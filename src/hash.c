@@ -74,14 +74,14 @@ count_relevant_bytes (void *x, size_t size)
 static size_t
 le_relevant_bytes (unsigned char *bytes, size_t size, void *x)
 {
-  size_t relevant_size = count_relevant_bytes(x, size);
+  size_t relevant_size = count_relevant_bytes (x, size);
 #if defined (HAVE_BIG_ENDIAN)
   unsigned char *src = (unsigned char *)x;
   src += (size - relevant_size);
   for (size_t i = 0; i < relevant_size; ++i)
     bytes[i] = src[relevant_size - 1 - i];
 #elif defined (HAVE_LITTLE_ENDIAN)
-  memcpy(bytes, x, relevant_size);
+  memcpy (bytes, x, relevant_size);
 #endif
   return relevant_size;
 }
@@ -101,20 +101,18 @@ get_bytes_size (mpfr_srcptr x)
          + (MPFR_LIMB_SIZE (x) * sizeof (mp_limb_t)); /* significand size */
 }
 
-static mpfr_digest_t
-fnv32 (const unsigned char *bytes, size_t bytes_len)
+static fnv32_t
+fnv32 (fnv32_t hash, const unsigned char *bytes, size_t bytes_len)
 {
   size_t i;
-  /* This is always a 4 bytes number */
-  fnv32_t hash32 = FNV32_BASIS;
 
   for (i = 0; i < bytes_len; i++)
     {
-      hash32 ^= bytes[i];
-      hash32 *= FNV32_PRIME;
+      hash ^= bytes[i];
+      hash *= FNV32_PRIME;
     }
 
-  return (mpfr_digest_t) hash32;
+  return hash;
 }
 
 static const unsigned char *
@@ -182,7 +180,7 @@ non_singular_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
     {
       l_bytes = (unsigned char *) (limbs + i);
 
-      for (j = 0; j < sizeof(mp_limb_t) && limb_bytes < min_prec_byte_size; ++j)
+      for (j = 0; j < sizeof (mp_limb_t) && limb_bytes < min_prec_byte_size; ++j)
         {
           mpfr_bytes[written_bytes++] = l_bytes[limb_byte_index (j)];
           limb_bytes++;
@@ -228,14 +226,69 @@ mpfr_bytes_free (mpfr_bytes_t *bytes)
 }
 
 mpfr_digest_t
-mpfr_hash (mpfr_srcptr x)
+mpfr_hash32 (mpfr_srcptr x)
 {
   mpfr_bytes_t bytes;
   mpfr_digest_t hash;
-  
+
   mpfr_unique_bytes (x, &bytes);
-  hash = fnv32 (bytes.content, bytes.len);
+  hash = fnv32 (FNV32_BASIS, bytes.content, bytes.len);
   mpfr_bytes_free (&bytes);
 
   return hash;
+}
+
+int
+mpfr_hash32_update (mpfr_digest_ctx_t *ctx, const unsigned char *bytes,
+                    size_t l)
+{
+  if (!ctx || !bytes)
+    return 0;
+
+  ctx->hash = fnv32 (ctx->hash, bytes, l);
+
+  return 1;
+}
+
+int
+mpfr_hash32_final (const mpfr_digest_ctx_t *ctx, mpfr_digest_t *digest)
+{
+  *digest = ctx->hash;
+  return 1;
+}
+
+void
+mpfr_digest_init (mpfr_digest_ctx_t *ctx, size_t digest_size,
+                  hash_update_fn_t update_fn, hash_final_fn_t final_fn)
+{
+  ctx->hash = FNV32_BASIS;
+  ctx->digest_size = digest_size;
+  ctx->update_fn = update_fn;
+  ctx->final_fn = final_fn;
+}
+
+int
+mpfr_digest_update (mpfr_digest_ctx_t *ctx, const unsigned char *data,
+                    size_t len)
+{
+  return ctx->update_fn (ctx, data, len);
+}
+
+int
+mpfr_digest_update_m (mpfr_digest_ctx_t *ctx, mpfr_srcptr x)
+{
+  int ret = 1;
+  mpfr_bytes_t bytes;
+
+  mpfr_unique_bytes (x, &bytes);
+  ret = ctx->update_fn (ctx, bytes.content, bytes.len);
+  mpfr_bytes_free (&bytes);
+
+  return ret;
+}
+
+int
+mpfr_digest_final (const mpfr_digest_ctx_t *ctx, mpfr_digest_t *digest)
+{
+  return mpfr_hash32_final (ctx, digest);
 }

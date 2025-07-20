@@ -390,12 +390,28 @@ typedef enum {
 # define MPFR_RETURNS_NONNULL
 #endif
 
+#define MPFR_FNV_HASH_BYTES 4
+typedef unsigned long mpfr_digest_t;
+
 typedef struct {
   unsigned char *content;
   size_t len;
 } mpfr_bytes_t;
 
-typedef unsigned long mpfr_digest_t;
+struct mpfr_digest_ctx_t;
+
+typedef int (*hash_update_fn_t) (struct mpfr_digest_ctx_t *,
+                                 const unsigned char *,
+                                 size_t);
+typedef int (*hash_final_fn_t) (const struct mpfr_digest_ctx_t *,
+                                mpfr_digest_t *);
+
+typedef struct mpfr_digest_ctx_t {
+  mpfr_digest_t hash;
+  size_t digest_size;
+  hash_update_fn_t update_fn;
+  hash_final_fn_t final_fn;
+} mpfr_digest_ctx_t;
 
 /* Note: In order to be declared, some functions need a specific
    system header to be included *before* "mpfr.h". If the user
@@ -878,11 +894,25 @@ __MPFR_DECLSPEC int mpfr_custom_get_kind (mpfr_srcptr);
 
 __MPFR_DECLSPEC int mpfr_total_order_p (mpfr_srcptr, mpfr_srcptr);
 
-__MPFR_DECLSPEC mpfr_digest_t mpfr_hash (mpfr_srcptr);
-
 __MPFR_DECLSPEC int mpfr_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes);
 
 __MPFR_DECLSPEC void mpfr_bytes_free (mpfr_bytes_t *bytes);
+
+/* Hash functions */
+__MPFR_DECLSPEC mpfr_digest_t mpfr_hash32 (mpfr_srcptr);
+__MPFR_DECLSPEC int mpfr_hash32_update (mpfr_digest_ctx_t *ctx,
+                                        const unsigned char *bytes, size_t l);
+__MPFR_DECLSPEC int mpfr_hash32_final (const mpfr_digest_ctx_t *ctx,
+                                       mpfr_digest_t *digest);
+__MPFR_DECLSPEC void mpfr_digest_init (mpfr_digest_ctx_t *ctx,
+                                       size_t digest_size,
+                                       hash_update_fn_t update_fn,
+                                       hash_final_fn_t final_fn);
+__MPFR_DECLSPEC int mpfr_digest_update (mpfr_digest_ctx_t *ctx,
+                                        const unsigned char *data, size_t len);
+__MPFR_DECLSPEC int mpfr_digest_update_m (mpfr_digest_ctx_t *ctx, mpfr_srcptr x);
+__MPFR_DECLSPEC int mpfr_digest_final (const mpfr_digest_ctx_t *ctx,
+                                       mpfr_digest_t *digest);
 
 #if defined (__cplusplus)
 }

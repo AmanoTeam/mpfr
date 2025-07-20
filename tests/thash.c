@@ -49,8 +49,8 @@ test_zero (void)
   mpfr_init2 (nZero, 200);
   mpfr_set_zero (nZero, -1);
 
-  pZero_hash = mpfr_hash (pZero);
-  nZero_hash = mpfr_hash (nZero);
+  pZero_hash = mpfr_hash32 (pZero);
+  nZero_hash = mpfr_hash32 (nZero);
 
   /* Zeros with different signs should be equal */
   if (pZero_hash != nZero_hash)
@@ -75,8 +75,8 @@ test_zero (void)
 
   for (i = 0, j = 1; j < N_SAMPLES; i++, j++)
     {
-      if (mpfr_hash (pos[i]) != mpfr_hash (pos[j])
-        && mpfr_hash (neg[i]) != mpfr_hash (neg[j]))
+      if (mpfr_hash32 (pos[i]) != mpfr_hash32 (pos[j])
+        && mpfr_hash32 (neg[i]) != mpfr_hash32 (neg[j]))
       {
         fprintf (stderr, "All zeros should be hashed the same, regardless their "
                          "precision. i: %d j: %d\n", i , j);
@@ -102,8 +102,8 @@ test_inf (void)
   mpfr_init2 (nInf, 200);
   mpfr_set_inf (nInf, -1);
 
-  pInf_hash = mpfr_hash (pInf);
-  nInf_hash = mpfr_hash (nInf);
+  pInf_hash = mpfr_hash32 (pInf);
+  nInf_hash = mpfr_hash32 (nInf);
 
   /* H(+Inf) and H(-Inf) should not be equal */
   if (pInf_hash == nInf_hash)
@@ -128,13 +128,13 @@ test_inf (void)
 
   for (i = 0, j = 1; j < N_SAMPLES; i++, j++)
   {
-    if (mpfr_hash (pos[i]) != mpfr_hash (pos[j]))
+    if (mpfr_hash32 (pos[i]) != mpfr_hash32 (pos[j]))
       {
         fprintf (stderr, "All +Inf should be hashed the same, regardless their "
                          "precision. i: %d j: %d\n", i , j);
         exit (1);
       }
-    if (mpfr_hash (neg[i]) != mpfr_hash (neg[j]))
+    if (mpfr_hash32 (neg[i]) != mpfr_hash32 (neg[j]))
       {
         fprintf (stderr, "All -Inf should be hashed the same, regardless their "
                          "precision. i: %d j:%d\n", i , j);
@@ -162,10 +162,10 @@ test_nan (void)
 
   MPFR_CHANGE_SIGN (unconventional_nan);
 
-  nan_hash = mpfr_hash (nan);
-  unconventional_nan_hash = mpfr_hash (unconventional_nan);
+  nan_hash = mpfr_hash32 (nan);
+  unconventional_nan_hash = mpfr_hash32 (unconventional_nan);
 
-  /* mpfr_hash should ignore the sign of NAN */
+  /* mpfr_hash32 should ignore the sign of NAN */
   if (nan_hash != unconventional_nan_hash)
     {
       fprintf (stderr, "hash for +NAN and -NAN should be equal."
@@ -186,7 +186,7 @@ test_nan (void)
 
   for (i = 0, j = 1; j < N_SAMPLES; i++, j++)
     {
-      if (mpfr_hash (pos[i]) != mpfr_hash (pos[j]))
+      if (mpfr_hash32 (pos[i]) != mpfr_hash32 (pos[j]))
        {
           fprintf (stderr, "All NANs should be hashed the same, regardless their "
                            "precision. i: %d j: %d\n", i , j);
@@ -214,8 +214,8 @@ test_precision (void)
   mpfr_init2 (high_prec, 20);
   mpfr_set_d (high_prec, 1.0, MPFR_RNDD);
 
-  hash_low_prec = mpfr_hash(low_prec);
-  hash_high_prec = mpfr_hash(high_prec);
+  hash_low_prec = mpfr_hash32 (low_prec);
+  hash_high_prec = mpfr_hash32 (high_prec);
 
   if (hash_low_prec != hash_high_prec)
     {
@@ -232,8 +232,8 @@ test_precision (void)
   mpfr_init2 (high_prec, 50);
   mpfr_set_d (high_prec, 1.0, MPFR_RNDD);
 
-  hash_low_prec = mpfr_hash(low_prec);
-  hash_high_prec = mpfr_hash(high_prec);
+  hash_low_prec = mpfr_hash32 (low_prec);
+  hash_high_prec = mpfr_hash32 (high_prec);
 
   if (hash_low_prec != hash_high_prec)
     {
@@ -250,8 +250,8 @@ test_precision (void)
   mpfr_init2 (high_prec, 80);
   mpfr_set_d (high_prec, 1.0, MPFR_RNDD);
 
-  hash_low_prec = mpfr_hash(low_prec);
-  hash_high_prec = mpfr_hash(high_prec);
+  hash_low_prec = mpfr_hash32 (low_prec);
+  hash_high_prec = mpfr_hash32 (high_prec);
 
   if (hash_low_prec != hash_high_prec)
     {
@@ -270,8 +270,8 @@ test_precision (void)
   mpfr_init2 (high_prec, 50);
   mpfr_set_d (high_prec, val, MPFR_RNDD);
 
-  hash_low_prec = mpfr_hash(low_prec);
-  hash_high_prec = mpfr_hash(high_prec);
+  hash_low_prec = mpfr_hash32 (low_prec);
+  hash_high_prec = mpfr_hash32 (high_prec);
 
   if (hash_low_prec == hash_high_prec)
     {
@@ -296,7 +296,7 @@ test_constants (void)
 
   mpfr_init2 (pi, p);
   mpfr_const_pi (pi, MPFR_RNDD);
-  h_pi = mpfr_hash (pi);
+  h_pi = mpfr_hash32 (pi);
   if (h_pi != H_PI)
     {
       fprintf (stderr, "pi digest should be %lu; got %lu\n",
@@ -306,7 +306,7 @@ test_constants (void)
 
   mpfr_init2 (log2, p);
   mpfr_const_log2 (log2, MPFR_RNDD);
-  h_log2 = mpfr_hash (log2);
+  h_log2 = mpfr_hash32 (log2);
   if (h_log2 != H_LOG2)
     {
       fprintf (stderr, "log2 digest should be %lu; got %lu\n",
@@ -316,7 +316,7 @@ test_constants (void)
 
   mpfr_init2 (euler, p);
   mpfr_const_euler (euler, MPFR_RNDD);
-  h_euler = mpfr_hash (euler);
+  h_euler = mpfr_hash32 (euler);
   if (h_euler != H_EULER)
     {
       fprintf (stderr, "euler digest should be %lu; got %lu\n",
@@ -326,7 +326,7 @@ test_constants (void)
 
   mpfr_init2 (catalan, p);
   mpfr_const_catalan (catalan, MPFR_RNDD);
-  h_catalan = mpfr_hash (catalan);
+  h_catalan = mpfr_hash32 (catalan);
   if (h_catalan != H_CATALAN)
     {
       fprintf (stderr, "catalan digest should be %lu; got %lu\n",
@@ -339,6 +339,50 @@ test_constants (void)
   mpfr_clear (euler);
   mpfr_clear (catalan);
   mpfr_free_cache ();
+}
+
+static void
+test_incremental_hashing (void)
+{
+  mpfr_digest_ctx_t ctx;
+  const char *chunk1, *chunk2;
+  size_t chunk1_len, chunk2_len;
+  mpfr_digest_t got, expected;
+
+  chunk1 = "Calculate the digest of ";
+  chunk1_len = strlen(chunk1);
+  chunk2 = "chunked bytes.";
+  chunk2_len = strlen(chunk2);
+  expected = 708666724;
+
+  mpfr_digest_init (&ctx, MPFR_FNV_HASH_BYTES, mpfr_hash32_update,
+                    mpfr_hash32_final);
+
+  if (!mpfr_digest_update (&ctx, (const unsigned char *) chunk1, chunk1_len))
+    {
+      fprintf(stderr, "cannot calculate hash of chunk 1: `%s`\n", chunk1);
+      exit (1);
+    }
+
+  if (!mpfr_digest_update (&ctx, (const unsigned char *) chunk2, chunk2_len))
+    {
+      fprintf(stderr, "cannot calculate hash of chunk 2: `%s`\n", chunk2);
+      exit (1);
+    }
+
+  if (!mpfr_digest_final (&ctx, &got))
+    {
+      fprintf(stderr, "cannot get the resulting digest of chunk1 + chunk2:\n"
+                      "`%s`+`%s`\n", chunk1, chunk2);
+      exit (1);
+    }
+
+  if (got != expected)
+    {
+      fprintf(stderr, "hash of chunk1 + chunk2 should be %lu, got %lu instead\n",
+              expected, got);
+      exit (1);
+    }
 }
 
 int
@@ -357,6 +401,9 @@ main (int argc, char *argv[])
      that the hash function returns the same digest on both little endian and
      big endian machines, as long as they have the same exponent size. */
   test_constants ();
+
+  /* */
+  test_incremental_hashing ();
 
   tests_end_mpfr ();
 }
