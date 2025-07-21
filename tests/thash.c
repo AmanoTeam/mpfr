@@ -330,7 +330,7 @@ test_constants (void)
   if (h_catalan != H_CATALAN)
     {
       fprintf (stderr, "catalan digest should be %lu; got %lu\n",
-              H_CATALAN, h_catalan);
+               H_CATALAN, h_catalan);
       exit (1);
     }
 
@@ -350,9 +350,9 @@ test_incremental_hashing (void)
   mpfr_digest_t got, expected;
 
   chunk1 = "Calculate the digest of ";
-  chunk1_len = strlen(chunk1);
+  chunk1_len = strlen (chunk1);
   chunk2 = "chunked bytes.";
-  chunk2_len = strlen(chunk2);
+  chunk2_len = strlen (chunk2);
   expected = 708666724;
 
   mpfr_digest_init (&ctx, MPFR_FNV_HASH_BYTES, mpfr_hash32_update,
@@ -360,29 +360,67 @@ test_incremental_hashing (void)
 
   if (!mpfr_digest_update (&ctx, (const unsigned char *) chunk1, chunk1_len))
     {
-      fprintf(stderr, "cannot calculate hash of chunk 1: `%s`\n", chunk1);
+      fprintf (stderr, "cannot calculate hash of chunk 1: `%s`\n", chunk1);
       exit (1);
     }
 
   if (!mpfr_digest_update (&ctx, (const unsigned char *) chunk2, chunk2_len))
     {
-      fprintf(stderr, "cannot calculate hash of chunk 2: `%s`\n", chunk2);
+      fprintf (stderr, "cannot calculate hash of chunk 2: `%s`\n", chunk2);
       exit (1);
     }
 
   if (!mpfr_digest_final (&ctx, &got))
     {
-      fprintf(stderr, "cannot get the resulting digest of chunk1 + chunk2:\n"
+      fprintf (stderr, "cannot get the resulting digest of chunk1 + chunk2:\n"
                       "`%s`+`%s`\n", chunk1, chunk2);
       exit (1);
     }
 
   if (got != expected)
     {
-      fprintf(stderr, "hash of chunk1 + chunk2 should be %lu, got %lu instead\n",
+      fprintf (stderr, "hash of chunk1 + chunk2 should be %lu, got %lu instead\n",
               expected, got);
       exit (1);
     }
+}
+
+static void
+test_pi_incremental_hashing (void)
+{
+  mpfr_prec_t p = 50;
+  mpfr_t pi;
+  mpfr_digest_t h_pi;
+  mpfr_digest_ctx_t ctx;
+
+  mpfr_init2 (pi, p);
+  mpfr_const_pi (pi, MPFR_RNDD);
+
+  mpfr_digest_init (&ctx, MPFR_FNV_HASH_BYTES, mpfr_hash32_update,
+                    mpfr_hash32_final);
+
+  if (!mpfr_digest_update_m (&ctx, pi))
+    {
+      fprintf (stderr, "cannot calculate hash of pi constant with "
+                      "`mpfr_digest_update_m`\n");
+      exit (1);
+    }
+
+  if (!mpfr_digest_final (&ctx, &h_pi))
+    {
+      fprintf (stderr, "cannot get the resulting digest of pi\n");
+      exit (1);
+    }
+
+  if (h_pi != mpfr_hash32 (pi))
+    {
+      fprintf (stderr, "pi digest should be %lu; got %lu\n",
+               H_PI, h_pi);
+      exit (1);
+    }
+
+  mpfr_clear (pi);
+  mpfr_free_cache ();
 }
 
 int
@@ -402,8 +440,11 @@ main (int argc, char *argv[])
      big endian machines, as long as they have the same exponent size. */
   test_constants ();
 
-  /* */
+  /* Incremental hashing of bytes sequences */
   test_incremental_hashing ();
+
+  /* Incremental hashing of pi constant */
+  test_pi_incremental_hashing ();
 
   tests_end_mpfr ();
 }
