@@ -280,7 +280,9 @@ mpfr_digest_update_m (mpfr_digest_ctx_t *ctx, mpfr_srcptr x)
   int ret = 1;
   mpfr_bytes_t bytes;
 
-  mpfr_unique_bytes (x, &bytes);
+  if (!mpfr_unique_bytes (x, &bytes))
+    return 0;
+
   ret = ctx->update_fn (ctx, bytes.content, bytes.len);
   mpfr_bytes_free (&bytes);
 
@@ -290,5 +292,5 @@ mpfr_digest_update_m (mpfr_digest_ctx_t *ctx, mpfr_srcptr x)
 int
 mpfr_digest_final (const mpfr_digest_ctx_t *ctx, mpfr_digest_t *digest)
 {
-  return mpfr_hash32_final (ctx, digest);
+  return ctx->final_fn (ctx, digest);
 }
