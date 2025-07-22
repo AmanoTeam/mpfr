@@ -39,7 +39,7 @@ main (int argc, char *argv[])
 
   if (!mpfr_digest_update_m (&ctx, pi))
     {
-      fprintf (stderr, "An error occured while executing digest update\n");
+      fprintf (stderr, "An error occurred while executing digest update\n");
       goto cleanup;
     }
 
