@@ -58,7 +58,7 @@ static const unsigned char default_neg_inf[] = { 0x01, 0x03, 0x80 };
 /* Removing the leading zeros of a number guarantee that the encoding will
    be the same on different architectures with different sizes of the
    numbers */
-static inline size_t
+static size_t
 count_relevant_bytes (void *x, size_t size)
 {
   unsigned char *bytes = (unsigned char *)x;
@@ -86,13 +86,13 @@ le_relevant_bytes (unsigned char *bytes, size_t size, void *x)
   return relevant_size;
 }
 
-static inline size_t
+static size_t
 bytes_for (mpfr_prec_t bits)
 {
   return (bits + 7) / 8;
 }
 
-static inline size_t
+static size_t
 get_bytes_size (mpfr_srcptr x)
 {
   return 1                                            /* sign size */
