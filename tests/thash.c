@@ -22,10 +22,10 @@ If not, see <https://www.gnu.org/licenses/>. */
 #include "mpfr-test.h"
 
 #define N_SAMPLES 200
-static const mpfr_digest_t H_PI      = 126454210;
-static const mpfr_digest_t H_LOG2    = 1348199468;
-static const mpfr_digest_t H_EULER   = 3879845459;
-static const mpfr_digest_t H_CATALAN = 887850484;
+static const mpfr_digest_t H_PI      = 126454210U;
+static const mpfr_digest_t H_LOG2    = 1348199468U;
+static const mpfr_digest_t H_EULER   = 3879845459U;
+static const mpfr_digest_t H_CATALAN = 887850484U;
 
 static mpfr_t pos[N_SAMPLES], neg[N_SAMPLES];
 
