@@ -204,6 +204,7 @@ test_precision (void)
 {
   mpfr_t low_prec, high_prec;
   mpfr_digest_t hash_low_prec, hash_high_prec;
+  const double val = 1.0 / 3.0;
 
   mpfr_init2 (low_prec, MPFR_PREC_MIN);
   mpfr_set_d (low_prec, 1.0, MPFR_RNDD);
@@ -259,8 +260,6 @@ test_precision (void)
 
   mpfr_clear (low_prec);
   mpfr_clear (high_prec);
-
-  double val = 1.0 / 3.0;
 
   mpfr_init2 (low_prec, 10);
   mpfr_set_d (low_prec, val, MPFR_RNDD);
