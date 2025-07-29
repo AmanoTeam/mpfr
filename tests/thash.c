@@ -444,4 +444,5 @@ main (int argc, char *argv[])
   test_pi_incremental_hashing ();
 
   tests_end_mpfr ();
+  return 0;
 }
