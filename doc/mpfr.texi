@@ -3730,7 +3730,7 @@ Return a string saying which thresholds file has been used at compile time.
 This file is normally selected from the processor type.
 @end deftypefun
 
-@deftypefun int mpfr_unique_bytes (mpfr_srcptr @var{x}, mpfr_bytes_t *@var{bytes})
+@deftypefun int mpfr_unique_bytes (const mpfr_t @var{x}, mpfr_bytes_t *@var{bytes})
 Compute a unique representation of the MPFR number @var{x}.
 A unique representation is a byte sequence maintains the consistency with
 @code{mpfr_cmp3}, meaning that if two numbers are considered equal
@@ -3745,7 +3745,7 @@ the unique representation of @var{x} and store it in @code{bytes->content}.
 The size of this buffer (in bytes) is stored in @code{bytes->len}.
 @end deftypefun
 
-@deftypefun void mpfr_bytes_free (mpfr_bytes_t *@var{bytes})
+@deftypefun void mpfr_bytes_free (mpfr_bytes_t * @var{bytes})
 Free the buffer allocated by @code{mpfr_unique_bytes} and set
 @code{bytes->content} to NULL pointer and @code{bytes->len} to 0.
 
@@ -3758,15 +3758,15 @@ Initialize the digest context @var{ctx} to compute a hash digest of size
 to update the hash state with new data and to finalize the computation
 of the digest respectively. The functions @var{update_fn} and @var{final_fn}
 for FNV-1a 32-bit hash functions are provided by the MPFR library itself
-(see below).
-
-Note: The user maintains the ownership of the context @var{ctx}, and it must be
-already allocated once passed to the init function.
-
-Note: MPFR provides a default function to update a 32-bit hash digest,
+(see below). MPFR provides a default function to update a 32-bit hash digest,
 called @code{mpfr_hash32_update}, with signature @code{hash_update_fn_t}.
 It also provides a default function to finalize a 32-bit hash digest,
 called @code{mpfr_hash32_final}, with signature @code{hash_final_fn_t}.
+This function is experimental, and does not yet support digest sizes
+other than 32 bits.
+
+Note: The user maintains the ownership of the context @var{ctx}, and it must be
+already allocated once passed to the init function.
 @end deftypefun
 
 @deftypefun int mpfr_digest_update (mpfr_digest_ctx_t *@var{ctx}, const unsigned char *@var{data}, size_t @var{len})
@@ -3775,7 +3775,7 @@ Update the context @var{ctx} with the hash digest of the byte sequences in
 Return 1 if successful, and a 0 if an error occurred.
 @end deftypefun
 
-@deftypefun int mpfr_digest_update_m (mpfr_digest_ctx_t *@var{ctx}, mpfr_srcptr @var{x})
+@deftypefun int mpfr_digest_update_m (mpfr_digest_ctx_t *@var{ctx}, const mpfr_t @var{x})
 Update the digest context @var{ctx} with the data of the MPFR number
 @var{x}. The MPFR number is converted to a unique byte representation
 using @code{mpfr_unique_bytes} before being used in the update function.
@@ -3795,7 +3795,25 @@ the digest (as specified when initializing the context).
 Return 1 if successful, and a 0 if an error occurred.
 @end deftypefun
 
-@deftypefun mpfr_digest_t mpfr_hash32 (mpfr_srcptr @var{x})
+@deftypefun int mpfr_hash32_update (mpfr_digest_ctx_t *@var{ctx}, const unsigned char *@var{bytes}, size_t @var{l})
+It's the default function MPFR provides to update a 32-bit hash digest using
+the FNV-1a hash algorithm. It can be used as the @var{update_fn} argument
+of @code{mpfr_digest_init}. The function updates the hash state in
+@code{ctx->state} with the byte sequence in @var{bytes} of length
+@var{l} bytes.
+Return 1 if successful, and a 0 if an error occurred.
+@end deftypefun
+
+@deftypefun int mpfr_hash32_final (const mpfr_digest_ctx_t *@var{ctx}, mpfr_digest_t *@var{digest})
+It's the default function MPFR provides to finalize a 32-bit hash digest
+using the FNV-1a hash algorithm. It can be used as the @var{final_fn} argument
+of @code{mpfr_digest_init}. The function stores the final hash digest in
+the buffer pointed to by @var{digest}, which must be already allocated
+by the user and be large enough to hold a 32-bit digest.
+Return 1 if successful, and a 0 if an error occurred.
+@end deftypefun
+
+@deftypefun mpfr_digest_t mpfr_hash32 (const mpfr_t @var{x})
 Return a @code{mpfr_digest_t} that represents the 32-bit hash digest of the
 unique bytes of the number @var{x}. The unique bytes are obtained by
 @code{mpfr_unique_bytes}. The digest produced by this function is equivalent
