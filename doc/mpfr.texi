@@ -5,7 +5,7 @@
 @c Note that the 5 occurrences of the version string in this file
 @c should be updated by the tools/update-version script.
 @set VERSION 4.3.0-dev
-@set UPDATED-MONTH May 2025
+@set UPDATED-MONTH July 2025
 @settitle GNU MPFR @value{VERSION}
 @synindex tp fn
 @iftex
@@ -1521,6 +1521,7 @@ These functions assign new values to already initialized floats
 @deftypefunx int mpfr_set_d (mpfr_t @var{rop}, double @var{op}, mpfr_rnd_t @var{rnd})
 @deftypefunx int mpfr_set_ld (mpfr_t @var{rop}, long double @var{op}, mpfr_rnd_t @var{rnd})
 @deftypefunx int mpfr_set_float16 (mpfr_t @var{rop}, _Float16 @var{op}, mpfr_rnd_t @var{rnd})
+@deftypefunx int mpfr_set_bfloat16 (mpfr_t @var{rop}, __bf16 @var{op}, mpfr_rnd_t @var{rnd})
 @deftypefunx int mpfr_set_float128 (mpfr_t @var{rop}, mpfr_float128 @var{op}, mpfr_rnd_t @var{rnd})
 @deftypefunx int mpfr_set_decimal64 (mpfr_t @var{rop}, _Decimal64 @var{op}, mpfr_rnd_t @var{rnd})
 @deftypefunx int mpfr_set_decimal128 (mpfr_t @var{rop}, _Decimal128 @var{op}, mpfr_rnd_t @var{rnd})
@@ -1536,6 +1537,8 @@ Note that the input 0 is converted to @mm{+}0 by @code{mpfr_set_ui},
 The @code{mpfr_set_float16} function is built only if the
 compiler or system provides the @samp{_Float16} data type
 (GCC 12 or later supports this data type).
+Similarly, @code{mpfr_set_bfloat16} is built only if the
+compiler or system provides the @samp{__bf16} data type.
 To use the @code{mpfr_set_float128} function, see @ref{Nomenclature and Types}.
 If the system does not support the IEEE@tie{}754 standard,
 @code{mpfr_set_flt}, @code{mpfr_set_d}, @code{mpfr_set_ld},
@@ -1565,6 +1568,14 @@ Otherwise the floating-point constant will be first
 converted into a reduced-precision (e.g., 53-bit) binary
 (or decimal, for @code{mpfr_set_decimal64} and @code{mpfr_set_decimal128})
 number before MPFR can work with it.
+
+The functions converting from machine floating-point numbers do not guarantee
+the quality of the results if the environment does not conform to IEEE 754.
+For instance, on x86, if denormals-are-zero (DAZ) or flush-to-zero (FTZ) is
+enabled, numbers that have non-zero bits in the subnormal range may yield
+unexpected results.
+@c Note: "non-zero bits in the subnormal range" because the MPFR code
+@c might split FP numbers for the conversion.
 @end deftypefun
 
 @deftypefun int mpfr_set_ui_2exp (mpfr_t @var{rop}, unsigned long int @var{op}, mpfr_exp_t @var{e}, mpfr_rnd_t @var{rnd})
@@ -1735,6 +1746,7 @@ as set by @code{mpfr_set_default_prec}.
 @deftypefunx double mpfr_get_d (const mpfr_t @var{op}, mpfr_rnd_t @var{rnd})
 @deftypefunx {long double} mpfr_get_ld (const mpfr_t @var{op}, mpfr_rnd_t @var{rnd})
 @deftypefunx {_Float16} mpfr_get_float16 (const mpfr_t @var{op}, mpfr_rnd_t @var{rnd})
+@deftypefunx {__bf16} mpfr_get_bfloat16 (const mpfr_t @var{op}, mpfr_rnd_t @var{rnd})
 @deftypefunx {mpfr_float128} mpfr_get_float128 (const mpfr_t @var{op}, mpfr_rnd_t @var{rnd})
 @deftypefunx _Decimal64 mpfr_get_decimal64 (const mpfr_t @var{op}, mpfr_rnd_t @var{rnd})
 @deftypefunx _Decimal128 mpfr_get_decimal128 (const mpfr_t @var{op}, mpfr_rnd_t @var{rnd})
@@ -1746,11 +1758,19 @@ of 0.0/0.0 is returned (the sign bit is not preserved).
 If @var{op} is @pom{}Inf, an infinity of the same
 sign or the result of @pom{}1.0/0.0 is returned. If @var{op} is zero, these
 functions return a zero, trying to preserve its sign, if possible.
-The @code{mpfr_get_float16}, @code{mpfr_get_float128},
+The @code{mpfr_get_float16}, @code{mpfr_get_bfloat16}, @code{mpfr_get_float128},
 @code{mpfr_get_decimal64} and @code{mpfr_get_decimal128} functions are built
 only under some conditions: see the documentation of @code{mpfr_set_float16},
-@code{mpfr_set_float128},
+@code{mpfr_set_bfloat16}, @code{mpfr_set_float128},
 @code{mpfr_set_decimal64} and @code{mpfr_set_decimal128} respectively.
+
+These functions do not guarantee the quality of the results if the
+environment does not conform to IEEE 754. For instance, on x86, if
+denormals-are-zero (DAZ) or flush-to-zero (FTZ) is enabled, numbers
+that have non-zero bits in the subnormal range may yield unexpected
+results.
+@c Note: "non-zero bits in the subnormal range" because the MPFR code
+@c might split FP numbers for the conversion.
 @end deftypefun
 
 @deftypefun {long int} mpfr_get_si (const mpfr_t @var{op}, mpfr_rnd_t @var{rnd})
@@ -2848,6 +2868,33 @@ Note: this function is experimental and its interface might change in future
 versions.
 @end deftypefun
 
+@deftypefun int mpfr_fpif_export_mem (unsigned char *@var{buffer}, size_t @var{buffer_size}, const mpfr_t @var{x})
+Export the number @var{x} to the byte array @var{buffer} of size @var{buffer_size}
+(expressed in bytes) in a floating-point interchange format.
+The precision of @var{x} and the sign bit of a NaN are stored too.
+Return 0 iff the export was successful.
+
+Note: this function is experimental and its interface might change in future
+versions.
+@end deftypefun
+
+@deftypefun int mpfr_fpif_import_mem (mpfr_t @var{x}, unsigned char *@var{buffer}, size_t @var{buffer_size})
+Import the number @var{x} from the byte array @var{buffer} of size
+@var{buffer_size} (expressed in bytes) in a floating-point interchange
+format (see @code{mpfr_fpif_export_mem}).
+Also note that the precision of @var{x} is set to the one read from the stream,
+and the sign bit is always retrieved (even for NaN)@.
+If the stored precision is zero or greater than @code{MPFR_PREC_MAX}, the
+function fails (it returns non-zero) and @var{x} is unchanged.
+If the function fails for another reason, @var{x} is set to NaN@ and it is
+unspecified whether the precision of @var{op} has changed to the one
+read from the file.
+Return 0 iff the import was successful.
+
+Note: this function is experimental and its interface might change in future
+versions.
+@end deftypefun
+
 @deftypefun void mpfr_dump (const mpfr_t @var{op})
 Output @var{op} on @code{stdout} in some unspecified format, then a newline
 character. This function is mainly for debugging purpose. Thus invalid data
@@ -3698,6 +3745,11 @@ Return a non-zero value if MPFR was compiled with @samp{_Float16} support,
 return zero otherwise.
 @end deftypefun
 
+@deftypefun int mpfr_buildopt_bfloat16_p (void)
+Return a non-zero value if MPFR was compiled with @samp{__bf16} support,
+return zero otherwise.
+@end deftypefun
+
 @deftypefun int mpfr_buildopt_float128_p (void)
 Return a non-zero value if MPFR was compiled with binary128 support
 (a.k.a.@: float128), return zero otherwise. @xref{Nomenclature and Types}
@@ -4514,6 +4566,8 @@ that were added after MPFR@tie{}2.2, and in which MPFR version.
 
 @item @code{mpfr_buildopt_float16_p} in MPFR@tie{}4.3.
 
+@item @code{mpfr_buildopt_bfloat16_p} in MPFR@tie{}4.3.
+
 @item @code{mpfr_buildopt_float128_p} in MPFR@tie{}4.0.
 
 @item @code{mpfr_buildopt_gmpinternals_p} in MPFR@tie{}3.1.
@@ -4581,6 +4635,8 @@ in MPFR@tie{}4.0.
 
 @item @code{mpfr_fpif_export} and @code{mpfr_fpif_import} in MPFR@tie{}4.0.
 
+@item @code{mpfr_fpif_export_mem} and @code{mpfr_fpif_import_mem} in MPFR@tie{}4.3.
+
 @item @code{mpfr_fprintf} in MPFR@tie{}2.4.
 
 @item @code{mpfr_free_cache2} in MPFR@tie{}4.0.
@@ -4594,6 +4650,8 @@ in MPFR@tie{}4.0.
 @item @code{mpfr_get_decimal128} in MPFR@tie{}4.1.
 
 @item @code{mpfr_get_float16} in MPFR@tie{}4.3.
+
+@item @code{mpfr_get_bfloat16} in MPFR@tie{}4.3.
 
 @item @code{mpfr_get_float128} in MPFR@tie{}4.0 if configured with
 @samp{--enable-float128}.
@@ -4674,6 +4732,8 @@ use @code{mpfr_get_z_exp}.
 @item @code{mpfr_set_divby0} in MPFR@tie{}3.1 (new divide-by-zero exception).
 
 @item @code{mpfr_set_float16} in MPFR@tie{}4.3.
+
+@item @code{mpfr_set_bfloat16} in MPFR@tie{}4.3.
 
 @item @code{mpfr_set_float128} in MPFR@tie{}4.0 if configured with
 @samp{--enable-float128}.
@@ -5010,6 +5070,7 @@ functions, and helped to the Microsoft Windows porting.
 Damien Stehl@'e contributed the @code{mpfr_get_ld_2exp} function.
 Charles Karney contributed the @code{mpfr_nrandom} and @code{mpfr_erandom}
 functions.
+Matteo Nicoli contributed the memory export/import functions.
 
 We would like to thank Jean-Michel Muller and Joris van der Hoeven for very
 fruitful discussions at the beginning of that project, Torbj@"orn Granlund
