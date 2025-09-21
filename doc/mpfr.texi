@@ -3790,6 +3790,7 @@ by @code{mpfr_cmp3}, they will have the same unique byte representation.
 Notably, +0.0 and -0.0 have the same unique byte representation.
 If you are looking for an exact byte representation of the number,
 please refer to @code{mpfr_fpif_export_mem}.
+Return 1 if successful, and a 0 if an error occurred.
 
 Note: The pointer @var{bytes} must be a valid address to a variable of type
 @code{mpfr_bytes_t}. The function allocates a buffer large enough to hold
@@ -3797,7 +3798,7 @@ the unique representation of @var{x} and store it in @code{bytes->content}.
 The size of this buffer (in bytes) is stored in @code{bytes->len}.
 @end deftypefun
 
-@deftypefun void mpfr_bytes_free (mpfr_bytes_t * @var{bytes})
+@deftypefun void mpfr_bytes_free (mpfr_bytes_t *@var{bytes})
 Free the buffer allocated by @code{mpfr_unique_bytes} and set
 @code{bytes->content} to NULL pointer and @code{bytes->len} to 0.
 
@@ -3879,6 +3880,7 @@ mpfr_digest_init (&ctx, sizeof (mpfr_digest_t), mpfr_hash32_update,
 mpfr_digest_update_m (&ctx, x);
 mpfr_digest_final (&ctx, &digest);
 @end example
+Return 0 if an error occurred while computing the digest.
 
 Note: This function maintains the consistency with
 @code{mpfr_cmp3}, meaning that if two numbers are considered equal by

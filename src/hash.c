@@ -106,12 +106,16 @@ fnv32 (fnv32_t hash, const unsigned char *bytes, size_t bytes_len)
 {
   size_t i;
 
+  if (bytes == NULL)
+    goto _ret;
+
   for (i = 0; i < bytes_len; i++)
     {
       hash ^= bytes[i];
       hash *= FNV32_PRIME;
     }
 
+_ret:
   return hash;
 }
 
@@ -195,29 +199,24 @@ non_singular_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
 int
 mpfr_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
 {
-  int ret = 1;
   const unsigned char *singular_num;
 
-  MPFR_ASSERTN (x != NULL);
+  if (x == NULL || bytes == NULL)
+    return 0;
 
   if (MPFR_IS_SINGULAR (x))
     {
-      /* FIXME (bug found by GCC's static analyzer):
-         If malloc fails (i.e. if bytes->content is a null pointer),
-         memcpy will be called with a null pointer as the destination. */
+      bytes->len = MPFR_SINGULAR_DIGEST_SIZE;
       bytes->content = (unsigned char *) malloc (MPFR_SINGULAR_DIGEST_SIZE);
       if (!bytes->content)
-        ret = 0;
-      bytes->len = MPFR_SINGULAR_DIGEST_SIZE;
+        return 0;
+
       singular_num = get_singular_number (x);
       memcpy (bytes->content, singular_num, MPFR_SINGULAR_DIGEST_SIZE);
-      goto _ret;
+      return 1;
     }
 
-  ret = non_singular_unique_bytes (x, bytes);
-
-_ret:
-  return ret;
+  return non_singular_unique_bytes (x, bytes);
 }
 
 void
@@ -231,10 +230,12 @@ mpfr_bytes_free (mpfr_bytes_t *bytes)
 mpfr_digest_t
 mpfr_hash32 (mpfr_srcptr x)
 {
-  mpfr_bytes_t bytes;
-  mpfr_digest_t hash;
+  mpfr_bytes_t bytes = { 0 };
+  mpfr_digest_t hash = 0;
 
-  mpfr_unique_bytes (x, &bytes);
+  if (!mpfr_unique_bytes (x, &bytes))
+    return 0;
+
   hash = fnv32 (FNV32_BASIS, bytes.content, bytes.len);
   mpfr_bytes_free (&bytes);
 
