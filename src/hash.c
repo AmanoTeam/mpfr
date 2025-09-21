@@ -202,6 +202,9 @@ mpfr_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
 
   if (MPFR_IS_SINGULAR (x))
     {
+      /* FIXME (bug found by GCC's static analyzer):
+         If malloc fails (i.e. if bytes->content is a null pointer),
+         memcpy will be called with a null pointer as the destination. */
       bytes->content = (unsigned char *) malloc (MPFR_SINGULAR_DIGEST_SIZE);
       if (!bytes->content)
         ret = 0;
