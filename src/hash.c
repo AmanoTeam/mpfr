@@ -209,7 +209,10 @@ mpfr_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
       bytes->len = MPFR_SINGULAR_DIGEST_SIZE;
       bytes->content = (unsigned char *) malloc (MPFR_SINGULAR_DIGEST_SIZE);
       if (!bytes->content)
-        return 0;
+        {
+          bytes->len = 0;
+          return 0;
+        }
 
       singular_num = get_singular_number (x);
       memcpy (bytes->content, singular_num, MPFR_SINGULAR_DIGEST_SIZE);

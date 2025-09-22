@@ -3800,7 +3800,7 @@ The size of this buffer (in bytes) is stored in @code{bytes->len}.
 
 @deftypefun void mpfr_bytes_free (mpfr_bytes_t *@var{bytes})
 Free the buffer allocated by @code{mpfr_unique_bytes} and set
-@code{bytes->content} to NULL pointer and @code{bytes->len} to 0.
+@code{bytes->content} to a null pointer and @code{bytes->len} to 0.
 
 Note: The ownership of @var{bytes} itself is kept by the user.
 @end deftypefun
