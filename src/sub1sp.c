@@ -23,14 +23,11 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
 
-/* Note: The 3 "INITIALIZED(sh)" occurrences below are necessary
-   to avoid a maybe-uninitialized warning or error, e.g. when
+/* Note: The 3 "sh = 0" initialization set an arbitrary exponent. This is
+   necessary to avoid a maybe-uninitialized warning or error, e.g. when
    configuring MPFR with
      ./configure --enable-assert CFLAGS="-O2 -Werror=maybe-uninitialized"
-   (a --enable-assert or --enable-assert=full is needed to reproduce
-   the issue). This occurs with GCC 4.9.4, 5.5.0, 6.5.0, 8.4.0, 9.5.0,
-   10.4.0, 11.3.0 and 12.2.0 under Linux (Debian/unstable).
-   Bug report: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108467
+   Whenever the variable sh is needed, its value will be set.
 */
 
 /* define MPFR_FULLSUB to use alternate code in mpfr_sub1sp2 and mpfr_sub1sp2n
@@ -145,7 +142,7 @@ mpfr_sub1sp1 (mpfr_ptr a, mpfr_srcptr b, mpfr_srcptr c, mpfr_rnd_t rnd_mode,
   mp_limb_t *ap = MPFR_MANT(a);
   mp_limb_t *bp = MPFR_MANT(b);
   mp_limb_t *cp = MPFR_MANT(c);
-  mpfr_prec_t cnt, INITIALIZED(sh);
+  mpfr_prec_t cnt, sh = 0;
   mp_limb_t rb; /* round bit */
   mp_limb_t sb; /* sticky bit */
   mp_limb_t a0;
@@ -519,7 +516,7 @@ mpfr_sub1sp2 (mpfr_ptr a, mpfr_srcptr b, mpfr_srcptr c, mpfr_rnd_t rnd_mode,
   mp_limb_t *ap = MPFR_MANT(a);
   mp_limb_t *bp = MPFR_MANT(b);
   mp_limb_t *cp = MPFR_MANT(c);
-  mpfr_prec_t cnt, INITIALIZED(sh);
+  mpfr_prec_t cnt, sh = 0;
   mp_limb_t rb; /* round bit */
   mp_limb_t sb; /* sticky bit */
   mp_limb_t mask, a0, a1;
@@ -574,7 +571,6 @@ mpfr_sub1sp2 (mpfr_ptr a, mpfr_srcptr b, mpfr_srcptr c, mpfr_rnd_t rnd_mode,
           ap[0] = a0;
         }
       rb = sb = 0;
-      /* Note: sh is not initialized, but will not be used in this case. */
     }
   else
     {
@@ -1062,7 +1058,7 @@ mpfr_sub1sp3 (mpfr_ptr a, mpfr_srcptr b, mpfr_srcptr c, mpfr_rnd_t rnd_mode,
   mp_limb_t *ap = MPFR_MANT(a);
   mp_limb_t *bp = MPFR_MANT(b);
   mp_limb_t *cp = MPFR_MANT(c);
-  mpfr_prec_t cnt, INITIALIZED(sh);
+  mpfr_prec_t cnt, sh = 0;
   mp_limb_t rb; /* round bit */
   mp_limb_t sb; /* sticky bit */
   mp_limb_t mask, a0, a1, a2;
@@ -1129,7 +1125,6 @@ mpfr_sub1sp3 (mpfr_ptr a, mpfr_srcptr b, mpfr_srcptr c, mpfr_rnd_t rnd_mode,
           ap[0] = a0;
         }
       rb = sb = 0;
-      /* Note: sh is not initialized, but will not be used in this case. */
     }
   else
     {
