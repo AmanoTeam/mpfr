@@ -351,7 +351,7 @@ test_incremental_hashing (void)
   chunk2_len = strlen (chunk2);
   expected = 708666724;
 
-  mpfr_digest_init (&ctx, MPFR_FNV_HASH_BYTES, mpfr_hash32_update,
+  mpfr_digest_init (&ctx, MPFR_FNV_HASH32_BYTES, mpfr_hash32_update,
                     mpfr_hash32_final);
 
   if (!mpfr_digest_update (&ctx, (const unsigned char *) chunk1, chunk1_len))
@@ -392,7 +392,7 @@ test_pi_incremental_hashing (void)
   mpfr_init2 (pi, p);
   mpfr_const_pi (pi, MPFR_RNDD);
 
-  mpfr_digest_init (&ctx, MPFR_FNV_HASH_BYTES, mpfr_hash32_update,
+  mpfr_digest_init (&ctx, MPFR_FNV_HASH32_BYTES, mpfr_hash32_update,
                     mpfr_hash32_final);
 
   if (!mpfr_digest_update_m (&ctx, pi))

@@ -1,4 +1,4 @@
-/* mpfr_hash -- hash function for MPFR numbers
+/* mpfr_hash32 -- function to calculate 32-bit hash digest for MPFR numbers
 
 Copyright 2025 Free Software Foundation, Inc.
 Contributed by Matteo Nicoli.
@@ -147,7 +147,7 @@ non_singular_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
   mp_limb_t *limbs = NULL;
 
   sign = MPFR_IS_NEG (x) ? 1 : 0;
-  exp = MPFR_EXP (x);
+  exp = MPFR_GET_EXP (x);
 
   /* We only encode the minimum number of bits required to
      represent the number */
@@ -206,13 +206,13 @@ mpfr_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
 
   if (MPFR_IS_SINGULAR (x))
     {
-      bytes->len = MPFR_SINGULAR_DIGEST_SIZE;
       bytes->content = (unsigned char *) malloc (MPFR_SINGULAR_DIGEST_SIZE);
       if (!bytes->content)
-        {
-          bytes->len = 0;
-          return 0;
-        }
+      {
+        bytes->len = 0;
+        return 0;
+      }
+      bytes->len = MPFR_SINGULAR_DIGEST_SIZE;
 
       singular_num = get_singular_number (x);
       memcpy (bytes->content, singular_num, MPFR_SINGULAR_DIGEST_SIZE);

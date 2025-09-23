@@ -34,7 +34,7 @@ main (int argc, char *argv[])
   mpfr_init2 (pi, p);
   mpfr_const_pi (pi, MPFR_RNDD);
 
-  mpfr_digest_init (&ctx, MPFR_FNV_HASH_BYTES, mpfr_hash32_update,
+  mpfr_digest_init (&ctx, MPFR_FNV_HASH32_BYTES, mpfr_hash32_update,
                     mpfr_hash32_final);
 
   if (!mpfr_digest_update_m (&ctx, pi))

@@ -390,7 +390,7 @@ typedef enum {
 # define MPFR_RETURNS_NONNULL
 #endif
 
-#define MPFR_FNV_HASH_BYTES 4
+#define MPFR_FNV_HASH32_BYTES 4
 typedef unsigned long mpfr_digest_t;
 
 typedef struct {
