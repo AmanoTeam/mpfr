@@ -166,10 +166,10 @@ mpfr_legendre (mpfr_ptr res, int n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 
       test_prec = realprec - err;
 
-      if (mpfr_min_prec (pn) < test_prec)
+      if (mpfr_min_prec (pn) < test_prec - 1)
         break;
 
-      if (MPFR_CAN_ROUND (pn, test_prec, res_prec, rnd_mode))
+      if (MPFR_LIKELY (MPFR_CAN_ROUND (pn, test_prec, res_prec, rnd_mode)))
         break;
 
       MPFR_ZIV_NEXT (loop, realprec);
