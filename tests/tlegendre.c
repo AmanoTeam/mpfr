@@ -477,7 +477,7 @@ test_random (int n, mpfr_prec_t p, unsigned long K)
               if (mpfr_cmp (y, t))
                 {
                   printf ("Error in mpfr_legendre for n=%d x=", n);
-                  mpfr_out_str (stdout, 10, 0, x, MPFR_RNDN);
+                  mpfr_out_str (stdout, 16, 0, x, MPFR_RNDN);
                   printf (" rnd=%s\n", mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
                   DUMP_NUMBERS (t, y);
                   exit (1);
@@ -534,10 +534,65 @@ random_test_suite (int num_degrees, int num_tests)
   free (test_degrees);
 }
 
+static void
+bug20251001 (void)
+{
+  mpfr_t x, y;
+  mpfr_init2 (x, 53);
+  mpfr_init2 (y, 53);
+
+  /* bug found with GMP_CHECK_RANDOMIZE=1759307919467569:
+     Error in mpfr_legendre for n=2 x=-4.7184833984611241e-1 rnd=MPFR_RNDD
+     expected: -0.10101010000001100000110110100001000111001110111100001E-2
+     got:      -0.10101010000001100000110110100001000111001110111100000E-2 */
+  mpfr_set_str (x, "-4.7184833984611241e-1", 10, MPFR_RNDN);
+  mpfr_legendre (y, 2, x, MPFR_RNDD);
+  mpfr_set_str_binary (x, "-0.10101010000001100000110110100001000111001110111100001E-2");
+  if (mpfr_cmp (y, x) != 0) {
+    printf ("Error in bug20251001 (1)\n");
+    printf ("expected "); mpfr_dump (x);
+    printf ("got      "); mpfr_dump (y);
+    exit (1);
+  }
+
+  /* bug found with GMP_CHECK_RANDOMIZE=1759308817539561:
+     Error in mpfr_legendre for n=10 x=4.608a667782dd0@-1 rnd=MPFR_RNDU
+     expected: 0.11111010001111111110111110101011110010000001110000001E-2
+     got:      0.11111010001111111110111110101011110010000001110000000E-2 */
+  mpfr_set_str (x, "4.608a667782dd0@-1", 16, MPFR_RNDN);
+  mpfr_legendre (y, 10, x, MPFR_RNDU);
+  mpfr_set_str_binary (x, "0.11111010001111111110111110101011110010000001110000001E-2");
+  if (mpfr_cmp (y, x) != 0) {
+    printf ("Error in bug20251001 (2)\n");
+    printf ("expected "); mpfr_dump (x);
+    printf ("got      "); mpfr_dump (y);
+    exit (1);
+  }
+
+  /* bug found with GMP_CHECK_RANDOMIZE=1759309465303933:
+     Error in mpfr_legendre for n=3 x=5.6a59d5d01d9d0@-1 rnd=MPFR_RNDZ
+     expected: -0.11010010010011110110100000101001000001111000100101111E-1
+     got:      -0.11010010010011110110100000101001000001111000100110000E-1 */
+  mpfr_set_str (x, "5.6a59d5d01d9d0@-1", 16, MPFR_RNDN);
+  mpfr_legendre (y, 3, x, MPFR_RNDZ);
+  mpfr_set_str_binary (x, "-0.11010010010011110110100000101001000001111000100101111E-1");
+  if (mpfr_cmp (y, x) != 0) {
+    printf ("Error in bug20251001 (3)\n");
+    printf ("expected "); mpfr_dump (x);
+    printf ("got      "); mpfr_dump (y);
+    exit (1);
+  }
+
+  mpfr_clear (x);
+  mpfr_clear (y);
+}
+
 int
 main (void)
 {
   tests_start_mpfr ();
+
+  bug20251001 ();
 
   /* The canonical domain of Legendre polynomials is [-1,1]. mpfr_legendre
      should return false for any x outside of the canonical domain */

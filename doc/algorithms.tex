@@ -4636,17 +4636,17 @@ treated as special cases. These cases are:
 \item[(a)] The base cases $P_0$ and $P_1$.
 \item[(b)] $P_n(1) = 1$.
 \item[(c)] $P_n(-1) = (-1)^n$.
-\item[(d)] If $n$ is an odd number greater than 1, then $P_n(0) = 0$.
+\item[(d)] If $n \ge 1$ is odd, then $P_n(0) = 0$.
 \end{itemize}
 
 \noindent Equations (b)--(d) are simple consequences of well known properties of
 Legendre polynomials. In particular, (d) is a straightforward consequence of Equation
 (\ref{eq:legendre-parity-eq}), that establishes the parity rule of Legendre polynomials.
 \begin{equation} \label{eq:legendre-parity-eq}
-  P_n(-x) = (-1)^nP_n(x)
+  P_n(-x) = (-1)^nP_n(x).
 \end{equation}
 Equations (b) and (c) can be proven by induction from Bonnet recursion formula,
-i.e.~Equation (\ref{eq:bonnet-recursion}).
+i.e., Equation~(\ref{eq:bonnet-recursion}).
 
 In Algorithm \ref{algo:legendre-special} below, we find the pseudo--language input
 parameters validation and special cases (a)--(d).
