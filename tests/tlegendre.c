@@ -130,7 +130,7 @@ test_domain (void)
       ret = mpfr_legendre (res, i, outer, MPFR_RNDN);
       if (!MPFR_IS_NAN (res))
         {
-          printf ("input number ouside of the domain ");
+          printf ("input number outside of the domain ");
           mpfr_out_str (stdout, 10, 0, outer, MPFR_RNDD);
           printf (" should lead to a NAN result (degree: %d)\n", i);
           exit (1);
@@ -316,7 +316,7 @@ test_second_iteration (void)
       exit (1);
     }
 
-  /* For x equal to NAN, +Inf or -Inf, the result of the second iteration
+  /* For x begin NAN, +Inf or -Inf, the result of the second iteration
      should be NAN as well */
   mpfr_set_nan (x);
   ret = mpfr_legendre (res, 1, x, MPFR_RNDN);
@@ -702,15 +702,15 @@ main (void)
   /* Upper and lower bounds are computed without using Bonnet's recursion */
   test_domain_bounds ();
 
-  /* The first two iterations are tested separately beacuse they are the base
-     cases of the Bonnet’s recursion algorithm used by mpfr_legendre */
+  /* The first two iterations are tested separately because they are the base
+     cases of the Bonnet's recursion algorithm used by mpfr_legendre */
   test_first_iteration ();
   test_second_iteration ();
 
   /* This test checks the ternary value returned by mpfr_legendre */
   test_round ();
 
-  /* res precision si arbitrarily low. ARBITRARILY_LOW_PREC should be lower
+  /* res precision is arbitrarily low. ARBITRARILY_LOW_PREC should be lower
      than any other precision */
   test_sample_with_precision (IEEE754_SINGLE_PREC, ARBITRARILY_LOW_PREC);
   test_sample_with_precision (IEEE754_DOUBLE_PREC, ARBITRARILY_LOW_PREC);
@@ -724,7 +724,7 @@ main (void)
   test_sample_with_precision (IEEE754_DOUBLE_PREC, IEEE754_DOUBLE_PREC);
   test_sample_with_precision (MPFR_PREC_100, IEEE754_DOUBLE_PREC);
   test_sample_with_precision (MPFR_PREC_200, IEEE754_DOUBLE_PREC);
-  
+
   /* res precision is MPFR_PREC_200, the highest available.
      NOTE: to reach higher precisions, the expected values should be
      recalculated, because they all contains a 200-bit significand */
