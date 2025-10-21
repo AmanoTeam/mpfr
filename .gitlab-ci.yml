@@ -21,7 +21,8 @@ linux_gmp_cxx:
     - autoreconf -i
     - ./configure CC=g++
     - make
-    - make check
+    # copied from https://gitlab.com/hepcedar/rivet/-/blob/release-3-1-x/.gitlab-ci.yml
+    - make check || (cat tests/test-suite.log && false)
   tags:
     - linux
 
@@ -34,7 +35,8 @@ linux_gmp_clang:
     - autoreconf -i
     - ./configure CC=clang
     - make
-    - make check
+    # copied from https://gitlab.com/hepcedar/rivet/-/blob/release-3-1-x/.gitlab-ci.yml
+    - make check || (cat tests/test-suite.log && false)
   tags:
     - linux
 
@@ -47,6 +49,7 @@ linux_gmp_Werror:
     - autoreconf -i
     - ./configure CFLAGS=-Werror
     - make
-    - make check
+    # copied from https://gitlab.com/hepcedar/rivet/-/blob/release-3-1-x/.gitlab-ci.yml
+    - make check || (cat tests/test-suite.log && false)
   tags:
     - linux
