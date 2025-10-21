@@ -652,7 +652,7 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
 
       mpfr_set_si_2exp (x, a, -b, MPFR_RNDN);
       RND_LOOP (rnd) {
-        mpfr_rnd_t r = rnd;
+        mpfr_rnd_t r = (mpfr_rnd_t) rnd;
         mpfr_set_q (y, t, (mpfr_rnd_t) rnd); /* expected result */
         mpfr_legendre (z, n, x, r);
         if (mpfr_cmp (y, z)) {
