@@ -587,10 +587,111 @@ bug20251001 (void)
   mpfr_clear (y);
 }
 
+/* Exhaustive test of degree-n Legendre polynomial with all fractions
+   a/2^b with |a| <= A and |b| <= B, for precision p.
+   Assume n >= 1. */
+static void
+test_exact (int n, int A, int B, mpfr_prec_t p)
+{
+  mpq_t *P0, *P1, t, u;
+  int i, j, a, b, rnd;
+  mpfr_t x, y, z;
+
+  P0 = (mpq_t*) malloc ((n + 1) * sizeof (mpq_t));
+  P1 = (mpq_t*) malloc ((n + 1) * sizeof (mpq_t));
+  for (i = 0; i <= n; i++) {
+    mpq_init (P0[i]); /* set to 0 */
+    mpq_init (P1[i]); /* set to 0 */
+  }
+  mpq_init (t);
+  mpq_init (u);
+  /* use Bonnet's recursion */
+  mpq_set_ui (P0[0], 1, 1); /* P[0] = 1 */
+  mpq_set_ui (P1[1], 1, 1); /* P[1] = x */
+  for (j = 2; j <= n; j++) {
+    /* P[j] = ((2j-1)*x*P[j-1]-(j-1)*P[j-2])/j
+       thus P[j][i] = ((2j-1)*P[j-1][i-1] - (j-1)*P[j-2][i])/j.
+       Invariant: P[j-2] is stored in P0, and P[j-1] in P1. */
+    for (i = 0; i <= j; i++) {
+      if (i == 0)
+        mpq_set_ui (t, 0, 1);
+      else {
+        mpq_set_ui (t, 2*j-1, 1);
+        mpq_mul (t, t, P1[i-1]);
+      }
+      /* t = (2j-1)*P[j-1][i-1] */
+      mpq_set_ui (u, j-1, 1);
+      mpq_mul (u, u, P0[i]);
+      /* u = (j-1)*P[j-2][i] */
+      mpq_sub (t, t, u);
+      /* t = (2j-1)*P[j-1][i-1] - (j-1)*P[j-2][i] */
+      mpq_set_ui (u, j, 1);
+      mpq_div (P0[i], t, u);
+      /* now P0[i] contains P[j][i] */
+    }
+    /* swap P0 and P1 */
+    for (i = 0; i <= j; i++)
+      mpq_swap (P0[i], P1[i]);
+  }
+
+  mpfr_init2 (x, 64);
+  mpfr_init2 (y, p);
+  mpfr_init2 (z, p);
+
+  for (a = -A; a <= A; a++)
+    for (b = 0; b <= B; b++) {
+      /* compute t = Pn(a/2^b) */
+      mpq_set_si (u, a, 1ul<<b);
+      mpq_set (t, P1[n]);
+      for (i = n-1; i >= 0; i--) {
+        mpq_mul (t, t, u);
+        mpq_add (t, t, P1[i]);
+      }
+
+      /* now t = Pn(a/2^b) exactly */
+
+      mpfr_set_si_2exp (x, a, -b, MPFR_RNDN);
+      RND_LOOP (rnd) {
+        mpfr_rnd_t r = rnd;
+        mpfr_set_q (y, t, (mpfr_rnd_t) rnd); /* expected result */
+        mpfr_legendre (z, n, x, r);
+        if (mpfr_cmp (y, z)) {
+          printf ("Error in test_exact for n=%d a=%d b=%d p=%lu rnd=%s\n",
+                  n, a, b, p, mpfr_print_rnd_mode (r));
+          printf ("expected "); mpfr_out_str (stdout, 16, 0, y, MPFR_RNDN);
+          printf ("\ngot      "); mpfr_out_str (stdout, 16, 0, z, MPFR_RNDN);
+          printf ("\n");
+          exit (1);
+        }
+      }
+    }
+
+  for (i = 0; i <= n; i++) {
+    mpq_clear (P0[i]);
+    mpq_clear (P1[i]);
+  }
+  free (P0);
+  free (P1);
+  mpq_clear (t);
+  mpq_clear (u);
+  mpfr_clear (x);
+  mpfr_clear (y);
+  mpfr_clear (z);
+}
+
 int
 main (void)
 {
   tests_start_mpfr ();
+
+  {
+    int n;
+    mpfr_prec_t p;
+
+    for (n = 1; n <= 20; n++)
+      for (p = 1; p <= 20; p++)
+        test_exact (n, 20, 20, p);
+  }
 
   bug20251001 ();
 
