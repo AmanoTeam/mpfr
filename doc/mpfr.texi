@@ -2202,7 +2202,8 @@ and underflows.
 @var{res} is set with the value of Legendre's polynomial P_@var{n}(@var{x}),
 rounded in the direction of @var{rnd}, where @var{n} stands for the degree of
 the polynomial. If the input variable @var{x} is outside the [-1,1] domain,
-@var{res} is set to NaN and 0 is returned. The same happens for @var{n} < 0.
+or if @var{n} < 0 || @var{n} > 8192, then @var{res} is set to NaN and 0 is
+returned.
 @end deftypefun
 
 For the power functions (with an integer exponent or not), see @ref{mpfr_pow}

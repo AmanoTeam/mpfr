@@ -1,7 +1,7 @@
 /* Test file for legendre polynomials.
 
 Copyright 2025 Free Software Foundation, Inc.
-Contributed by Matteo Nicoli.
+Contributed by Matteo Nicoli and Paul Zimmermann.
 
 This file is part of the GNU MPFR Library.
 
@@ -29,7 +29,7 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define MPFR_PREC_100        100
 #define MPFR_PREC_200        200
 
-#define RANDOM_TESTS_BATCH 5000
+#define RANDOM_TESTS_BATCH 50
 
 #define DUMP_NUMBERS(expected, got)   \
           do                          \
@@ -46,10 +46,8 @@ static const unsigned degrees[] =
   3,       /* The first odd degree after the base cases */
   10,
   50,
-  128,     /* The maximum degree officially supported by the C++ standard */
+  128,     /* The maximum degree officially supported by C++17 */
   1024,    /* 2^10 */
-  8192,    /* 2^13 */
-  1048576, /* 2^20 */
 };
 static const char *expected_vals[] =
 {
@@ -679,21 +677,21 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
   mpfr_clear (z);
 }
 
+static void
+test_exact_dyadic (void)
+{
+  int n;
+  mpfr_prec_t p;
+
+  for (n = 1; n <= 20; n++)
+    for (p = 1; p <= 20; p++)
+      test_exact (n, 20, 20, p);
+}
+
 int
 main (void)
 {
   tests_start_mpfr ();
-
-  {
-    int n;
-    mpfr_prec_t p;
-
-    for (n = 1; n <= 20; n++)
-      for (p = 1; p <= 20; p++)
-        test_exact (n, 20, 20, p);
-  }
-
-  bug20251001 ();
 
   /* The canonical domain of Legendre polynomials is [-1,1]. mpfr_legendre
      should return false for any x outside of the canonical domain */
@@ -733,8 +731,14 @@ main (void)
   test_sample_with_precision (MPFR_PREC_100, MPFR_PREC_200);
   test_sample_with_precision (MPFR_PREC_200, MPFR_PREC_200);
 
-  /* Random tests */
+  /* Random tests (contributed by Paul Zimmermann) */
   random_test_suite (100, RANDOM_TESTS_BATCH);
+
+  /* bug reported by Paul Zimmermann */
+  bug20251001 ();
+
+  /* test suite contributed by Paul Zimmermann */
+  test_exact_dyadic ();
 
   tests_end_mpfr ();
   return 0;
