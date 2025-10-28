@@ -80,9 +80,9 @@ mpfr_legendre (mpfr_ptr res, int n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 
   /* the following variables are used (and consequently initialized) only
      for n >= 2, where x is not equal to -1, 0 or 1 */
-  unsigned i, loop_err;
+  unsigned i, loop_err, u_correction;
   mpfr_t p1, p2, pn, first_term, second_term;
-  mpfr_prec_t res_prec, realprec, test_prec, err, lost_bits;
+  mpfr_prec_t res_prec, realprec, x_prec, delta, test_prec, err, lost_bits;
   MPFR_GROUP_DECL (group);
   MPFR_ZIV_DECL (loop);
 
@@ -143,12 +143,15 @@ mpfr_legendre (mpfr_ptr res, int n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
     }
 
   res_prec = MPFR_PREC(res);
-  /* the error of each iteration of the loop is bounded to 7 ulps.
-     We add 1 for the initial p1 = x */
-  loop_err = 7 * n + 1;
-  realprec = res_prec + MPFR_INT_CEIL_LOG2(res_prec) * n + loop_err;
-  realprec = realprec > MPFR_PREC(x) ? realprec : MPFR_PREC(x);
-  /* err = ceil(log2(1+7n)) + small margin (5 bits). This variable is
+  x_prec = MPFR_PREC(x);
+  /*  */
+  loop_err = 14 * (n - 1);
+  delta = MPFR_INT_CEIL_LOG2(res_prec) + loop_err;
+  realprec = res_prec + delta;
+  if (x_prec > realprec) {
+    realprec = x_prec;
+  }
+  /* err = ceil(log2(loop_err)) + small margin (5 bits). This value is
      incremented in case of severe cancellation */
   err = MPFR_INT_CEIL_LOG2(loop_err) + 5;
 
@@ -160,19 +163,17 @@ mpfr_legendre (mpfr_ptr res, int n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
     {
 _start:
       i = 2;
-      /* p1 = P_1 = x, err <= 1 ulp */
+      /* p1 = x, p2 = 1 */
       mpfr_set (p1, x, MPFR_RNDN);
-      /* p2 = P_0 = 1, exact */
       mpfr_set_ui (p2, 1, MPFR_RNDN);
       while (i <= n)
         {
-          /* first_term = (2i-1)*x, err <= 1 ulp */
+          /* first_term = x * (2 * i - 1) */
           mpfr_mul_ui (first_term, x, 2 * i - 1, MPFR_RNDN);
-          /* second_term = (i-1)*p2, err <= 1 ulp + err(p_2) */
-          mpfr_mul_ui (second_term, p2, i - 1, MPFR_RNDN);
-          /* first_term = first_term * p1
-             err <= 1 ulps + err(first_term) + err(p1) */
+          /* first_term *= p1 */
           mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
+          /* second_term = p2 * (i - 1) */
+          mpfr_mul_ui (second_term, p2, i - 1, MPFR_RNDN);
 
           /* we check if a severe cancellation may occur *before* performing
              the subtraction. If the number of canceled bits is greater than
@@ -196,24 +197,27 @@ _start:
               goto _start;
             }
 
-          /* without considering cancellation (handled above):
-             pn = first_term - second_term,
-             err <= (err(first_term) + err(second_term) + 1) ulps  */
+          /* pn = (first_term - second_term) / i */
           mpfr_sub (pn, first_term, second_term, MPFR_RNDN);
-          /* pn = pn / i, err <= err(pn) + 1 ulp */
           mpfr_div_ui (pn, pn, i, MPFR_RNDN);
 
+          /* p2 = p1, p1 = pn */
           mpfr_set (p2, p1, MPFR_RNDN);
           mpfr_set (p1, pn, MPFR_RNDN);
           i++;
         }
 
+      /* we have (eventually) added the lost bits due to cancellation
+         above, so test_prec is the effective precision we can use */
       test_prec = realprec - err;
 
-      if (mpfr_min_prec (pn) < test_prec - 1)
-        break;
+      // if (mpfr_min_prec (pn) < test_prec - 1)
+      //   break;
 
       if (MPFR_LIKELY (MPFR_CAN_ROUND (pn, test_prec, res_prec, rnd_mode)))
+        break;
+
+      if (mpfr_equal_p(pn, p1))
         break;
 
       MPFR_ZIV_NEXT (loop, realprec);
@@ -221,7 +225,6 @@ _start:
                            p1, p2, pn, first_term, second_term);
     }
   MPFR_ZIV_FREE (loop);
-
   ternary_value = mpfr_set (res, pn, rnd_mode);
 
   MPFR_GROUP_CLEAR (group);
