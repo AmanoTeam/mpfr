@@ -731,7 +731,7 @@ main (void)
   test_sample_with_precision (MPFR_PREC_100, MPFR_PREC_200);
   test_sample_with_precision (MPFR_PREC_200, MPFR_PREC_200);
 
-  /* Random tests (contributed by Paul Zimmermann) */
+  /* random tests contributed by Paul Zimmermann */
   random_test_suite (100, RANDOM_TESTS_BATCH);
 
   /* bug reported by Paul Zimmermann */

@@ -28,7 +28,8 @@ If not, see <https://www.gnu.org/licenses/>. */
 static mpfr_prec_t
 likely_cancellation (mpfr_srcptr x, mpfr_srcptr y, mpfr_prec_t prec)
 {
-  long ex, ey, ed, maxexp, lost_bits;
+  long lost_bits;
+  mpfr_exp_t ex, ey, ed, maxexp;
   mpfr_t diff;
 
   if (MPFR_IS_ZERO (x) || MPFR_IS_ZERO (y))
@@ -41,15 +42,11 @@ likely_cancellation (mpfr_srcptr x, mpfr_srcptr y, mpfr_prec_t prec)
   ey = MPFR_GET_EXP (y);
 
   /* magnitudes too different, subtraction is safe */
-#if _MPFR_EXP_FORMAT == 2
-  if (abs (ex - ey) > 2)
-#else
   if (labs (ex - ey) > 2)
-#endif
     return 0;
 
   /* we compute the difference with a slightly higher precision.
-     We add extra8 bits to the working precision to give some guard space
+     We add extra 8 bits to the working precision to give some guard space
      for the subtraction itself. */
   mpfr_init2 (diff, prec + 8);
   mpfr_sub (diff, x, y, MPFR_RNDN);
@@ -67,7 +64,7 @@ likely_cancellation (mpfr_srcptr x, mpfr_srcptr y, mpfr_prec_t prec)
   mpfr_clear (diff);
 
   /* if lost_bits <= 0, subtraction doesn’t lose any precision.
-     If the subtraction loses only one bit of precision, treat
+     If the subtraction loses only one bit of precision, treat it
      as negligible */
   if (lost_bits <= 1)
     return 0;
