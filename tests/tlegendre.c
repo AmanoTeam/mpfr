@@ -677,15 +677,17 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
   mpfr_clear (z);
 }
 
+#define BOUND 33
+
 static void
 test_exact_dyadic (void)
 {
   int n;
   mpfr_prec_t p;
 
-  for (n = 1; n <= 20; n++)
-    for (p = 1; p <= 20; p++)
-      test_exact (n, 20, 20, p);
+  for (n = 1; n <= BOUND; n++)
+    for (p = 1; p <= BOUND; p++)
+      test_exact (n, BOUND, BOUND, p);
 }
 
 int
