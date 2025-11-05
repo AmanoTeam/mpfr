@@ -9,6 +9,7 @@
 \usepackage{comment}
 \usepackage{hyperref}
 \usepackage{graphicx}
+\usepackage{color}
 
 \pagestyle{plain}
 \title{The MPFR\footnote{\lowercase{\url{https://www.mpfr.org/}}} Library:
@@ -4727,117 +4728,41 @@ parameters validation and special cases (a)--(d).
 
 \noindent In Algorithm \ref{algo:legendre-bonnet} above, you can find the
 pseudo-code implementation of the \textit{iterative} Bonnet's recursion
-with final rounding.
+with final rounding. Now, we have to bound the rounding error for each
+iteration.
 
-All the variables $p_1, p_2, p_n, first\_term, second\_term$
-share the same working precision \emph{realprec}, that is initialized starting from $\text{prec}(\text{res})$. We add a $\Delta_{prec} = \text{ceil}(\log(\text{prec}(\text{res}))) + \text{loop\_err}$. 
 \begin{center}
 \begin{tabular}{p{.37\textwidth}p{.63\textwidth}}
-$p_1 \gets \N(x)$ & $k_0$ \\[2pt]
-$p_2 \gets 1$ & $k_1$. The first assignment of $p2$ is exactly 1, but all subsequent assignments are floating point numbers of precision $realprec$. \\[2pt]
-$\text{first\_term} \gets \N((2i - 1) \cdot{} x)$ & $k_2 = \frac{1}{2} \cdot k_x$, since we are multiplying $x$ for an exact integer number ($2i - 1$). \\[2pt]
-$\text{first\_term} \gets \N(\text{first\_term} \cdot{} p_1)$ &
-$k_3 = \frac{1}{2} + u \cdot k_0 + u \cdot k_2$ \\[2pt]
-$\text{second\_term} \gets \N((i - 1) \cdot{} p_2)$ &  \\[2pt]
-$err_{canc} \gets \dots$ & \\[2pt]
-$p_n = \N(\text{first\_term} - \text{second\_term})$ &
-$\le \mathrm{err}(\text{first\_term}) + \mathrm{err}(\text{second\_term}) + err_{canc} + 1$ ~\text{ulp} \\[2pt]
-$p_n \gets \N(p_n / i)$ & $\le \mathrm{err}(p_n) + 1$ ~\text{ulp} \\[4pt]
+$p_1 \gets \N(x)$ & $k_{p_1} \le \tfrac12$.\\[4pt]
+$p_2 \gets 1$ &
+$k_{p_2}=0$ at initialization. For subsequent iterations we assume
+$k_{p_2} \le \tfrac12$. \\[4pt]
+$\text{first\_term} \gets \N((2i-1)\,x)$ &
+Multiplication by an exact integer: $c_{\text{first}}=\tfrac12$, so 
+$k_{\text{first}} = k_2 = \tfrac12$.\\[4pt]
+$\text{first\_term} \gets \N(\text{first\_term}\cdot p_1)$ 
+& Using the generic multiplication rule:
+$k_3 \le c_3 + (1+c_{p_1}^+)k_{\text{first}} + (1+c_{\text{first}}^+)k_{p_1}$,
+with $c_3=\tfrac12$ and $c_{p_1}^+=c_{\text{first}}^+=1$.  
+Thus $k_3 \le \tfrac12 + 2(k_{p_1}+k_2) = \tfrac12 + 2\Bigl(\tfrac12+\tfrac12\Bigr) = \tfrac52$. \\[4pt]
+$\text{second\_term} \gets \N((i-1)p_2)$ &
+Integer multiplication followed by rounding:
+$k_4 \le c_4 + (1+c_{p_2}^+)k_{p_2}$,
+with $c_4=\tfrac12$, $c_{p_2}^+=1$, $k_{p_2}\le \tfrac12$. Thence:
+$k_4 \le \tfrac12 + 2k_{p_2} \le \tfrac32.$ \\[4pt]
+$p_n \gets \N(\text{first\_term} - \text{second\_term})$ &
+Using the generic subtraction rule (same sign operands):
+$k_{p_n} \le c_{p_n} + k_3 + k_4, c_{p_n}=\tfrac12$. Thus:
+$k_{p_n} \le \tfrac12 + \tfrac52 + \tfrac32 = \tfrac92$.
+\textcolor{red}{If cancellation occurs, the effective bound is increased by
+a factor $2^d$, with $d=e_{\text{first}}-e_{p_n}$}. \\[4pt]
+$p_n \gets \N(p_n/i)$ &
+Exact integer division. Using generic division:
+$k_{p_n}' \le c_{p_n'} + 2k_{p_n}, c_{p_n'}=\tfrac12$. Thus,
+$k_{p_n}' \le \tfrac12 + 2\cdot \tfrac92 = \tfrac{19}{2}$.
+\\[4pt]
 \end{tabular}
 \end{center}
-
-\boxed{\textbf{Compute }k\text{-coefficients step by step}}
-
-
-%% p1, p2 computed from x
-\[
-\begin{aligned}
-p_1 &= x\cdot(2i-1), \qquad &\Rightarrow\qquad
-k_{p1} &= c_{p1} + 2\,k_x, \\[4pt]
-p_2 &= x\cdot(i-1),   \qquad &\Rightarrow\qquad
-k_{p2} &= c_{p2} + 2\,k_x.
-\end{aligned}
-\]
-
-%% first_term after mul_ui: first_term^{(1)}
-\[
-\text{After } \texttt{mpfr\_mul\_ui(first\_term, x, 2*i-1, ...)}:
-\qquad
-k_{\text{first\_term}^{(1)}} = c_{\text{first\_term}^{(1)}} + 2\,k_x.
-\]
-
-%% first_term after multiplication by p1: first_term^{(2)}
-\[
-\text{After } \texttt{mpfr\_mul(first\_term, first\_term, p1, ...)}:
-\qquad
-\begin{aligned}
-k_{\text{first\_term}^{(2)}}
-&= c_{\text{first\_term}^{(2)}}
-  + (1 + c_{\text{first\_term}^{(1)}}^{+})\,k_{\text{first\_term}^{(1)}}
-  + (1 + c_{p1}^{+})\,k_{p1} \\[4pt]
-&= c_{\text{first\_term}^{(2)}}
-  + (1 + c_{\text{first\_term}^{(1)}}^{+})\big(c_{\text{first\_term}^{(1)}} + 2k_x\big)
-  + (1 + c_{p1}^{+})\big(c_{p1} + 2k_x\big),
-\end{aligned}
-\]
-
-where we substituted \(k_{\text{first\_term}^{(1)}} = c_{\text{first\_term}^{(1)}} + 2k_x\)
-and \(k_{p1} = c_{p1} + 2k_x\).
-
-%% second_term (multiplication by integer)
-\[
-\text{After } \texttt{mpfr\_mul\_ui(second\_term, p2, i-1, ...)}:
-\qquad
-k_{\text{second\_term}}
-= c_{\text{second\_term}} + 2\,k_{p2}
-= c_{\text{second\_term}} + 2\big(c_{p2} + 2k_x\big).
-\]
-
-%% subtraction: pn^{(sub)}
-\[
-\text{After } \texttt{mpfr\_sub(pn, first\_term, second\_term, ...)}:
-\qquad
-\begin{aligned}
-k_{\mathrm{pn}^{(\mathrm{sub})}}
-&= c_{\mathrm{pn}}^{(\mathrm{sub})}
-  + (1 + c_{\text{first\_term}^{(2)}}^{+})\,k_{\text{first\_term}^{(2)}}
-  + (1 + c_{\text{second\_term}}^{+})\,k_{\text{second\_term}} \\[4pt]
-&= c_{\mathrm{pn}}^{(\mathrm{sub})}
-  + (1 + c_{\text{first\_term}^{(2)}}^{+})\Big[
-       c_{\text{first\_term}^{(2)}}
-     + (1 + c_{\text{first\_term}^{(1)}}^{+})(c_{\text{first\_term}^{(1)}} + 2k_x)
-     + (1 + c_{p1}^{+})(c_{p1} + 2k_x)
-    \Big] \\[4pt]
-&\qquad\;
-  + (1 + c_{\text{second\_term}}^{+})\big(c_{\text{second\_term}} + 2(c_{p2} + 2k_x)\big).
-\end{aligned}
-\]
-
-%% division by integer i: final pn
-\[
-\text{After } \texttt{mpfr\_div\_ui(pn, pn, i, ...)}:
-\qquad
-\boxed{
-\begin{aligned}
-k_{\mathrm{pn}} \equiv k_r
-&= c_{\mathrm{pn}}^{(\mathrm{div})} \;+\; 2\,k_{\mathrm{pn}^{(\mathrm{sub})}} \\[6pt]
-&= c_{\mathrm{pn}}^{(\mathrm{div})}
-  + 2\Bigg\{ c_{\mathrm{pn}}^{(\mathrm{sub})}
-  + (1 + c_{\text{first\_term}^{(2)}}^{+})\Big[
-       c_{\text{first\_term}^{(2)}}
-     + (1 + c_{\text{first\_term}^{(1)}}^{+})(c_{\text{first\_term}^{(1)}} + 2k_x)\\[4pt]
-&\qquad\qquad\qquad\qquad\qquad
-     + (1 + c_{p1}^{+})(c_{p1} + 2k_x)
-    \Big] \\
-&\qquad\qquad\qquad
-  + (1 + c_{\text{second\_term}}^{+})\big(c_{\text{second\_term}} + 2(c_{p2} + 2k_x)\big)
-  \Bigg\}.
-\end{aligned}
-}
-\]
-
-\texttt{mpfr\_sub} is subject to cancellation errors when the two operands are close to each other.
-In order to prevent this, we 
 
 \subsection{Summary}
 

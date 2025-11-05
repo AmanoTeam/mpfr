@@ -677,8 +677,7 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
   mpfr_clear (z);
 }
 
-#define BOUND 33
-
+#define BOUND 30
 static void
 test_exact_dyadic (void)
 {

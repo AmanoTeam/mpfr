@@ -22,6 +22,7 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
 
+#if 0
 /* return the number of bits we (eventually) have to add to realprec
    to compute x - y exactly, i.e to avoid catastrophic cancellation.
    Return 0 if cancellation is negligible. */
@@ -41,14 +42,10 @@ likely_cancellation (mpfr_srcptr x, mpfr_srcptr y, mpfr_prec_t prec)
   ex = MPFR_GET_EXP (x);
   ey = MPFR_GET_EXP (y);
 
-  /* magnitudes too different, subtraction is safe */
-  if (labs (ex - ey) > 2)
-    return 0;
-
   /* we compute the difference with a slightly higher precision.
      We add extra 8 bits to the working precision to give some guard space
      for the subtraction itself. */
-  mpfr_init2 (diff, prec + 8);
+  mpfr_init2 (diff, prec + labs (ex - ey));
   mpfr_sub (diff, x, y, MPFR_RNDN);
 
   if (MPFR_IS_ZERO (diff))
@@ -60,17 +57,16 @@ likely_cancellation (mpfr_srcptr x, mpfr_srcptr y, mpfr_prec_t prec)
   ed = MPFR_GET_EXP (diff);
   maxexp = (ex > ey) ? ex : ey;
   lost_bits = maxexp - ed;
-
+printf("***LOST_BITS: %zu\n", lost_bits);
   mpfr_clear (diff);
 
-  /* if lost_bits <= 0, subtraction doesn’t lose any precision.
-     If the subtraction loses only one bit of precision, treat it
-     as negligible */
+  /* if lost_bits <= 1, subtraction doesn’t lose any precision. */
   if (lost_bits <= 1)
     return 0;
 
   return (mpfr_prec_t) lost_bits;
 }
+#endif
 
 int
 mpfr_legendre (mpfr_ptr res, int n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
@@ -144,13 +140,16 @@ mpfr_legendre (mpfr_ptr res, int n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 
   res_prec = MPFR_PREC(res);
   x_prec = MPFR_PREC(x);
+  mpfr_exp_t x_exp = MPFR_GET_EXP (x);
   /*  */
-  loop_err = 14 * (n - 1);
+  loop_err = 10 * (n - 1);
   delta = MPFR_INT_CEIL_LOG2(res_prec) + loop_err;
   realprec = res_prec + delta;
-  if (x_prec > realprec) {
-    realprec = x_prec;
-  }
+  if (x_prec > realprec)
+    {
+      realprec = x_prec;
+    }
+
   /* err = ceil(log2(loop_err)) + small margin (5 bits). This value is
      incremented in case of severe cancellation */
   err = MPFR_INT_CEIL_LOG2(loop_err) + 5;
@@ -161,7 +160,6 @@ mpfr_legendre (mpfr_ptr res, int n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   MPFR_ZIV_INIT (loop, realprec);
   for (;;)
     {
-_start:
       i = 2;
       /* p1 = x, p2 = 1 */
       mpfr_set (p1, x, MPFR_RNDN);
@@ -174,31 +172,9 @@ _start:
           mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
           /* second_term = p2 * (i - 1) */
           mpfr_mul_ui (second_term, p2, i - 1, MPFR_RNDN);
-
-          /* we check if a severe cancellation may occur *before* performing
-             the subtraction. If the number of canceled bits is greater than
-             the working precision minus the result precision, we need to
-             increase the working precision */
-          lost_bits = likely_cancellation (first_term, second_term, realprec);
-          if (lost_bits > (realprec - res_prec))
-            {
-              /* increase precision by the number of lost bits
-                 (due to cancellation), plus a small safety margin */
-              realprec += lost_bits + 2;
-              /* the error estimate is updated as well */
-              err += lost_bits;
-
-              MPFR_GROUP_REPREC_5 (group, realprec,
-                                   p1, p2, pn, first_term, second_term);
-
-              /* in case of severe cancellation, a new precision is set
-                 and we go back to the beginning of the loop, so that each
-                 term is recomputed with the new precision */
-              goto _start;
-            }
-
-          /* pn = (first_term - second_term) / i */
+          /* pn = first_term - second_term */
           mpfr_sub (pn, first_term, second_term, MPFR_RNDN);
+          /* pn = pn/i */
           mpfr_div_ui (pn, pn, i, MPFR_RNDN);
 
           /* p2 = p1, p1 = pn */
@@ -211,13 +187,10 @@ _start:
          above, so test_prec is the effective precision we can use */
       test_prec = realprec - err;
 
-      // if (mpfr_min_prec (pn) < test_prec - 1)
-      //   break;
-
-      if (MPFR_LIKELY (MPFR_CAN_ROUND (pn, test_prec, res_prec, rnd_mode)))
+      if (mpfr_min_prec (pn) < test_prec - 1)
         break;
 
-      if (mpfr_equal_p(pn, p1))
+      if (MPFR_LIKELY (MPFR_CAN_ROUND (pn, test_prec, res_prec, rnd_mode)))
         break;
 
       MPFR_ZIV_NEXT (loop, realprec);
