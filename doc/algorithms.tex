@@ -4703,7 +4703,7 @@ parameters validation and special cases (a)--(d).
   \BlankLine
   realprec $\gets$ mpfr\_get\_prec(res) + 8\;
   \tcc{Initializing all the variables to the working precision}
-  init\_prec (realprec, $p_1$, $p_2$, $p_n$, first\_term, second\_term)\;
+  init\_prec (realprec, $p_1$, $p_2$, $p_i$, first\_term, second\_term)\;
   \tcc{Initializing the two base cases}
   $p_2~\gets{}~1$\;
   $p_1~\gets~\N(x)$\;
@@ -4721,7 +4721,7 @@ parameters validation and special cases (a)--(d).
     $i++$\;
   }
   \tcc{Final rounding of the result with the input rounding mode}
-  \Return mpfr\_set(res, p\_i, rnd\_mode)\;
+  \Return mpfr\_set(res, $p_i$, rnd\_mode)\;
   \BlankLine
 \end{algorithm}
 \vspace{.3cm}
