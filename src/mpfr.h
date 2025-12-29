@@ -872,6 +872,7 @@ __MPFR_DECLSPEC int mpfr_custom_get_kind (mpfr_srcptr);
 __MPFR_DECLSPEC int mpfr_total_order_p (mpfr_srcptr, mpfr_srcptr);
 
 __MPFR_DECLSPEC int mpfr_legendre (mpfr_ptr, unsigned, mpfr_srcptr, mpfr_rnd_t);
+__MPFR_DECLSPEC int mpfr_hermite (mpfr_ptr, unsigned, mpfr_srcptr, mpfr_rnd_t);
 
 #if defined (__cplusplus)
 }

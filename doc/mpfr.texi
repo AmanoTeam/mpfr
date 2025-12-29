@@ -2206,6 +2206,13 @@ or if @var{n} > 8192, then @var{res} is set to NaN and 0 is
 returned.
 @end deftypefun
 
+@deftypefun int mpfr_hermite (mpfr_t @var{res}, unsigned @var{n}, const mpfr_t @var{x}, mpfr_rnd_t @var{rnd})
+@var{res} is set with the value of the (physicist's) Hermite polynomial
+P_@var{n}(@var{x}), rounded in the direction of @var{rnd}, where
+@var{n} stands for the degree of the polynomial. If @var{n} > 8192, then
+@var{res} is set to NaN and 0 is returned.
+@end deftypefun
+
 For the power functions (with an integer exponent or not), see @ref{mpfr_pow}
 in @ref{Transcendental Functions}.
 
