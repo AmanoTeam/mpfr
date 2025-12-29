@@ -22,63 +22,41 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
 
-#if 0
-/* return the number of bits we (eventually) have to add to realprec
-   to compute x - y exactly, i.e to avoid catastrophic cancellation.
-   Return 0 if cancellation is negligible. */
+#include <math.h> /* for ceil function */
+
 static mpfr_prec_t
-likely_cancellation (mpfr_srcptr x, mpfr_srcptr y, mpfr_prec_t prec)
+error_extra_bits (unsigned n)
 {
-  long lost_bits;
-  mpfr_exp_t ex, ey, ed, maxexp;
-  mpfr_t diff;
+  /* pre-computed error bits for n <= 10, see the table in algorithms.tex */
+  const mpfr_prec_t extra_bits[] = { 0, 0, 6, 8, 11, 13, 15, 17, 20, 22, 24 };
+  double log2_r1, log2_A, asym_bits;
 
-  if (MPFR_IS_ZERO (x) || MPFR_IS_ZERO (y))
-    return 0;
+  if (n <= 10)
+    return extra_bits[n];
 
-  if (MPFR_SIGN (x) != MPFR_SIGN (y))
-    return 0;
+  /* for larger n we use the asymptotic analysis shown in algorithms.tex,
+     in particular we have:
+       - log2_r1 = log2(2+2*sqrt(2)) = 2.271553303163612;
+       - log2_A = log2((7+5*sqrt(2))/4) = 1.815573220150449;
+       - asym_bits = log2_A + n*(log2_r1) + 1 */
+  log2_r1 = 2.271553303163612;
+  log2_A = 1.815573220150449;
+  asym_bits = log2_A + n * log2_r1 + 1.0;
 
-  ex = MPFR_GET_EXP (x);
-  ey = MPFR_GET_EXP (y);
-
-  /* we compute the difference with a slightly higher precision.
-     We add extra 8 bits to the working precision to give some guard space
-     for the subtraction itself. */
-  mpfr_init2 (diff, prec + labs (ex - ey));
-  mpfr_sub (diff, x, y, MPFR_RNDN);
-
-  if (MPFR_IS_ZERO (diff))
-    {
-      mpfr_clear (diff);
-      return prec;
-    }
-
-  ed = MPFR_GET_EXP (diff);
-  maxexp = (ex > ey) ? ex : ey;
-  lost_bits = maxexp - ed;
-printf("***LOST_BITS: %zu\n", lost_bits);
-  mpfr_clear (diff);
-
-  /* if lost_bits <= 1, subtraction doesn’t lose any precision. */
-  if (lost_bits <= 1)
-    return 0;
-
-  return (mpfr_prec_t) lost_bits;
+  return ceil (asym_bits);
 }
-#endif
 
 int
-mpfr_legendre (mpfr_ptr res, int n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
+mpfr_legendre (mpfr_ptr res, unsigned n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 {
   int ternary_value = 0;
   unsigned is_within_domain = 1;
 
   /* the following variables are used (and consequently initialized) only
      for n >= 2, where x is not equal to -1, 0 or 1 */
-  unsigned i, loop_err, u_correction;
+  unsigned i;
   mpfr_t p1, p2, pn, first_term, second_term;
-  mpfr_prec_t res_prec, realprec, x_prec, delta, test_prec, err, lost_bits;
+  mpfr_prec_t res_prec, realprec, x_prec, test_prec, err;
   MPFR_GROUP_DECL (group);
   MPFR_ZIV_DECL (loop);
 
@@ -91,7 +69,7 @@ mpfr_legendre (mpfr_ptr res, int n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   is_within_domain &= mpfr_lessequal_p(x, __gmpfr_one);
   is_within_domain &= mpfr_greaterequal_p (x, __gmpfr_mone);
 
-  if (!is_within_domain || n < 0 || n > 8192)
+  if (!is_within_domain || n > 8192)
     {
       MPFR_SET_NAN (res);
       /* as specified in the documentation, "[...] a NaN result
@@ -138,21 +116,17 @@ mpfr_legendre (mpfr_ptr res, int n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       return 0;
     }
 
-  res_prec = MPFR_PREC(res);
-  x_prec = MPFR_PREC(x);
-  mpfr_exp_t x_exp = MPFR_GET_EXP (x);
-  /*  */
-  loop_err = 10 * (n - 1);
-  delta = MPFR_INT_CEIL_LOG2(res_prec) + loop_err;
-  realprec = res_prec + delta;
-  if (x_prec > realprec)
-    {
-      realprec = x_prec;
-    }
+  res_prec = MPFR_PREC (res);
+  x_prec = MPFR_PREC (x);
+  /* if x_prec > res_prec, then we use x_prec as the starting precision
+     for the Ziv's loop, otherwise we use res_prec. We add then a coefficient
+     that is proportional either to x_prec or res_prec + 10 safety bits */
+  realprec = x_prec > res_prec ? x_prec : res_prec + 10;
+  realprec += MPFR_INT_CEIL_LOG2 (realprec);
 
-  /* err = ceil(log2(loop_err)) + small margin (5 bits). This value is
-     incremented in case of severe cancellation */
-  err = MPFR_INT_CEIL_LOG2(loop_err) + 5;
+  /* the error is set to error_extra_bits, plus 2 extra bits of safety for
+     the final rounding */
+  err = error_extra_bits (n) + 2;
 
   MPFR_GROUP_INIT_5 (group, realprec,
                      p1, p2, pn, first_term, second_term);
@@ -161,9 +135,11 @@ mpfr_legendre (mpfr_ptr res, int n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   for (;;)
     {
       i = 2;
+
       /* p1 = x, p2 = 1 */
       mpfr_set (p1, x, MPFR_RNDN);
       mpfr_set_ui (p2, 1, MPFR_RNDN);
+
       while (i <= n)
         {
           /* first_term = x * (2 * i - 1) */
@@ -180,6 +156,7 @@ mpfr_legendre (mpfr_ptr res, int n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
           /* p2 = p1, p1 = pn */
           mpfr_set (p2, p1, MPFR_RNDN);
           mpfr_set (p1, pn, MPFR_RNDN);
+
           i++;
         }
 

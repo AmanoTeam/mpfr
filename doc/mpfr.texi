@@ -2198,11 +2198,11 @@ This function is experimental, and does not yet handle intermediate overflows
 and underflows.
 @end deftypefun
 
-@deftypefun int mpfr_legendre (mpfr_t @var{res}, int @var{n}, const mpfr_t @var{x}, mpfr_rnd_t @var{rnd})
+@deftypefun int mpfr_legendre (mpfr_t @var{res}, unsigned @var{n}, const mpfr_t @var{x}, mpfr_rnd_t @var{rnd})
 @var{res} is set with the value of Legendre's polynomial P_@var{n}(@var{x}),
 rounded in the direction of @var{rnd}, where @var{n} stands for the degree of
 the polynomial. If the input variable @var{x} is outside the [-1,1] domain,
-or if @var{n} < 0 || @var{n} > 8192, then @var{res} is set to NaN and 0 is
+or if @var{n} > 8192, then @var{res} is set to NaN and 0 is
 returned.
 @end deftypefun
 

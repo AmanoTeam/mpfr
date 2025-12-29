@@ -30,6 +30,7 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define MPFR_PREC_200        200
 
 #define RANDOM_TESTS_BATCH 50
+#define DYADIC_BOUND       35
 
 #define DUMP_NUMBERS(expected, got)   \
           do                          \
@@ -677,16 +678,15 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
   mpfr_clear (z);
 }
 
-#define BOUND 30
 static void
 test_exact_dyadic (void)
 {
   int n;
   mpfr_prec_t p;
 
-  for (n = 1; n <= BOUND; n++)
-    for (p = 1; p <= BOUND; p++)
-      test_exact (n, BOUND, BOUND, p);
+  for (n = 1; n <= DYADIC_BOUND; n++)
+    for (p = 1; p <= DYADIC_BOUND; p++)
+      test_exact (n, DYADIC_BOUND, DYADIC_BOUND, p);
 }
 
 int
@@ -733,7 +733,7 @@ main (void)
   test_sample_with_precision (MPFR_PREC_200, MPFR_PREC_200);
 
   /* random tests contributed by Paul Zimmermann */
-  random_test_suite (100, RANDOM_TESTS_BATCH);
+  random_test_suite (RANDOM_TESTS_BATCH, RANDOM_TESTS_BATCH);
 
   /* bug reported by Paul Zimmermann */
   bug20251001 ();
