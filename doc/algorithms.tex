@@ -4863,6 +4863,106 @@ $i$ & $b_i$ (exact) & $b_i$ (decimal) & $\lceil\log_2(b_i)\rceil$ & $b_i/b_{i-1}
 \end{tabular}
 \end{center}
 
+\subsection{Hermite polynomials}
+
+Physicist's Hermite polynomials $H_n(x)$, with $n \geq 0$, are widely used in
+physics to describe the energy eigenstates (wavefunctions) and energy levels
+of the quantum harmonic oscillator (QHO). They are a sequence of orthogonal
+polynomials defined in the domain $(-\infty,\infty)$.
+
+These polynomials are computed by MPFR through the following recursion
+\begin{equation} \label{eq:hermite-recursion}
+  \begin{cases}
+      H_0(x) = 1\\
+      H_1(x) = 2x\\
+      H_n(x) = H_{n+1}(x) = 2xH_n(x) - 2nH_{n-1}(x)
+  \end{cases}
+\end{equation}
+Some values of $x$ and $n$ are treated as special cases. These cases are:
+\begin{itemize}
+\item[(a)] The base cases $H_0$ and $H_1$.
+\item[(b)] If $n \ge 1$ is odd, then $H_n(0) = 1$.
+\item[(c)] If $n \ge 1$ is even, then $H_n(0) = H_{2k}(0) = (-1)^k~\dfrac{(2k)!}{k!}$.
+\end{itemize}
+The fraction in (c) is computed with the Log-Gamma method to avoid overflow for
+large $n$. Let's start from the implementation of the case $H_{2k}(0)$ and its
+error analysis.
+\vspace{.3cm}
+
+\begin{algorithm}[H]
+  \caption{\texttt{mpfr\_hermite} special cases}
+  \label{algo:hermite-special}
+  \KwData{mpfr\_ptr res, unsigned n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
+  \KwResult{ternary value}
+  \BlankLine
+  \tcc{The higher degree allowed is $2^{13}$}
+  \lIf{$~~(n>8192)~~$}{
+    res $\gets$ NaN;
+    \Return 0\;
+  }
+  \lIf{$~~(n=0)~~$}{
+    res $\gets$ 1;
+    \Return 0\;
+  }
+  \If{$~~(x=0)~~$}{
+    \lIf{$~~((n\&1)\neq 0)~~$}{
+      res $\gets$ 0;
+      \Return 0\;
+    }
+    res $\gets$ 1;
+    \Return 0\;
+  }
+  \lIf{$~~(\text{MPFR\_IS\_SINGULAR} (x))~~$}{
+    res $\gets$ NaN;
+    \Return 0\;
+  }
+  \lIf{$~~(n=1)~~$}{
+    \Return mpfr\_mul\_ui(res, x, 2, rnd\_mode)\;
+  }
+  \BlankLine
+\end{algorithm}
+\vspace{.3cm}
+
+\paragraph{\textbf{Implementation of $\mathbf{H_{2k}(0)}$ and error analysis.}}
+
+a
+\vspace{.3cm}
+
+\begin{algorithm}[H]
+  \caption{\texttt{mpfr\_hermite} $H_{2k}(0)$}
+  \label{algo:hermite-zero-even-special}
+  \KwData{mpfr\_ptr res, unsigned n, mpfr\_rnd\_t rnd\_mode}
+  \KwResult{ternary value}
+  \BlankLine
+  $\text{first} \gets \N(n+1)$\;
+  $\text{second} \gets \N(\frac{n}{2}+1)$\;
+  $\text{gamma1} \gets \N(\log(\Gamma(\text{first})))$\;
+  $\text{gamma2} \gets \N(\log(\Gamma(\text{second})))$\;
+  $\text{sub} \gets \N(\text{gamma1} - \text{gamma2})$\;
+  $\text{e} \gets \N(\exp(\text{sub}))$\;
+  ternary\_value $\gets$ mpfr\_set (res, e, rnd\_mode)\;
+  \lIf{$~~((n>>1)\&1)~~$}{
+    MPFR\_SET\_NEG (res)\;
+  }
+  \Return ternary\_value\;
+  \BlankLine
+\end{algorithm}
+
+\begin{center}
+\begin{tabular}{p{.37\textwidth}p{.63\textwidth}}
+$\text{gamma1} \gets \N(\log(\Gamma(\text{first})))$
+& $k_1 \le \tfrac12$. \\[4pt]
+$\text{gamma2} \gets \N(\log(\Gamma(\text{second})))$
+& $k_2 \le \tfrac12$. \\[4pt]
+$\text{sub} \gets \N(\text{gamma1} - \text{gamma2})$
+& $k_3 \le c_3 + k_1 + k_2;~c_3=\frac12$. Thus:
+$k_3 \le \frac12 + \frac12 + \frac12 = \frac32$.
+A runtime heuristic it's applied to handle eventual cancellation. \\[4pt]
+$\text{e} \gets \N(\exp(\text{sub}))$
+& $k_4 \le e^{k_3 2^{e_{s}} - p}~2^{e_{s}+1}~k_3$. \\[4pt]
+\end{tabular}
+\end{center}
+
 \subsection{Summary}
 
 Table ~\ref{table:genericError} presents the generic error for several operations, assuming all variables have a

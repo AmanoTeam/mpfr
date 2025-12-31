@@ -1,4 +1,4 @@
-/* Test file for hermite polynomials.
+/* Test file for (physicist's) hermite polynomials.
 
 Copyright 2025 Free Software Foundation, Inc.
 Contributed by Matteo Nicoli.
@@ -40,18 +40,18 @@ test_special_cases (void)
       if (mpfr_hermite (res, odd_degree, x, r) != 0
           || !MPFR_IS_ZERO (res))
         {
-          printf ("P%d(0) should be 0; got ", odd_degree);
+          printf ("H_%d(0) should be 0; got ", odd_degree);
           mpfr_out_str (stdout, 10, 0, res, r);
           printf ("\n");
           exit (1);
         }
 
-      /* P_2(0) = -2 */
+      /* H_2(0) = -2 */
       mpfr_set_d (expected, -2.0, r);
       ret = mpfr_hermite (res, degree_2, x, r);
       if (ret != 0 || !mpfr_equal_p (res, expected))
         {
-          printf ("P_2(0) should be: ");
+          printf ("H_2(0) should be: ");
           mpfr_dump (expected);
           printf ("got: ");
           mpfr_dump (res);
@@ -59,14 +59,24 @@ test_special_cases (void)
           exit (1);
         }
 
-      /* P_4(0) = 12 */
+      /* H_4(0) = 12 */
       mpfr_set_d (expected, 12.0, r);
       ret = mpfr_hermite (res, degree_4, x, r);
       if (ret != 0 || !mpfr_equal_p (res, expected))
         {
-          printf ("P_4(0) should be: ");
+          printf ("H_4(0) should be: ");
           mpfr_dump (expected);
           printf ("got: ");
+          mpfr_dump (res);
+          printf ("with return value: %d\n", ret);
+          exit (1);
+        }
+
+      /* H_{1e9}(0) should overflow, i.e. return NaN */
+      ret = mpfr_hermite (res, (unsigned) 1e9, x, r);
+      if (ret != 0 || !mpfr_nan_p (res))
+        {
+          printf ("H_{1e9}(0) should overflow and return NaN. Got: ");
           mpfr_dump (res);
           printf ("with return value: %d\n", ret);
           exit (1);
@@ -79,12 +89,20 @@ test_special_cases (void)
   mpfr_free_cache ();
 }
 
+/* for n == 0:
+     - H_0(Inf)  -> 1.0
+     - H_0(-Inf) -> 1.0
+     - H_0(NaN)  -> 1.0
+   for n >= 1:
+     - H_n(Inf)  -> NaN
+     - H_n(-Inf) -> NaN
+     - H_n(NaN)  -> NaN */
 static void
 test_singular_input (void)
 {
   mpfr_t res, x;
   int i, ret;
-  unsigned n, degrees[] = { 0, 2, 5, 12, 21, 30, 50 };
+  unsigned n, degrees[] = { 1, 2, 5, 12, 21, 30, 50 };
 
   mpfr_init2 (res, 200);
   mpfr_init2 (x, 200);
@@ -92,11 +110,12 @@ test_singular_input (void)
   for (i = 0; i < sizeof (degrees) / sizeof (unsigned); i++)
     {
       n = degrees[i];
+
       mpfr_set_nan (x);
       ret = mpfr_hermite (res, n, x, MPFR_RNDN);
       if (ret != 0 || !mpfr_nan_p (res))
         {
-          printf ("For x = NAN, P_%u should be NAN\ngot: ", n);
+          printf ("For x = NAN, H_%u should be NAN\ngot: ", n);
           mpfr_dump (res);
           printf ("With return value: %d\n", ret);
           exit (1);
@@ -105,7 +124,7 @@ test_singular_input (void)
       ret = mpfr_hermite (res, n, x, MPFR_RNDN);
       if (ret != 0 || !mpfr_nan_p (res))
         {
-          printf ("For x = +Inf, P_%u should be NAN\ngot: ", n);
+          printf ("For x = +Inf, H_%u should be NAN\ngot: ", n);
           mpfr_dump (res);
           printf ("With return value: %d\n", ret);
           exit (1);
@@ -114,11 +133,41 @@ test_singular_input (void)
       ret = mpfr_hermite (res, n, x, MPFR_RNDN);
       if (ret != 0 || !mpfr_nan_p (res))
         {
-          printf ("For x = -Inf, P_%u should be NAN\ngot: ", n);
+          printf ("For x = -Inf, H_%u should be NAN\ngot: ", n);
           mpfr_dump (res);
           printf ("With return value: %d\n", ret);
           exit (1);
         }
+    }
+
+  /* if n == 0, x should not be checked, so H_n should be evaluated according
+     to the base case of the recurrence */
+  mpfr_set_nan (x);
+  ret = mpfr_hermite (res, 0, x, MPFR_RNDN);
+  if (ret != 0 || mpfr_nan_p (res))
+    {
+      printf ("For x = NAN, H_0 should *not* be NAN\ngot: ");
+      mpfr_dump (res);
+      printf ("With return value: %d\n", ret);
+      exit (1);
+    }
+  mpfr_set_inf(x, 1);
+  ret = mpfr_hermite (res, 0, x, MPFR_RNDN);
+  if (ret != 0 || mpfr_nan_p (res))
+    {
+      printf ("For x = +Inf, H_0 should *not* be NAN\ngot: ");
+      mpfr_dump (res);
+      printf ("With return value: %d\n", ret);
+      exit (1);
+    }
+  mpfr_set_inf(x, -1);
+  ret = mpfr_hermite (res, 0, x, MPFR_RNDN);
+  if (ret != 0 || mpfr_nan_p (res))
+    {
+      printf ("For x = -Inf, H_0 should *not* be NAN\ngot: ");
+      mpfr_dump (res);
+      printf ("With return value: %d\n", ret);
+      exit (1);
     }
 
   mpfr_clear (res);
@@ -146,7 +195,7 @@ test_first_iteration (void)
   ret = mpfr_hermite (res, 0, x, MPFR_RNDN);
   if (ret != 0 || !mpfr_equal_p (res, one))
     {
-      printf ("The first Hermite polynomial P_0 should be exactly 1.\ngot: ");
+      printf ("The first Hermite polynomial H_0 should be exactly 1.\ngot: ");
       mpfr_dump (res);
       printf ("With return value: %d\n", ret);
       exit (1);
@@ -177,7 +226,7 @@ test_second_iteration (void)
   ret = mpfr_hermite (res, 1, x, MPFR_RNDN);
   if (ret != 0 || !mpfr_equal_p (res, expected))
     {
-      printf ("P_1 should be 2x\ngot: ");
+      printf ("H_1 should be 2x\ngot: ");
       mpfr_dump (res);
       printf ("With return value: %d\n", ret);
       exit (1);
@@ -194,7 +243,7 @@ main (void)
 {
   tests_start_mpfr ();
 
-  /* tests for P_n(0) */
+  /* tests for H_n(0) */
   test_special_cases ();
 
   /* for singular input (+/-Inf or NaN), mpfr_hermit should always set res
