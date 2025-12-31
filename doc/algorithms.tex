@@ -4658,11 +4658,11 @@ parameters validation and special cases (a)--(d).
 \begin{algorithm}[H]
   \caption{\texttt{mpfr\_legendre} special cases}
   \label{algo:legendre-special}
-  \KwData{mpfr\_ptr res, int n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
+  \KwData{mpfr\_ptr res, unsigned n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
   \KwResult{ternary value}
   \BlankLine
   \tcc{The higher degree allowed is $2^{13}$}
-  \lIf{$~~(n<0~~\vert~~n>8192)~~$}{
+  \lIf{$~~(n>8192)~~$}{
     res $\gets$ NaN;
     \Return 0\;
   }
@@ -4698,11 +4698,10 @@ parameters validation and special cases (a)--(d).
 \begin{algorithm}[H]
   \caption{\texttt{mpfr\_legendre} Bonnet's recursion}
   \label{algo:legendre-bonnet}
-  \KwData{mpfr\_ptr res, int n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
+  \KwData{mpfr\_ptr res, unsigned n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
   \KwResult{ternary value}
   \BlankLine
-  realprec $\gets$ mpfr\_get\_prec(res) + 8\;
-  \tcc{Initializing all the variables to the working precision}
+  \tcc{Initializing all the variables to the working precision (realprec)}
   init\_prec (realprec, $p_1$, $p_2$, $p_i$, first\_term, second\_term)\;
   \tcc{Initializing the two base cases}
   $p_2~\gets{}~1$\;
@@ -4759,7 +4758,7 @@ $p_i \gets \N(\text{first\_term} - \text{second\_term})$ &
 Using the generic subtraction rule (same sign operands):
 $k_{p_i} \le c_{p_i} + k_3 + k_4, c_{p_i}=\tfrac12$. Thus:
 $k_{p_i} \le \tfrac12 + \tfrac52 + \tfrac32 = \tfrac92$.
-A runtime heuristic it's applyed to handle eventual cancellation. \\[4pt]
+A runtime heuristic it's applied to handle eventual cancellation. \\[4pt]
 $p_i \gets \N(p_i/i)$ &
 Exact integer division. Using generic division:
 $k_{p_i}' \le c_{p_i'} + 2k_{p_i}, c_{p_i'}=\tfrac12$. Thus,
