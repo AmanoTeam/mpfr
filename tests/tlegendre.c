@@ -21,25 +21,10 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-test.h"
 
-#include <time.h>
-
 #define ARBITRARILY_LOW_PREC 10
-#define IEEE754_SINGLE_PREC  24
-#define IEEE754_DOUBLE_PREC  53
-#define MPFR_PREC_100        100
-#define MPFR_PREC_200        200
 
 #define RANDOM_TESTS_BATCH 50
 #define DYADIC_BOUND       35
-
-#define DUMP_NUMBERS(expected, got)   \
-          do                          \
-            {                         \
-              printf ("expected: ");  \
-              mpfr_dump (expected);   \
-              printf ("got:      ");  \
-              mpfr_dump (got);        \
-            } while (0)
 
 static const unsigned degrees[] =
 {
@@ -450,89 +435,6 @@ test_round (void)
   mpfr_free_cache ();
 }
 
-/* perform K random tests with degree n and precision p */
-static void
-test_random (int n, mpfr_prec_t p, unsigned long K)
-{
-  mpfr_t x, y, z, t;
-  unsigned long k;
-  int rnd;
-  mpfr_init2 (x, p);
-  mpfr_init2 (y, p);
-  mpfr_init2 (z, p + 20);
-  mpfr_init2 (t, p);
-  for (k = 0; k < K; k++)
-    {
-      mpfr_urandomb (x, RANDS); /* x is in [0,1] */
-      mpfr_mul_ui (x, x, 2, MPFR_RNDN);
-      mpfr_sub_ui (x, x, 1, MPFR_RNDN); /* now x is in [-1,1] */
-      RND_LOOP_NO_RNDF (rnd)
-        {
-          mpfr_legendre (y, n, x, (mpfr_rnd_t) rnd);
-          mpfr_legendre (z, n, x, MPFR_RNDN);
-          if (mpfr_can_round (z, p + 20, MPFR_RNDN, (mpfr_rnd_t) rnd, p))
-            {
-              mpfr_set (t, z, (mpfr_rnd_t) rnd);
-              if (mpfr_cmp (y, t))
-                {
-                  printf ("Error in mpfr_legendre for n=%d x=", n);
-                  mpfr_out_str (stdout, 16, 0, x, MPFR_RNDN);
-                  printf (" rnd=%s\n", mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
-                  DUMP_NUMBERS (t, y);
-                  exit (1);
-                }
-            }
-        }
-    }
-  mpfr_clear (x);
-  mpfr_clear (y);
-  mpfr_clear (z);
-  mpfr_clear (t);
-}
-
-static void
-random_array (int *array, int size, int inf, int sup)
-{
-  int i, tmp;
-  for (i = 0; i < size; i++)
-    {
-      if (inf > sup)
-        {
-          tmp = inf;
-          inf = sup;
-          sup = tmp;
-        }
-      array[i] = inf + rand() % (sup - inf + 1);
-    }
-}
-
-static void
-random_test_suite (int num_degrees, int num_tests)
-{
-  /* we set the minimum degree to 2 to skip the two base cases P0 and P1,
-     and the maximum degree to 128 to limit the range of degrees tested
-     to the same limit of the C++ standard */
-  int min_degree = 2, max_degree = 128;
-  int *test_degrees;
-
-  srand(time(NULL));
-
-  test_degrees = (int *) malloc (num_degrees * sizeof(int));
-  if (!test_degrees)
-    {
-      printf ("Could not allocate memory for random tests\n");
-      exit (1);
-    }
-
-  random_array (test_degrees, num_degrees, min_degree, max_degree);
-
-  for (int i = 0; i < num_degrees; i++)
-    {
-      test_random (test_degrees[i], IEEE754_DOUBLE_PREC, num_tests);
-    }
-  free (test_degrees);
-}
-
 static void
 bug20251001 (void)
 {
@@ -733,7 +635,8 @@ main (void)
   test_sample_with_precision (MPFR_PREC_200, MPFR_PREC_200);
 
   /* random tests contributed by Paul Zimmermann */
-  random_test_suite (RANDOM_TESTS_BATCH, RANDOM_TESTS_BATCH);
+  random_poly_suite (RANDOM_TESTS_BATCH, RANDOM_TESTS_BATCH,
+                     IEEE754_DOUBLE_PREC, mpfr_legendre);
 
   /* bug reported by Paul Zimmermann */
   bug20251001 ();

@@ -21,6 +21,8 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-test.h"
 
+#define RANDOM_TESTS_BATCH 50
+
 static void
 test_special_cases (void)
 {
@@ -102,7 +104,7 @@ test_singular_input (void)
 {
   mpfr_t res, x;
   int i, ret;
-  unsigned n, degrees[] = { 1, 2, 5, 12, 21, 30, 50 };
+  unsigned n, degrees[] = { 0, 1, 2, 5, 12, 21, 30, 50 };
 
   mpfr_init2 (res, 200);
   mpfr_init2 (x, 200);
@@ -138,36 +140,6 @@ test_singular_input (void)
           printf ("With return value: %d\n", ret);
           exit (1);
         }
-    }
-
-  /* if n == 0, x should not be checked, so H_n should be evaluated according
-     to the base case of the recurrence */
-  mpfr_set_nan (x);
-  ret = mpfr_hermite (res, 0, x, MPFR_RNDN);
-  if (ret != 0 || mpfr_nan_p (res))
-    {
-      printf ("For x = NAN, H_0 should *not* be NAN\ngot: ");
-      mpfr_dump (res);
-      printf ("With return value: %d\n", ret);
-      exit (1);
-    }
-  mpfr_set_inf(x, 1);
-  ret = mpfr_hermite (res, 0, x, MPFR_RNDN);
-  if (ret != 0 || mpfr_nan_p (res))
-    {
-      printf ("For x = +Inf, H_0 should *not* be NAN\ngot: ");
-      mpfr_dump (res);
-      printf ("With return value: %d\n", ret);
-      exit (1);
-    }
-  mpfr_set_inf(x, -1);
-  ret = mpfr_hermite (res, 0, x, MPFR_RNDN);
-  if (ret != 0 || mpfr_nan_p (res))
-    {
-      printf ("For x = -Inf, H_0 should *not* be NAN\ngot: ");
-      mpfr_dump (res);
-      printf ("With return value: %d\n", ret);
-      exit (1);
     }
 
   mpfr_clear (res);
@@ -238,6 +210,43 @@ test_second_iteration (void)
   mpfr_free_cache ();
 }
 
+static void
+test_double_precision (void)
+{
+  mpfr_t x, expected, res;
+
+  mpfr_init2 (x, IEEE754_DOUBLE_PREC);
+  mpfr_init2 (res, IEEE754_DOUBLE_PREC);
+  mpfr_init2 (expected, IEEE754_DOUBLE_PREC);
+
+  /* H_3(3.49376) = 2.9924358881463501e2 with MPFR_RNDN */
+  mpfr_set_d (x, 3.49376, MPFR_RNDD);
+  mpfr_set_str (expected, "299.24358881463500799999999999999999999961", 10, MPFR_RNDN);
+  mpfr_hermite (res, 3, x, MPFR_RNDN);
+  if (mpfr_cmp (res, expected))
+    {
+      printf ("test_double_precision failed;\n");
+      DUMP_NUMBERS (expected, res);
+      exit (1);
+    }
+
+  /* H_6(-2.2364) = -5.1892977013945506e2 with MPFR_RNDN */
+  mpfr_set_d (x, -2.2364, MPFR_RNDD);
+  mpfr_set_str (expected, "-518.92977013945504945520448445364119704459", 10, MPFR_RNDN);
+  mpfr_hermite (res, 6, x, MPFR_RNDN);
+  if (mpfr_cmp (res, expected))
+    {
+      printf ("test_double_precision failed;\n");
+      DUMP_NUMBERS (expected, res);
+      exit (1);
+    }
+
+  mpfr_clear (res);
+  mpfr_clear (x);
+  mpfr_clear (expected);
+  mpfr_free_cache ();
+}
+
 int
 main (void)
 {
@@ -254,6 +263,11 @@ main (void)
      cases of the recursion algorithm used to calculate mpfr_hermite */
   test_first_iteration ();
   test_second_iteration ();
+
+  test_double_precision ();
+
+  random_poly_suite (RANDOM_TESTS_BATCH, RANDOM_TESTS_BATCH,
+                     IEEE754_DOUBLE_PREC, mpfr_legendre);
 
   tests_end_mpfr ();
   return 0;

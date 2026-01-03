@@ -24,6 +24,28 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 #include <math.h> /* for ceil function */
 
+static mpfr_prec_t
+error_extra_bits (unsigned n)
+{
+  /* pre-computed error bits for n <= 10, see the table in algorithms.tex */
+  const mpfr_prec_t extra_bits[] = { 0, 0, 3, 4, 6, 7, 9, 10, 12, 13, 14 };
+  double log2_r1, log2_A, asym_bits;
+
+  if (n <= 10)
+    return extra_bits[n];
+
+  /* for larger n we use the asymptotic analysis shown in algorithms.tex,
+     in particular we have:
+       - log2_r1 = log2(1*sqrt(3)) = 1.4499843134764958;
+       - log2_A = log2((4+sqrt(3))/sqrt(3)) = 1.726570147010381;
+       - asym_bits = log2_A + n*(log2_r1) + 1 */
+  log2_r1 = 1.4499843134764958;
+  log2_A = 1.726570147010381;
+  asym_bits = log2_A + n * log2_r1 + 1.0;
+
+  return ceil (asym_bits);
+}
+
 int
 mpfr_hermite (mpfr_ptr res, unsigned n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 {
@@ -31,18 +53,26 @@ mpfr_hermite (mpfr_ptr res, unsigned n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 
   /* the following variables are used (and consequently initialized) only
      for n >= 2, where x is not equal to -1, 0 or 1 */
-  // unsigned i;
-  // mpfr_t p1, p2, pn, first_term, second_term;
-  // mpfr_prec_t res_prec, realprec, x_prec, test_prec, err;
-  // MPFR_GROUP_DECL (group);
-  // MPFR_ZIV_DECL (loop);
-  mpfr_prec_t res_prec, realprec;
+  unsigned i;
+  mpfr_t p1, p2, pn, first_term, second_term;
+  mpfr_prec_t res_prec, realprec, x_prec, test_prec, err;
+  MPFR_GROUP_DECL (group);
+  MPFR_ZIV_DECL (loop);
 
+  x_prec = MPFR_PREC (x);
   res_prec = MPFR_PREC (res);
 
-  /* */
-  if (n > 8192)
-    goto nan_ret;
+  /* NaN are checke *before* any other check, according to C++ specs:
+     "If the argument is NaN, NaN is returned [...]".
+     We extended to +/-Inf as well. */
+  if (MPFR_IS_NAN (x) || MPFR_IS_INF (x) || n > 8192)
+    {
+  nan_ret:
+      MPFR_SET_NAN (res);
+      /* as specified in the documentation, "[...] a NaN result
+         (Not-a-Number) always corresponds to an exact return value." */
+      return 0;
+    }
 
   /* H_0(x) = 1. In this case, since the output is const and does not depend
      on the value of x, no further analysis on the value of x is performed */
@@ -51,15 +81,6 @@ mpfr_hermite (mpfr_ptr res, unsigned n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       mpfr_set_ui (res, 1, rnd_mode);
       /* 1 is exactly representable in MPFR regardless of precision,
         so this will always return 0 */
-      return 0;
-    }
-
-  if (MPFR_IS_NAN (x) || MPFR_IS_INF (x))
-    {
-  nan_ret:
-      MPFR_SET_NAN (res);
-      /* as specified in the documentation, "[...] a NaN result
-         (Not-a-Number) always corresponds to an exact return value." */
       return 0;
     }
 
@@ -72,13 +93,13 @@ mpfr_hermite (mpfr_ptr res, unsigned n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       if ((n&1) == 0)
         {
           mpfr_t first, second, gamma1, gamma2, sub, e;
-          MPFR_GROUP_DECL (group);
+          MPFR_GROUP_DECL (zero_even);
           MPFR_BLOCK_DECL (flags);
 
           realprec = res_prec + 10;
 
-          MPFR_GROUP_INIT_6 (group, realprec, first, second, gamma1, gamma2,
-                             sub, e);
+          MPFR_GROUP_INIT_6 (zero_even, realprec, first, second, gamma1,
+                             gamma2, sub, e);
 
           mpfr_set_ui (first, n + 1, MPFR_RNDN);
           mpfr_set_ui (second, (n >> 1) + 1, MPFR_RNDN);
@@ -99,7 +120,7 @@ mpfr_hermite (mpfr_ptr res, unsigned n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
           if (((n >> 1) & 1))
             MPFR_SET_NEG (res);
 
-          MPFR_GROUP_CLEAR (group);
+          MPFR_GROUP_CLEAR (zero_even);
 
           return ternary_value;
         }
@@ -120,6 +141,62 @@ mpfr_hermite (mpfr_ptr res, unsigned n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       /* result is set to 2x. The ternary value of mpfr_set is returned */
       return mpfr_mul_ui (res, x, 2, rnd_mode);
     }
+
+  /* if x_prec > res_prec, then we use x_prec as the starting precision
+     for the Ziv's loop, otherwise we use res_prec. We add then a coefficient
+     that is proportional either to x_prec or res_prec + 10 safety bits */
+  realprec = x_prec > res_prec ? x_prec : res_prec + 10;
+  realprec += MPFR_INT_CEIL_LOG2 (realprec);
+
+  /* the error is set to error_extra_bits, plus 2 extra bits of safety for
+     the final rounding */
+  err = error_extra_bits (n) + 2;
+
+  MPFR_GROUP_INIT_5 (group, realprec,
+                     p1, p2, pn, first_term, second_term);
+
+  MPFR_ZIV_INIT (loop, realprec);
+  for (;;)
+    {
+      i = 1;
+
+      /* p1 = 2x, p2 = 1 */
+      mpfr_mul_ui (p1, x, 2, MPFR_RNDN);
+      mpfr_set_ui (p2, 1, MPFR_RNDN);
+      while (i < n)
+        {
+          /* first_term = 2x */
+          mpfr_mul_ui (first_term, x, 2, MPFR_RNDN);
+          /* first_term *= p1 */
+          mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
+          /* second_term = p2 * 2i */
+          mpfr_mul_ui (second_term, p2, 2 * i, MPFR_RNDN);
+          /* pn = first_term - second_term */
+          mpfr_sub (pn, first_term, second_term, MPFR_RNDN);
+
+          /* p2 = p1, p1 = pn */
+          mpfr_set (p2, p1, MPFR_RNDN);
+          mpfr_set (p1, pn, MPFR_RNDN);
+
+          i++;
+        }
+
+      test_prec = realprec - err;
+
+      if (mpfr_min_prec (pn) < test_prec - 1)
+        break;
+
+      if (MPFR_LIKELY (MPFR_CAN_ROUND (pn, test_prec, res_prec, rnd_mode)))
+        break;
+
+      MPFR_ZIV_NEXT (loop, realprec);
+      MPFR_GROUP_REPREC_5 (group, realprec,
+                           p1, p2, pn, first_term, second_term);
+    }
+  MPFR_ZIV_FREE (loop);
+  ternary_value = mpfr_set (res, pn, rnd_mode);
+
+  MPFR_GROUP_CLEAR (group);
 
   return ternary_value;
 }

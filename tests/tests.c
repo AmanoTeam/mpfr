@@ -1502,3 +1502,89 @@ tests_run_within_valgrind (void)
   return (strstr (p, "/valgrind/") != NULL ||
           strstr (p, "/vgpreload") != NULL);
 }
+
+/*
+*/
+void
+random_array (int *array, int size, int inf, int sup)
+{
+  int i, tmp;
+  for (i = 0; i < size; i++)
+    {
+      if (inf > sup)
+        {
+          tmp = inf;
+          inf = sup;
+          sup = tmp;
+        }
+      array[i] = inf + randlong () % (sup - inf + 1);
+    }
+}
+
+/* perform K random tests with degree n and precision p
+   test contributed by Paul Zimmermann */
+void
+test_poly_random (int n, mpfr_prec_t p, unsigned long K, orth_polynomial_t fn)
+{
+  mpfr_t x, y, z, t;
+  unsigned long k;
+  int rnd;
+  mpfr_init2 (x, p);
+  mpfr_init2 (y, p);
+  mpfr_init2 (z, p + 20);
+  mpfr_init2 (t, p);
+  for (k = 0; k < K; k++)
+    {
+      mpfr_urandomb (x, RANDS); /* x is in [0,1] */
+      mpfr_mul_ui (x, x, 2, MPFR_RNDN);
+      mpfr_sub_ui (x, x, 1, MPFR_RNDN); /* now x is in [-1,1] */
+      RND_LOOP_NO_RNDF (rnd)
+        {
+          fn (y, n, x, (mpfr_rnd_t) rnd);
+          fn (z, n, x, MPFR_RNDN);
+          if (mpfr_can_round (z, p + 20, MPFR_RNDN, (mpfr_rnd_t) rnd, p))
+            {
+              mpfr_set (t, z, (mpfr_rnd_t) rnd);
+              if (mpfr_cmp (y, t))
+                {
+                  printf ("Error in random test for n=%d x=", n);
+                  mpfr_out_str (stdout, 16, 0, x, MPFR_RNDN);
+                  printf (" rnd=%s\n", mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                  DUMP_NUMBERS (t, y);
+                  exit (1);
+                }
+            }
+        }
+    }
+  mpfr_clear (x);
+  mpfr_clear (y);
+  mpfr_clear (z);
+  mpfr_clear (t);
+}
+
+void
+random_poly_suite (int num_degrees, int num_tests, mpfr_prec_t p,
+                   orth_polynomial_t fn)
+{
+  /* we set the minimum degree to 2 to skip the two base cases P0 and P1,
+     and the maximum degree to 128 to limit the range of degrees tested
+     to the same limit of the C++ standard */
+  int min_degree = 2, max_degree = 128;
+  int *test_degrees;
+
+  test_degrees = (int *) malloc (num_degrees * sizeof(int));
+  if (!test_degrees)
+    {
+      printf ("Could not allocate memory for random tests\n");
+      exit (1);
+    }
+
+  random_array (test_degrees, num_degrees, min_degree, max_degree);
+
+  for (int i = 0; i < num_degrees; i++)
+    {
+      test_poly_random (test_degrees[i], p, num_tests, fn);
+    }
+
+  free (test_degrees);
+}
