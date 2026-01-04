@@ -1571,7 +1571,7 @@ random_poly_suite (int num_degrees, int num_tests, mpfr_prec_t p,
   /* we set the minimum degree to 2 to skip the two base cases P0 and P1,
      and the maximum degree to 128 to limit the range of degrees tested
      to the same limit of the C++ standard */
-  int min_degree = 2, max_degree = 128;
+  int i, min_degree = 2, max_degree = 128;
   int *test_degrees;
 
   test_degrees = (int *) malloc (num_degrees * sizeof(int));
@@ -1583,7 +1583,7 @@ random_poly_suite (int num_degrees, int num_tests, mpfr_prec_t p,
 
   random_array (test_degrees, num_degrees, min_degree, max_degree);
 
-  for (int i = 0; i < num_degrees; i++)
+  for (i = 0; i < num_degrees; i++)
     {
       test_poly_random (test_degrees[i], p, num_tests, fn);
     }
