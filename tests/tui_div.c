@@ -1,6 +1,6 @@
 /* Test file for mpfr_ui_div.
 
-Copyright 2000-2025 Free Software Foundation, Inc.
+Copyright 2000-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -186,6 +186,7 @@ check_overflow (void)
   set_emax (MPFR_EMAX_MAX);
 
   mpfr_inits2 (32, x, y1, y2, (mpfr_ptr) 0);
+  MPFR_SET_POS (x);
   mpfr_setmin (x, MPFR_EMIN_MIN);
   RND_LOOP (rnd_mode)
     {

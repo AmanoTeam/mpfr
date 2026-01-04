@@ -1,6 +1,6 @@
 /* Test file for mpfr_ui_pow and mpfr_ui_pow_ui.
 
-Copyright 2001-2025 Free Software Foundation, Inc.
+Copyright 2001-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -268,7 +268,7 @@ main (int argc, char *argv[])
 
   do n = randlimb (); while (n <= 1);
 
-  MPFR_SET_INF (x);
+  mpfr_set_inf (x, 1);
   mpfr_ui_pow (y, n, x, MPFR_RNDN);
   if (! MPFR_IS_INF (y))
     {

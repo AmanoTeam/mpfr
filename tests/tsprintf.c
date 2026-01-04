@@ -1,7 +1,7 @@
 /* tsprintf.c -- test file for mpfr_sprintf, mpfr_vsprintf, mpfr_snprintf,
    and mpfr_vsnprintf
 
-Copyright 2007-2025 Free Software Foundation, Inc.
+Copyright 2007-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -1376,6 +1376,7 @@ check_emin_aux (mpfr_exp_t e)
   mpfr_init2 (x, 16);
   mpz_init (ee);
 
+  MPFR_SET_POS (x);
   mpfr_setmin (x, e);
   mpz_set_si (ee, e);
   mpz_sub_ui (ee, ee, 1);
