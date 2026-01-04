@@ -67,7 +67,7 @@ static const int n_degrees_test = sizeof(degrees)/sizeof(unsigned);
 static void
 test_domain (void)
 {
-  int ret;
+  int i, ret;
   mpfr_t res, upper, lower, inner, outer;
 
   mpfr_init2 (res, 200);
@@ -87,7 +87,6 @@ test_domain (void)
   /* 1.00000000001 */
   mpfr_set_d (outer, 1.0 + 1e-11, MPFR_RNDD);
 
-  int i;
   for (i = 0; i < 10; i++)
     {
       mpfr_legendre (res, i, upper, MPFR_RNDN);
@@ -512,7 +511,7 @@ random_test_suite (int num_degrees, int num_tests)
   /* we set the minimum degree to 2 to skip the two base cases P0 and P1,
      and the maximum degree to 128 to limit the range of degrees tested
      to the same limit of the C++ standard */
-  int min_degree = 2, max_degree = 128;
+  int i, min_degree = 2, max_degree = 128;
   int *test_degrees;
 
   srand(time(NULL));
@@ -526,7 +525,7 @@ random_test_suite (int num_degrees, int num_tests)
 
   random_array (test_degrees, num_degrees, min_degree, max_degree);
 
-  for (int i = 0; i < num_degrees; i++)
+  for (i = 0; i < num_degrees; i++)
     {
       test_random (test_degrees[i], IEEE754_DOUBLE_PREC, num_tests);
     }
