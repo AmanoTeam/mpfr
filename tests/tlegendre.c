@@ -52,7 +52,7 @@ static const int n_degrees_test = sizeof(degrees)/sizeof(unsigned);
 static void
 test_domain (void)
 {
-  int ret;
+  int i, ret;
   mpfr_t res, upper, lower, inner, outer;
 
   mpfr_init2 (res, 200);
@@ -72,7 +72,6 @@ test_domain (void)
   /* 1.00000000001 */
   mpfr_set_d (outer, 1.0 + 1e-11, MPFR_RNDD);
 
-  int i;
   for (i = 0; i < 10; i++)
     {
       mpfr_legendre (res, i, upper, MPFR_RNDN);
