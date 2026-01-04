@@ -1,6 +1,6 @@
 /* Test file for (physicist's) hermite polynomials.
 
-Copyright 2025 Free Software Foundation, Inc.
+Copyright 2025-2026 Free Software Foundation, Inc.
 Contributed by Matteo Nicoli.
 
 This file is part of the GNU MPFR Library.

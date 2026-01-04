@@ -1,6 +1,6 @@
 /* hermite -- Compute the nth degree (physicist's) Hermite polynomial.
 
-Copyright 2025 Free Software Foundation, Inc.
+Copyright 2025-2026 Free Software Foundation, Inc.
 Contributed by Matteo Nicoli.
 
 This file is part of the GNU MPFR Library.
