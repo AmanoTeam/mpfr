@@ -22,8 +22,6 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
 
-#include <math.h> /* for ceil function */
-
 static mpfr_prec_t
 error_extra_bits (unsigned n)
 {
@@ -43,7 +41,7 @@ error_extra_bits (unsigned n)
   log2_A = 1.815573220150449;
   asym_bits = log2_A + n * log2_r1 + 1.0;
 
-  return ceil (asym_bits);
+  return MPFR_CEIL (asym_bits);
 }
 
 int
