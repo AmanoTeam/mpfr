@@ -4867,9 +4867,11 @@ $i$ & $b_i$ (exact) & $b_i$ (decimal) & $\lceil\log_2(b_i)\rceil$ & $b_i/b_{i-1}
 Physicist's Hermite polynomials $H_n(x)$, with $n \geq 0$, are widely used in
 physics to describe the energy eigenstates (wavefunctions) and energy levels
 of the quantum harmonic oscillator (QHO). They are a sequence of orthogonal
-polynomials defined in the domain $(-\infty,\infty)$.
-
-These polynomials are computed by MPFR through the following recursion
+polynomials defined in the domain $(-\infty,\infty)$. Unless otherwise stated,
+$H_n(x)$ refers to the physicist's convention; this differs from the
+probabilist's Hermite polynomials by a simple rescaling of the argument
+and normalization.
+These polynomials are computed by MPFR through the following recursion:
 \begin{equation} \label{eq:hermite-recursion}
   \begin{cases}
       H_0(x) = 1\\
@@ -4877,14 +4879,18 @@ These polynomials are computed by MPFR through the following recursion
       H_n(x) = 2xH_{n-1}(x) - 2nH_{n-2}(x)
   \end{cases}
 \end{equation}
-Some values of $x$ and $n$ are treated as special cases. These cases are:
+Some values of $x$ and $n$ are treated as special cases in which the
+recurrence is not evaluated. These cases are:
 \begin{itemize}
 \item[(a)] The base cases $H_0$ and $H_1$.
 \item[(b)] If $n \ge 1$ is odd, then $H_n(0) = 1$.
 \item[(c)] If $n \ge 1$ is even, then $H_n(0) = H_{2k}(0) = (-1)^k~\dfrac{(2k)!}{k!}$.
 \end{itemize}
-The fraction in (c) is computed with the Log-Gamma method to avoid overflow for
-large $n$. Let's start from the implementation of the case $H_{2k}(0)$ and its
+The fraction in (c) is computed with the Log-Gamma method to mitigate the
+overflow risk for large $n$. Unfortunately, also Algorithm
+\ref{algo:hermite-zero-even-special} is subject to overflow when $n$ is
+huge, but as of now, MPFR restricts it to $8192$, i.e., $2^{13}$.
+Let's start from the implementation of the case $H_{2k}(0)$ and its
 error analysis.
 \vspace{.3cm}
 
@@ -4895,7 +4901,7 @@ error analysis.
   \KwResult{ternary value}
   \BlankLine
   \tcc{The higher degree allowed is $2^{13}$}
-  \lIf{$~~(n>8192)~~$}{
+  \lIf{$~~(IS\_NAN (x)~||~IS\_INF (x)~||~n>8192)~~$}{
     res $\gets$ NaN;
     \Return 0\;
   }
@@ -4904,12 +4910,13 @@ error analysis.
     \Return 0\;
   }
   \If{$~~(x=0)~~$}{
-    \lIf{$~~((n\&1)\neq 0)~~$}{
-      res $\gets$ 0;
-      \Return 0\;
+    \vspace{.1cm}
+
+    $\quad$\lIf{$~~((n\&1) = 0)~~$}{
+      \Return zero\_x\_even\_degree (res, n, rnd\_mode)\;
     }
-    res $\gets$ 1;
-    \Return 0\;
+    $\quad$res $\gets$ 0\;
+    $\quad$\Return 0\;
   }
   \lIf{$~~(\text{MPFR\_IS\_SINGULAR} (x))~~$}{
     res $\gets$ NaN;
@@ -4924,7 +4931,8 @@ error analysis.
 
 \paragraph{\textbf{Implementation of $\mathbf{H_{2k}(0)}$ and error analysis.}}
 
-a
+In Algorithm \ref{algo:hermite-zero-even-special}, you can find the pseudo-code
+implementation of the special case $H_{2k}(0)$ with final rounding.
 \vspace{.3cm}
 
 \begin{algorithm}[H]
@@ -4939,14 +4947,15 @@ a
   $\text{gamma2} \gets \N(\log(\Gamma(\text{second})))$\;
   $\text{sub} \gets \N(\text{gamma1} - \text{gamma2})$\;
   $\text{e} \gets \N(\exp(\text{sub}))$\;
-  ternary\_value $\gets$ mpfr\_set (res, e, rnd\_mode)\;
+  \tcc{Here we omit both the cancellation and the overflow check}
   \lIf{$~~((n>>1)\&1)~~$}{
     MPFR\_SET\_NEG (res)\;
   }
-  \Return ternary\_value\;
   \BlankLine
 \end{algorithm}
+\vspace{.3cm}
 
+Here's the error analysis of the special case $H_{2k}(0)$.
 \begin{center}
 \begin{tabular}{p{.37\textwidth}p{.63\textwidth}}
 $\text{gamma1} \gets \N(\log(\Gamma(\text{first})))$
@@ -4975,12 +4984,10 @@ Hermite polynomial with final rounding.
   \KwData{mpfr\_ptr res, unsigned n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
   \KwResult{ternary value}
   \BlankLine
-  \tcc{Initializing all the variables to the working precision (realprec)}
-  init\_prec (realprec, $p_1$, $p_2$, $p_i$, first\_term, second\_term)\;
-  \tcc{Initializing the two base cases}
-  $p_2~\gets{}~1$\;
-  $p_1~\gets~\N(2x)$\;
-  $i~\gets~1$\;
+  \tcc{All the variables are initialized to the working precision (realprec)}
+  $p_2~\gets{}~1$;
+  $~~p_1~\gets~\N(2x)$;
+  $~~i~\gets~1$\;
   \tcc{Loop from 1 to $n-1$, where $n$ is the degree of the polynomial}
   \While{$i<n$}{
     $\mathrm{first\_term}~\gets~\N{}(2\cdot{}x)$\;
@@ -4993,7 +5000,6 @@ Hermite polynomial with final rounding.
     $p_1~\gets~p_i$\;
     $i++$\;
   }
-  \tcc{Final rounding of the result with the input rounding mode}
   \Return mpfr\_set(res, $p_i$, rnd\_mode)\;
   \BlankLine
 \end{algorithm}
@@ -5001,8 +5007,10 @@ Hermite polynomial with final rounding.
 
 Now, we have to bound the rounding error for the $n$-th iteration of the loop.
 This analysis is quite similar to the one performed for Legendre polynomials,
-except for the last division, that is missing here. For that reason, we skip
-the analysis step by step of the first iteration of the recurrence, and we just
+so we won't repeat all the steps here. We just report the main differences.
+The only significative difference is the last division, that is missing here.
+So we get $k_{p_1^1} \le \frac92$ instead of $k_{p_1^1} \le \frac{19}{2}$.
+Here's the error analysis of the first iteration of the loop:
 \begin{center}
 \begin{tabular}{p{.37\textwidth}p{.63\textwidth}}
 $p_2^1 \gets p_1^0$
@@ -5011,13 +5019,13 @@ $p_1^1 \gets p_i$
 & $k_{p_1^1} \le k_{p_i};\quad k_{p_1^1} \le \frac92$ \\[4pt]
 \end{tabular}
 \end{center}
-\vspace{.2cm}
 
-We can now derive the recurrence:
+\noindent From this, we can now derive the recurrence:
 \[
   a_{i+1} \;\le\; 2a_i + 2b_i + \tfrac52, \qquad
   b_{i+1} = a_i.
 \]
+As we can see, it only differs from the Legendre case in the coefficients.
 Substituting $b_i$ yields the second-order recurrence of the form
 \begin{equation} \label{eq:hermite-recurrence}
 \left\{
@@ -5056,7 +5064,7 @@ Therefore,
      - \tfrac56.
 \end{equation}
 Since $|1-\sqrt3|<1$, the second exponential term decays exponentially.
-Thus there exists a constant $C>0$ such that
+Thus, for large $i$,
 \[
   a_i \sim \frac{4+\sqrt3}{\sqrt3}(1+\sqrt3)^i,
 \]

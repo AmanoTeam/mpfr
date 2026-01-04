@@ -2210,7 +2210,8 @@ returned.
 @var{res} is set with the value of the (physicist's) Hermite polynomial
 P_@var{n}(@var{x}), rounded in the direction of @var{rnd}, where
 @var{n} stands for the degree of the polynomial. If @var{n} > 8192, then
-@var{res} is set to NaN and 0 is returned.
+@var{res} is set to NaN and 0 is returned. If @var{x} is either NaN or +/-Inf,
+then NaN is returned.
 @end deftypefun
 
 For the power functions (with an integer exponent or not), see @ref{mpfr_pow}

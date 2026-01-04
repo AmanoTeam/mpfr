@@ -74,11 +74,11 @@ test_special_cases (void)
           exit (1);
         }
 
-      /* H_{1e9}(0) should overflow, i.e. return NaN */
-      ret = mpfr_hermite (res, (unsigned) 1e9, x, r);
+      /* H_{1e6}(0) exceed 2^13, therefore should return NaN */
+      ret = mpfr_hermite (res, (unsigned) 1e6, x, r);
       if (ret != 0 || !mpfr_nan_p (res))
         {
-          printf ("H_{1e9}(0) should overflow and return NaN. Got: ");
+          printf ("H_{1e6}(0) return NaN. Got: ");
           mpfr_dump (res);
           printf ("with return value: %d\n", ret);
           exit (1);
