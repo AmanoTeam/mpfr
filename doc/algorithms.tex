@@ -4712,7 +4712,7 @@ parameters validation and special cases (a)--(d).
     $\mathrm{first\_term}~\gets~\N{}(x\cdot{}(2i - 1))$\;
     $\mathrm{second\_term}~\gets~\N{}(p_2\cdot{}(i - 1))$\;
     $\mathrm{first\_term}~\gets~\N{}(\mathrm{first\_term}\cdot{}p_1)$\;
-    \tcc{Check for cancellation in the subtraction}
+    \tcc{Here we omit the cancellation check}
     $p_i~\gets~\N{}(\mathrm{first\_term} - \mathrm{second\_term})$\;
     $p_i~\gets~\N{}(p_i/i)$\;
     $p_2~\gets~p_1$\;
@@ -4827,7 +4827,7 @@ At this point, we can calculate constants $A, B$ by enforcing the base values $a
 Therefore
 \begin{equation} \label{eq:legendre-error-bound}
  a_i
- = \frac{7+5\sqrt2}{4}(2+2\sqrt2)^i
+ \le \frac{7+5\sqrt2}{4}(2+2\sqrt2)^i
  + \frac{7-5\sqrt2}{4}(2-2\sqrt2)^i
  - \frac{11}{14}.
 \end{equation}

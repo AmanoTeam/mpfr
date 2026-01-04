@@ -235,7 +235,8 @@ typedef uintmax_t mpfr_uexp_t;
    The mpfr_sgn macro uses the fact that __MPFR_EXP_NAN and __MPFR_EXP_ZERO
    are the smallest values. For a n-bit type, EXP_MAX is 2^(n-1)-1,
    EXP_ZERO is 1-2^(n-1), EXP_NAN is 2-2^(n-1), EXP_INF is 3-2^(n-1).
-   This may change in the future. MPFR code should not be based on these
+   This might change in the future, but would break the ABI.
+   Source code using the MPFR library should not be based on these
    representations (but if this is absolutely needed, protect the code
    with a static assertion). */
 #define __MPFR_EXP_MAX ((mpfr_exp_t) (((mpfr_uexp_t) -1) >> 1))
@@ -407,6 +408,7 @@ __MPFR_DECLSPEC MPFR_RETURNS_NONNULL const char * mpfr_get_patches (void);
 
 __MPFR_DECLSPEC int mpfr_buildopt_tls_p          (void);
 __MPFR_DECLSPEC int mpfr_buildopt_float16_p      (void);
+__MPFR_DECLSPEC int mpfr_buildopt_bfloat16_p      (void);
 __MPFR_DECLSPEC int mpfr_buildopt_float128_p     (void);
 __MPFR_DECLSPEC int mpfr_buildopt_decimal_p      (void);
 __MPFR_DECLSPEC int mpfr_buildopt_gmpinternals_p (void);
@@ -510,6 +512,12 @@ MPFR_EXTENSION
 __MPFR_DECLSPEC int mpfr_set_float16 (mpfr_ptr, _Float16, mpfr_rnd_t);
 MPFR_EXTENSION
 __MPFR_DECLSPEC _Float16 mpfr_get_float16 (mpfr_srcptr, mpfr_rnd_t);
+#endif
+#ifdef MPFR_WANT_BFLOAT16
+MPFR_EXTENSION
+__MPFR_DECLSPEC int mpfr_set_bfloat16 (mpfr_ptr, __bf16, mpfr_rnd_t);
+MPFR_EXTENSION
+__MPFR_DECLSPEC __bf16 mpfr_get_bfloat16 (mpfr_srcptr, mpfr_rnd_t);
 #endif
 __MPFR_DECLSPEC int mpfr_set_z (mpfr_ptr, mpz_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC int mpfr_set_z_2exp (mpfr_ptr, mpz_srcptr, mpfr_exp_t,
@@ -873,6 +881,9 @@ __MPFR_DECLSPEC int mpfr_total_order_p (mpfr_srcptr, mpfr_srcptr);
 
 __MPFR_DECLSPEC int mpfr_legendre (mpfr_ptr, unsigned, mpfr_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC int mpfr_hermite (mpfr_ptr, unsigned, mpfr_srcptr, mpfr_rnd_t);
+
+__MPFR_DECLSPEC int mpfr_fpif_export_mem (unsigned char *, size_t, mpfr_srcptr);
+__MPFR_DECLSPEC int mpfr_fpif_import_mem (mpfr_ptr, unsigned char *, size_t);
 
 #if defined (__cplusplus)
 }
@@ -1242,6 +1253,7 @@ __MPFR_DECLSPEC size_t mpfr_out_str (FILE*, int, size_t, mpfr_srcptr,
 #define mpfr_fprintf __gmpfr_fprintf
 __MPFR_DECLSPEC int mpfr_fprintf (FILE*, const char*, ...);
 #endif
+
 #define mpfr_fpif_export __gmpfr_fpif_export
 #define mpfr_fpif_import __gmpfr_fpif_import
 __MPFR_DECLSPEC int mpfr_fpif_export (FILE*, mpfr_srcptr);

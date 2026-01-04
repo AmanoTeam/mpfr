@@ -328,10 +328,9 @@ __MPFR_DECLSPEC mpfr_cache_ptr * __gmpfr_cache_const_log2_f (void);
 #define BASE_MAX 62
 __MPFR_DECLSPEC extern const __mpfr_struct __gmpfr_l2b[BASE_MAX-1][2];
 
-/* Note: do not use the following values when they can be outside the
-   current exponent range, e.g. when the exponent range has not been
-   extended yet; under such a condition, they can be used only in
-   mpfr_cmpabs. */
+/* Warning! These constants may be out of range if the exponent range is
+   very reduced. Do not use them in such a case, except when explicitly
+   allowed (e.g., see comments in cmp.c, cmpabs.c and comparisons.c). */
 __MPFR_DECLSPEC extern const mpfr_t __gmpfr_one;
 __MPFR_DECLSPEC extern const mpfr_t __gmpfr_two;
 __MPFR_DECLSPEC extern const mpfr_t __gmpfr_four;
@@ -1051,15 +1050,15 @@ typedef uintmax_t mpfr_ueexp_t;
 #define MPFR_EMAX_MIN (1-MPFR_EXP_INVALID)
 #define MPFR_EMAX_MAX (MPFR_EXP_INVALID-1)
 
-/* Use MPFR_GET_EXP and MPFR_SET_EXP instead of MPFR_EXP directly,
-   unless when the exponent may be out-of-range, for instance when
-   setting the exponent before calling mpfr_check_range.
+/* Use MPFR_GET_EXP and MPFR_SET_EXP instead of MPFR_EXP directly, unless
+   the exponent may be invalid (or out of range in case of MPFR_SET_EXP),
+   for instance when setting the exponent before calling mpfr_check_range.
    MPFR_EXP_CHECK is defined when MPFR_WANT_ASSERT is defined, but if you
    don't use MPFR_WANT_ASSERT (for speed reasons), you can still define
    MPFR_EXP_CHECK by setting -DMPFR_EXP_CHECK in $CFLAGS.
    Note about MPFR_EXP_IN_RANGE and MPFR_SET_EXP:
      The exp expression is required to have a signed type. To avoid spurious
-     failures, we could cast (exp) to mpfr_exp_t, but this wouldn't allow us
+     failures, we could cast (e) to mpfr_exp_t, but this would not allow us
      to detect some bugs that can occur on particular platforms. Anyway, an
      unsigned type for exp is suspicious and should be regarded as a bug.
 */
@@ -1110,19 +1109,26 @@ typedef uintmax_t mpfr_ueexp_t;
 
 #define MPFR_IS_FP(x)       (!MPFR_IS_NAN(x) && !MPFR_IS_INF(x))
 
-/* Note: contrary to the MPFR_IS_PURE_*(x) macros, the MPFR_IS_SINGULAR*(x)
-   macros may be used even when x is being constructed, i.e. its exponent
-   field is already set (possibly out-of-range), but its significand field
-   may still contain arbitrary data. Thus MPFR_IS_PURE_FP(x) is not always
-   equivalent to !MPFR_IS_SINGULAR(x); see the code below. */
+/* Note: Contrary to the MPFR_IS_PURE_*(x) macros, the MPFR_IS_SINGULAR*(x)
+   macros may be used even when x is being constructed, e.g. by a low-level
+   algorithm. The exponent field of x must already be set, but it may have
+   any value, even less than MPFR_EMIN_MIN or larger than MPFR_EMAX_MAX.
+   Any real exponent value must obviously be larger than MPFR_EXP_INF,
+   though. The significand field may still contain arbitrary data. Thus
+   MPFR_IS_PURE_FP(x) is not always equivalent to !MPFR_IS_SINGULAR(x);
+   see the code below. */
 #define MPFR_IS_SINGULAR(x) (MPFR_EXP(x) <= MPFR_EXP_INF)
 #define MPFR_IS_SINGULAR_OR_UBF(x) (MPFR_EXP(x) <= MPFR_EXP_UBF)
 
 /* The following two macros return true iff the value is a regular number,
    i.e. it is not a singular number. In debug mode, the format is also
-   checked: valid exponent, but potentially out of range; normalized value.
-   In contexts where UBF's are not accepted or not possible, MPFR_IS_PURE_FP
-   is preferable. If UBF's are accepted, MPFR_IS_PURE_UBF must be used. */
+   checked: the exponent must be valid, but potentially out of range,
+   since such numbers may be acceptable as inputs by some functions
+   (e.g. comparisons with constants); the significand must be normalized
+   (all functions return numbers with a normalized significand; otherwise
+   this indicates a bug). In contexts where UBFs are not accepted or
+   not possible, MPFR_IS_PURE_FP is preferable. If UBFs are accepted,
+   MPFR_IS_PURE_UBF must be used. */
 #define MPFR_IS_PURE_FP(x)                          \
   (!MPFR_IS_SINGULAR(x) &&                          \
    (MPFR_ASSERTD (MPFR_EXP (x) >= MPFR_EMIN_MIN &&  \
@@ -1360,8 +1366,9 @@ typedef union { mp_size_t s; mp_limb_t l; } mpfr_size_limb_t;
 #define MPFR_TMP_FREE(x) TMP_FREE
 #endif
 
-#define MPFR_TMP_LIMBS_ALLOC(N) \
-  ((mp_limb_t *) MPFR_TMP_ALLOC ((size_t) (N) * MPFR_BYTES_PER_MP_LIMB))
+#define MPFR_TMP_LIMBS_ALLOC(N)                                         \
+  (MPFR_ASSERTD ((N) > 0),                                              \
+   (mp_limb_t *) MPFR_TMP_ALLOC ((size_t) (N) * MPFR_BYTES_PER_MP_LIMB))
 
 /* The temporary var doesn't have any size field, but it doesn't matter
  * since only functions dealing with the Heap care about it */
@@ -2823,7 +2830,7 @@ __MPFR_DECLSPEC mpfr_exp_t mpfr_ubf_diff_exp (mpfr_srcptr, mpfr_srcptr);
 /* Get the _mpfr_zexp field (pointer to a mpz_t) of an UBF object.
    For practical reasons, the type of the argument x can be either
    mpfr_ubf_ptr or mpfr_ptr, since the latter is used in functions
-   that accept both MPFR numbers and UBF's; this is checked by the
+   that accept both MPFR numbers and UBFs; this is checked by the
    code "(x)->_mpfr_exp" (the "sizeof" prevents an access, which
    could be invalid when MPFR_ZEXP(x) is used for an assignment,
    and also avoids breaking the aliasing rules if they are dealt

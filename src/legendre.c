@@ -160,8 +160,6 @@ mpfr_legendre (mpfr_ptr res, unsigned n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
           i++;
         }
 
-      /* we have (eventually) added the lost bits due to cancellation
-         above, so test_prec is the effective precision we can use */
       test_prec = realprec - err;
 
       if (mpfr_min_prec (pn) < test_prec - 1)
