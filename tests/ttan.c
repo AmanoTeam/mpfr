@@ -1,6 +1,6 @@
 /* Test file for mpfr_tan.
 
-Copyright 2001-2004, 2006-2025 Free Software Foundation, Inc.
+Copyright 2001-2004, 2006-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -122,6 +122,7 @@ coverage (void)
   set_emax (-2);
   mpfr_init2 (x, 2);
   mpfr_init2 (y, 2);
+  MPFR_SET_POS (x);
   mpfr_setmax (x, mpfr_get_emax ());
   inex = mpfr_tan (y, x, MPFR_RNDA);
   MPFR_ASSERTN(inex > 0);

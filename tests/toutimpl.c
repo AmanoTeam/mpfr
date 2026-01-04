@@ -1,7 +1,7 @@
 /* Test file for internal debugging-out functions:
    mpfr_print_rnd_mode, mpfr_dump, mpfr_print_mant_binary.
 
-Copyright 2004-2025 Free Software Foundation, Inc.
+Copyright 2004-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -88,6 +88,7 @@ main (void)
       exit (1);
     }
   mpfr_init2 (x, 53);
+  MPFR_SET_POS (x);  /* This test uses the sign bit of NaN. */
   mpfr_set_nan (x);
   mpfr_dump (x);
   MPFR_CHANGE_SIGN (x);
