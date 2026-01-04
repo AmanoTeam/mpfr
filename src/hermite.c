@@ -22,8 +22,6 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
 
-#include <math.h> /* for ceil function */
-
 static int
 zero_x_even_degree (mpfr_ptr res, unsigned n, mpfr_rnd_t rnd_mode)
 {
@@ -122,7 +120,7 @@ error_extra_bits (unsigned n)
   log2_A = 1.726570147010381;
   asym_bits = log2_A + n * log2_r1 + 1.0;
 
-  return ceil (asym_bits);
+  return MPFR_CEIL (asym_bits);
 }
 
 int
