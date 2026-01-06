@@ -62,6 +62,7 @@
 \SetKwData{precc}{prec}
 \SetKwData{cond}{cond}
 \SetKwData{assumedExp}{assumedExp}
+\SetKwComment{Comment}{\qquad$\triangleright$\,}{}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \DeclareMathOperator{\Ai}{Ai}
@@ -4620,7 +4621,8 @@ the recurrence relation and closed-form expressions also allow their
 evaluation outside this interval. However, extending them beyond
 $\vert x \vert \leq 1$ comes at the cost of losing some of their most
 useful properties, most notably orthogonality, which is crucial in
-approximation and expansion methods. These polynomials are computed by MPFR
+approximation and expansion methods. We thus assume $|x| \le 1$.
+These polynomials are computed
 through Bonnet's recursion, a simple recursive formula that
 expresses $P_n(x)$ in terms of lower-degree polynomials.
 Here's the recursion step:
@@ -4667,7 +4669,7 @@ parameters validation and special cases (a)--(d).
     \Return 0\;
   }
   \tcc{We have to check the domain bounds of the parameter $x$}
-  \lIf{$~~(x<-1~\mathbf{or}~x>1)~~$}{
+  \lIf{$|x| > 1$}{
     res $\gets$ NaN;
     \Return 0\;
   }
@@ -4704,7 +4706,7 @@ parameters validation and special cases (a)--(d).
   \tcc{Initializing all the variables to the working precision (realprec)}
   init\_prec (realprec, $p_1$, $p_2$, $p_i$, first\_term, second\_term)\;
   \tcc{Initializing the two base cases}
-  $p_2~\gets{}~1$\;
+  $p_2~\gets{}~1$; \Comment{$p_2$ stores $p_{i-2}$ and $p_1$ stores $p_{i-1}$}
   $p_1~\gets~\N(x)$\;
   $i~\gets~2$\;
   \tcc{Loop from 2 to $n$, where $n$ is the degree of the polynomial}
@@ -4712,7 +4714,6 @@ parameters validation and special cases (a)--(d).
     $\mathrm{first\_term}~\gets~\N{}(x\cdot{}(2i - 1))$\;
     $\mathrm{second\_term}~\gets~\N{}(p_2\cdot{}(i - 1))$\;
     $\mathrm{first\_term}~\gets~\N{}(\mathrm{first\_term}\cdot{}p_1)$\;
-    \tcc{Here we omit the cancellation check}
     $p_i~\gets~\N{}(\mathrm{first\_term} - \mathrm{second\_term})$\;
     $p_i~\gets~\N{}(p_i/i)$\;
     $p_2~\gets~p_1$\;
@@ -4728,7 +4729,9 @@ parameters validation and special cases (a)--(d).
 \noindent In Algorithm \ref{algo:legendre-bonnet} above, you can find the
 pseudo-code implementation of the \textit{iterative} Bonnet's recursion
 with final rounding. Now, we have to bound the rounding error for the
-$n$-th iteration of the loop $\epsilon_n$. Let's start from the first
+$n$-th iteration of the loop $\epsilon_n$. At each stage, we assume the
+total error for a given approximation $x$ is bounded by $k_x$ ulps.
+Let's start from the first
 initialization of $p_1$ and $p_2$, that is
 \begin{center}
 \begin{tabular}{p{.37\textwidth}p{.63\textwidth}}
