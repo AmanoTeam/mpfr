@@ -710,7 +710,7 @@ mpfr_fpif_import (mpfr_ptr x, FILE *fh)
   ext.base._mpfr_io_fn = read_from_file;
   ext.fh = fh;
 
-  return mpfr_fpif_import_aux(x, (ext_data_ptr) &ext);
+  return mpfr_fpif_import_aux (x, (ext_data_ptr) &ext);
 }
 
 /*
@@ -733,7 +733,7 @@ mpfr_fpif_import_mem (mpfr_ptr x, unsigned char *buffer, size_t buffer_size)
   ext.bytes_consumed = 0;
   ext.bytes_size = buffer_size;
 
-  return mpfr_fpif_import_aux(x, (ext_data_ptr) &ext);
+  return mpfr_fpif_import_aux (x, (ext_data_ptr) &ext);
 }
 
 /*
@@ -752,7 +752,7 @@ mpfr_fpif_export (FILE *fh, mpfr_srcptr x)
   ext.base._mpfr_io_fn = write_to_file;
   ext.fh = fh;
 
-  return mpfr_fpif_export_aux((ext_data_ptr) &ext, x);
+  return mpfr_fpif_export_aux ((ext_data_ptr) &ext, x);
 }
 
 /*
@@ -769,10 +769,62 @@ mpfr_fpif_export_mem (unsigned char *buffer, size_t buffer_size, mpfr_srcptr x)
   if (buffer == NULL)
     return -1;
 
+  /* we are not assuming that the input buffer is "clean", so it has to be
+     initialized to 0 */
+  memset (buffer, 0, buffer_size);
+
   ext.base._mpfr_io_fn = write_to_memory;
   ext.arena = buffer;
   ext.bytes_consumed = 0;
   ext.bytes_size = buffer_size;
 
-  return mpfr_fpif_export_aux((ext_data_ptr) &ext, x);
+  return mpfr_fpif_export_aux ((ext_data_ptr) &ext, x);
+}
+
+size_t
+mpfr_fpif_size (mpfr_srcptr x)
+{
+  size_t size = 0, precision_size = 0, exponent_size = 0, nb_byte;
+  mpfr_prec_t precision;
+  mpfr_exp_t exponent;
+  mpfr_uprec_t copy_precision;
+  mpfr_uexp_t copy_exponent;
+
+  precision = MPFR_PREC (x);
+
+  /* precision storage requires at least 1 byte */
+  size += 1;
+
+  if (precision > MPFR_MAX_EMBEDDED_PRECISION)
+    {
+      copy_precision = precision - (MPFR_MAX_EMBEDDED_PRECISION + 1);
+      COUNT_NB_BYTE (copy_precision, precision_size);
+      size += precision_size;
+    }
+
+  /* exponent and sign storage requires at least one byte */
+  size += 1;
+
+  if (MPFR_IS_PURE_FP (x))
+    {
+      exponent = MPFR_GET_EXP (x);
+      if (exponent > MPFR_MAX_EMBEDDED_EXPONENT
+          || exponent < -MPFR_MAX_EMBEDDED_EXPONENT)
+        {
+          copy_exponent = SAFE_ABS (mpfr_uexp_t, exponent)
+                          - MPFR_MAX_EMBEDDED_EXPONENT;
+          copy_exponent <<= 1;
+          COUNT_NB_BYTE (copy_exponent, exponent_size);
+          size += exponent_size;
+        }
+    }
+
+  /* significand storage (only for regular numbers) */
+  if (mpfr_regular_p (x))
+    {
+      nb_byte = (precision + 7) >> 3;
+      size += nb_byte;
+    }
+
+  return size;
 }

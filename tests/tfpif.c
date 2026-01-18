@@ -529,6 +529,73 @@ mem_check_bad (void)
   mpfr_clear (x);
 }
 
+static void
+test_byte_size (void)
+{
+  size_t size;
+  mpfr_t x;
+
+  mpfr_init2 (x, 100);
+
+  /* +/-0.0 */
+  mpfr_set_zero (x, 1);
+  size = mpfr_fpif_size (x);
+  if (size != 2)
+    {
+      printf ("x=0.0 should be serialized using 2 bytes, got %zu instead\n",
+              size);
+      exit (1);
+    }
+  mpfr_set_zero (x, -1);
+  size = mpfr_fpif_size (x);
+  if (size != 2)
+    {
+      printf ("x=-0.0 should be serialized using 2 bytes, got %zu instead\n",
+              size);
+      exit (1);
+    }
+
+  /* +/-Inf */
+  mpfr_set_inf (x, 1);
+  size = mpfr_fpif_size (x);
+  if (size != 2)
+    {
+      printf ("x=Inf should be serialized using 2 bytes, got %zu instead\n",
+              size);
+      exit (1);
+    }
+  mpfr_set_inf (x, -1);
+  size = mpfr_fpif_size (x);
+  if (size != 2)
+    {
+      printf ("x=-Inf should be serialized using 2 bytes, got %zu instead\n",
+              size);
+      exit (1);
+    }
+
+  /* NaN */
+  mpfr_set_nan (x);
+  size = mpfr_fpif_size (x);
+  if (size != 2)
+    {
+      printf ("x=NaN should be serialized using 2 bytes, got %zu instead\n",
+              size);
+      exit (1);
+    }
+
+  /* regular number */
+  mpfr_const_pi (x, MPFR_RNDN);
+  size = mpfr_fpif_size (x);
+  if (size != 15)
+    {
+      printf ("x=pi (prec 100) should be serialized using 15 bytes, "
+              "got %zu instead\n", size);
+      exit (1);
+    }
+
+  mpfr_clear (x);
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -548,6 +615,8 @@ main (int argc, char *argv[])
   mem_doit (argc, argv, 130, 2048);
   mem_doit (argc, argv, 1, 53);
   mem_check_bad ();
+
+  test_byte_size ();
 
   tests_end_mpfr ();
 
