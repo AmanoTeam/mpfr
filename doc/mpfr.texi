@@ -1133,6 +1133,8 @@ An exact infinite result is obtained from finite inputs.
 
 @item NaN (@code{MPFR_FLAGS_NAN}):
 A NaN exception occurs when the result of a function is NaN@.
+Note this does not exactly match the invalid exception from the C language,
+this is why we choose a different name.
 @c NaN is defined above. So, we don't say anything more.
 
 @item Inexact (@code{MPFR_FLAGS_INEXACT}):
