@@ -548,8 +548,7 @@ bug20251001 (void)
   mpfr_set_str_binary (x, "-0.10101010000001100000110110100001000111001110111100001E-2");
   if (mpfr_cmp (y, x) != 0) {
     printf ("Error in bug20251001 (1)\n");
-    printf ("expected "); mpfr_dump (x);
-    printf ("got      "); mpfr_dump (y);
+    DUMP_NUMBERS (x,y);
     exit (1);
   }
 
@@ -562,8 +561,7 @@ bug20251001 (void)
   mpfr_set_str_binary (x, "0.11111010001111111110111110101011110010000001110000001E-2");
   if (mpfr_cmp (y, x) != 0) {
     printf ("Error in bug20251001 (2)\n");
-    printf ("expected "); mpfr_dump (x);
-    printf ("got      "); mpfr_dump (y);
+    DUMP_NUMBERS (x,y);
     exit (1);
   }
 
@@ -576,8 +574,30 @@ bug20251001 (void)
   mpfr_set_str_binary (x, "-0.11010010010011110110100000101001000001111000100101111E-1");
   if (mpfr_cmp (y, x) != 0) {
     printf ("Error in bug20251001 (3)\n");
-    printf ("expected "); mpfr_dump (x);
-    printf ("got      "); mpfr_dump (y);
+    DUMP_NUMBERS (x,y);
+    exit (1);
+  }
+
+  mpfr_clear (x);
+  mpfr_clear (y);
+}
+
+static void
+bug20260205 (void)
+{
+  mpfr_t x, y;
+  mpfr_init2 (x, 53);
+  mpfr_init2 (y, 53);
+
+  /* Error in mpfr_legendre for n=2 x=-9.3dbaa2fd514c0@-1 rnd=MPFR_RNDZ
+     expected: 0.11001000000101110011101010100100001111111000011100111E-11
+     got:      0.11001000000101110011101010100100001111111000011101000E-11 */
+  mpfr_set_str (x, "-9.3dbaa2fd514c0@-1", 16, MPFR_RNDN);
+  mpfr_legendre (y, 2, x, MPFR_RNDZ);
+  mpfr_set_str_binary (x, "0.11001000000101110011101010100100001111111000011100111E-11");
+  if (mpfr_cmp (y, x) != 0) {
+    printf ("Error in bug20260205\n");
+    DUMP_NUMBERS (x,y);
     exit (1);
   }
 
@@ -736,6 +756,9 @@ main (void)
 
   /* bug reported by Paul Zimmermann */
   bug20251001 ();
+
+  /* bug reported by Matteo Nicoli */
+  bug20260205 ();
 
   /* test suite contributed by Paul Zimmermann */
   test_exact_dyadic ();
