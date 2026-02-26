@@ -4738,7 +4738,7 @@ We assume all roundings are to nearest, with working precision $p$.
 \par\noindent
 \textbf{Analysis of $f_i = \N{}(x\cdot{}(2i - 1))$.} Here, we use the
 \texttt{mpfr\_mul\_ui} function, with exact input $x$ and $2i-1$
-(we assume $2i-1$ fits into an unsigned long).
+(we assume $2i-1$ fits into a long).
 There is thus only one error, due to the rounding in $\N{}(x\cdot{}(2i - 1))$.
 This error is bounded by $\frac{1}{2} \ulp(f_i) \le \frac{1}{2} 2^{\Exp(f_i) - p}$:
 \[ e_{f,i} \le \Exp(f_i) - p - 1. \]
