@@ -4700,29 +4700,19 @@ parameters validation and special cases (a)--(d).
 \begin{algorithm}[H]
   \caption{\texttt{mpfr\_legendre} Bonnet's recursion}
   \label{algo:legendre-bonnet}
-  \KwData{mpfr\_ptr res, unsigned n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
-  \KwResult{ternary value}
-  \BlankLine
-  \tcc{Initializing all the variables to the working precision (realprec)}
-  init\_prec (realprec, $p_1$, $p_2$, $p_i$, first\_term, second\_term)\;
-  \tcc{Initializing the two base cases}
-  $p_2~\gets{}~1$; \Comment{$p_2$ stores $p_{i-2}$ and $p_1$ stores $p_{i-1}$}
-  $p_1~\gets~\N(x)$\;
+  $b~\gets{}~1$; \Comment{$b$ approximates $P_{i-2}(x)$ and $a$ approximates $P_{i-1}(x)$}
+  $a~\gets~\N(x)$\;
   $i~\gets~2$\;
   \tcc{Loop from 2 to $n$, where $n$ is the degree of the polynomial}
   \While{$i\leq{}n$}{
-    $\mathrm{first\_term}~\gets~\N{}(x\cdot{}(2i - 1))$\;
-    $\mathrm{second\_term}~\gets~\N{}(p_2\cdot{}(i - 1))$\;
-    $\mathrm{first\_term}~\gets~\N{}(\mathrm{first\_term}\cdot{}p_1)$\;
-    $p_i~\gets~\N{}(\mathrm{first\_term} - \mathrm{second\_term})$\;
-    $p_i~\gets~\N{}(p_i/i)$\;
-    $p_2~\gets~p_1$\;
-    $p_1~\gets~p_i$\;
+    $f~\gets~\N{}(x\cdot{}(2i - 1))$\;
+    $g~\gets~\N{}(b\cdot{}(i - 1))$\;
+    $h~\gets~\N{}(f\cdot{}a)$\;
+    $q~\gets~\N{}(h - g)$\;
+    $b~\gets~a$\;
+    $a~\gets~\N{}(q/i)$\;
     $i++$\;
   }
-  \tcc{Final rounding of the result with the input rounding mode}
-  \Return mpfr\_set(res, $p_i$, rnd\_mode)\;
-  \BlankLine
 \end{algorithm}
 \vspace{.3cm}
 
