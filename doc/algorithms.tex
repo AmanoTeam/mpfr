@@ -4781,7 +4781,8 @@ which approximates $P_i(x)$, and the induced error on $q_i$, which
 approximates $Q_i := H_i - G_i$:
 \[ |a_{i+1} - P_i(x)| \le 2^{\Exp(a_{i+1})-p-1} + 2^{e_{q,i}}/i. \]
 Since $1/i$ is bounded by $2^{-\lfloor \log_2(i) \rfloor}$, and for
-$i \ge 2$, $-\lfloor \log_2(i) \rfloor \le -\lceil \log_2(i-1) \rceil +1$,
+$i \ge 2$, $-\lfloor \log_2(i) \rfloor \le -\lceil \log_2(i-1) \rceil +1$
+(Lemma~\ref{lemma8}),
 we can reuse the computation of $\lceil \log_2(i-1) \rceil$ done above:
 \[ e_{a,i+1} \le \max(\Exp(a_{i+1})-p, e_{q,i} - \lceil \log_2(i-1) \rceil + 2). \]
 At the end of the loop, we will get an approximation $a_{n+1}$ of $P_n(x)$ such
@@ -4789,6 +4790,24 @@ that:
 \[ |a_{n+1} - P_n(x)| \le 2^{e_{a,n+1}}. \]
 This error bound will be used in the rounding test, and if it fails, we will try
 again with a larger working precision $p' > p$.
+
+\begin{lemma} \label{lemma8}
+  For $i \ge 2$ integer, we have
+  \[ \lfloor \log_2(i) \rfloor \ge \lceil \log_2(i-1) \rceil - 1. \]
+\end{lemma}
+\begin{proof}
+  First since $i \ge 2$, both $\log_2(i)$ and $\log_2(i-1)$ are well defined.
+  If $i$ and $i-1$ are in the same binade, with the bounds excluded, i.e.,
+  if $2^{k-1} < i-1 < i < 2^k$ for some integer $k$, then
+  $\lfloor \log_2(i) \rfloor = k-1$ and $\lceil \log_2(i-1) \rceil = k$,
+  thus the statement of the lemma holds.
+  It remains to deal with the cases where either $i$ or $i-1$ is a power of $2$.
+  If $i=2$, the statement holds.
+  If $i=2^k \ge 4$, then $\lfloor \log_2(i) \rfloor = k$ and
+  $\lceil \log_2(i-1) \rceil = k$, thus the statement holds.
+  Finally if $i=2^k+1$, then $\lfloor \log_2(i) \rfloor = k$ and
+  $\lceil \log_2(i-1) \rceil = k$, thus	the statement holds.
+\end{proof}
 
 \subsection{Summary}
 
