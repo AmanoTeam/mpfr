@@ -22,39 +22,29 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
 
+#define MAX_DEGREE 8192 // 2^13
+
 static mpfr_prec_t
-error_extra_bits (unsigned n)
+max3 (mpfr_prec_t x, mpfr_prec_t y, mpfr_prec_t z)
 {
-  /* pre-computed error bits for n <= 10, see the table in algorithms.tex */
-  const mpfr_prec_t extra_bits[] = { 0, 0, 6, 8, 11, 13, 15, 17, 20, 22, 24 };
-  double log2_r1, log2_A, asym_bits;
-
-  if (n <= 10)
-    return extra_bits[n];
-
-  /* for larger n we use the asymptotic analysis shown in algorithms.tex,
-     in particular we have:
-       - log2_r1 = log2(2+2*sqrt(2)) = 2.271553303163612;
-       - log2_A = log2((7+5*sqrt(2))/4) = 1.815573220150449;
-       - asym_bits = log2_A + n*(log2_r1) + 1 */
-  log2_r1 = 2.271553303163612;
-  log2_A = 1.815573220150449;
-  asym_bits = log2_A + n * log2_r1 + 1.0;
-
-  return MPFR_CEIL (asym_bits);
+  if (x >= y)
+   {
+    return x >= z ? x : z;
+   }
+  return y >= z ? y : z;
 }
 
 int
-mpfr_legendre (mpfr_ptr res, unsigned n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
+mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 {
   int ternary_value = 0;
   unsigned is_within_domain = 1;
 
   /* the following variables are used (and consequently initialized) only
      for n >= 2, where x is not equal to -1, 0 or 1 */
-  unsigned i;
+  long i;
   mpfr_t p1, p2, pn, first_term, second_term;
-  mpfr_prec_t res_prec, realprec, x_prec, test_prec, err;
+  mpfr_prec_t res_prec, realprec, x_prec, test_prec;
   MPFR_GROUP_DECL (group);
   MPFR_ZIV_DECL (loop);
 
@@ -62,12 +52,12 @@ mpfr_legendre (mpfr_ptr res, unsigned n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
     (("x[%Pd]=%.*Rg rnd=%d", MPFR_PREC (x), mpfr_log_prec, x, rnd_mode),
      ("legendre[%Pd]=%.*Rg", MPFR_PREC (res), mpfr_log_prec, res));
 
-  /* first, check if x belongs to the domain [-1,1] and 0 <= n <= 2^13 = 8192.
+  /* first, check if x belongs to the domain [-1,1] and 0 <= n <= MAX_DEGREE.
      If it's not, res is set to NAN, and 0 is returned */
-  is_within_domain &= mpfr_lessequal_p(x, __gmpfr_one);
+  is_within_domain &= mpfr_lessequal_p (x, __gmpfr_one);
   is_within_domain &= mpfr_greaterequal_p (x, __gmpfr_mone);
 
-  if (!is_within_domain || n > 8192)
+  if (!is_within_domain || n > MAX_DEGREE)
     {
       MPFR_SET_NAN (res);
       /* as specified in the documentation, "[...] a NaN result
@@ -122,9 +112,9 @@ mpfr_legendre (mpfr_ptr res, unsigned n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   realprec = x_prec > res_prec ? x_prec : res_prec + 10;
   realprec += MPFR_INT_CEIL_LOG2 (realprec);
 
-  /* the error is set to error_extra_bits, plus 2 extra bits of safety for
-     the final rounding */
-  err = error_extra_bits (n) + 2;
+  long abs_err_x = 1;
+  long b_i;
+  long log2_i_m1, f_i, g_i, h_i, q_i, a_i, a_n;
 
   MPFR_GROUP_INIT_5 (group, realprec,
                      p1, p2, pn, first_term, second_term);
@@ -137,35 +127,61 @@ mpfr_legendre (mpfr_ptr res, unsigned n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       /* p1 = x, p2 = 1 */
       mpfr_set (p1, x, MPFR_RNDN);
       mpfr_set_ui (p2, 1, MPFR_RNDN);
+      b_i = 0;
+      a_i = abs_err_x;
 
       while (i <= n)
         {
-          /* first_term = x * (2 * i - 1) */
+          log2_i_m1 = MPFR_INT_CEIL_LOG2(i-1);
+
+          /* first_term = x * (2 * i - 1), with absolute error at step i
+             bounded by f_i <= exp(first_term) - p - 1 */
           mpfr_mul_ui (first_term, x, 2 * i - 1, MPFR_RNDN);
-          /* first_term *= p1 */
-          mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
-          /* second_term = p2 * (i - 1) */
+          f_i = MPFR_GET_EXP (first_term) - realprec - 1;
+
+          /* second_term = p2 * (i - 1), with absolute error at step i
+               bounded by g_i <= max(exp(second_term)-p, error(p2) + MPFR_INT_CEIL_LOG2(i-1)+1)
+           */
           mpfr_mul_ui (second_term, p2, i - 1, MPFR_RNDN);
-          /* pn = first_term - second_term */
+          g_i = MAX (MPFR_GET_EXP (second_term) - realprec, b_i + log2_i_m1 + 1);
+
+          /* first_term = first_term * p1, with absolute error at step i
+             bounded by
+               h_i <= 2 + max(exp(first_term)-p-1, f_i+exp(p1), MPFR_INT_CEIL_LOG2(2*i-1)+MPFR_GET_EXP(x)+a_i) */
+          mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
+          h_i = 2 + max3 (MPFR_GET_EXP (first_term)-realprec-1, f_i + MPFR_GET_EXP (p1), MPFR_INT_CEIL_LOG2(2*i-1) + MPFR_GET_EXP(x)+a_i);
+
+          /* pn = first_term - second_term, with absolute error at step i
+             bounded by
+               q_i <= max(exp(pn)-p-1, error(first_term), error(second_term)) + 2 */
           mpfr_sub (pn, first_term, second_term, MPFR_RNDN);
-          /* pn = pn/i */
+          q_i = 2 + max3 (MPFR_GET_EXP (pn) - realprec - 1, h_i, g_i);
+
+          /* pn = pn/i, with absolute error at step i
+             bounded by a_i <= max(exp(pn)-p, q_i-MPFR_INT_CEIL_LOG2(i-1)+2) */
           mpfr_div_ui (pn, pn, i, MPFR_RNDN);
+          a_n = MAX (MPFR_GET_EXP (pn) - realprec, q_i - log2_i_m1 + 2);
 
           /* p2 = p1, p1 = pn */
           mpfr_set (p2, p1, MPFR_RNDN);
           mpfr_set (p1, pn, MPFR_RNDN);
+          b_i = a_i;
+          a_i = a_n;
 
           i++;
         }
 
-      test_prec = realprec - err;
-
+      /* a_n is the absolute error of pn. Since ulp(pn) = 2^{1-realprec}
+         we get the relative error as:
+           MPFR_INT_CEIL_LOG2 (a_n) - realprec + 1 */
+      test_prec = realprec - MPFR_INT_CEIL_LOG2 (a_n) - realprec + 1;
+      if ((MPFR_INT_CEIL_LOG2 (a_n) - realprec + 1) < realprec) {
       if (mpfr_min_prec (pn) < test_prec - 1)
         break;
 
       if (MPFR_LIKELY (MPFR_CAN_ROUND (pn, test_prec, res_prec, rnd_mode)))
         break;
-
+      }
       MPFR_ZIV_NEXT (loop, realprec);
       MPFR_GROUP_REPREC_5 (group, realprec,
                            p1, p2, pn, first_term, second_term);

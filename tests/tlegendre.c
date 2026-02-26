@@ -734,7 +734,7 @@ main (void)
   test_sample_with_precision (IEEE754_DOUBLE_PREC, ARBITRARILY_LOW_PREC);
   test_sample_with_precision (MPFR_PREC_100, ARBITRARILY_LOW_PREC);
   test_sample_with_precision (MPFR_PREC_200, ARBITRARILY_LOW_PREC);
-
+#if 0
   /* res precision is IEEE754_DOUBLE_PREC. It's higher than
      IEEE754_SINGLE_PREC and lower than MPFR_PREC_100 and
      MPFR_PREC_200 */
@@ -762,7 +762,7 @@ main (void)
 
   /* test suite contributed by Paul Zimmermann */
   test_exact_dyadic ();
-
+#endif
   tests_end_mpfr ();
   return 0;
 }

@@ -1578,15 +1578,6 @@ asm (".section predict_data, \"aw\"; .previous\n"
   (MPFR_ASSERTN (x <= ULONG_MAX), __gmpfr_int_ceil_log2(x))
 #endif /* __MPFR_GNUC(2,95) || __MPFR_ICC(8,1,0) */
 
-/* Ceil of a (double) floating point number. The return type is mpfr_prec_t */
-#define MPFR_CEIL(double_prec)                                    \
-  __extension__ ({                                                \
-    mpfr_prec_t int_prec, added;                                  \
-    int_prec = (mpfr_prec_t) double_prec;                         \
-    added = double_prec > (double) int_prec && double_prec > 0.0; \
-    int_prec + added;                                             \
-  })
-
 /* Add two integers with overflow handling */
 /* Example: MPFR_SADD_OVERFLOW (c, a, b, long, unsigned long,
  *                              LONG_MIN, LONG_MAX,
