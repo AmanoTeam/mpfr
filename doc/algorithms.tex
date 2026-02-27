@@ -7,14 +7,15 @@
 \usepackage{amsmath}
 \usepackage{url}
 \usepackage{comment}
-\usepackage{hyperref}
+\usepackage[english, lined, linesnumbered]{algorithm2e}
 \usepackage{graphicx}
 \usepackage{color}
+\usepackage{hyperref}
 
 \pagestyle{plain}
-\title{The MPFR\footnote{\lowercase{\url{https://www.mpfr.org/}}} Library:
-Algorithms and Proofs}
+\title{The MPFR Library: Algorithms and Proofs}
 \author{The MPFR team}
+\thanks{\url{https://www.mpfr.org/}}
 
 % This fixes some regressions compared to old LaTeX versions (in 2009).
 % For instance, one had in some CMap's (apparently not ToUnicode ones)
@@ -48,7 +49,6 @@ Algorithms and Proofs}
 \pdfgentounicode=1
 
 %%%%%%%%%%%%%% macros for the package algorithm2e %%%%%%%%%%%%%%%
-\usepackage[english, lined, linesnumbered]{algorithm2e}
 \SetKwData{tempv}{temp}
 \SetKwData{tzero}{t0}
 \SetKwData{tone}{t1}
@@ -62,11 +62,12 @@ Algorithms and Proofs}
 \SetKwData{precc}{prec}
 \SetKwData{cond}{cond}
 \SetKwData{assumedExp}{assumedExp}
+\SetKwComment{Comment}{\qquad$\triangleright$\,}{}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \DeclareMathOperator{\Ai}{Ai}
 \DeclareMathOperator{\acosh}{acosh}
-\DeclareMathOperator{\Li2}{Li_2}
+\DeclareMathOperator{\LiTwo}{Li_2}
 \DeclareMathOperator{\erf}{erf}
 \DeclareMathOperator{\erfc}{erfc}
 
@@ -109,7 +110,7 @@ Algorithms and Proofs}
 
 \begin{document}
 \maketitle
-\sloppy
+%\sloppy
 
 \tableofcontents
 
@@ -3111,7 +3112,7 @@ For $x \rightarrow \infty$ we have the following non-converging
 expansion \cite[formula 5.1.51]{AbSt73}:
 \[ {\rm Ei}(x) \sim e^x (\frac{1}{x} + \frac{1}{x^2} + \frac{2}{x^3}
     + \frac{6}{x^4} + \frac{24}{x^5} + \cdots). \]
-The $k$th term is of the form $k! x^{-k-1}$. The smallest value is obtained for
+The $k$th is of the form $k! x^{-k-1}$. The smallest value is obtained for
 $k \approx x$, and is of the order of $e^{-x}$. Thus assuming the error
 term is bounded by the first neglected term, we can use that expansion
 as long as $e^{-x} \leq 2^{-p}$ where $p$ is the target precision,
@@ -3866,16 +3867,16 @@ where we used $2^{-w} U \leq \ulp(U)$.
 The \texttt{mpfr\_li2} function computes the real part of the dilogarithm
 function defined by:
 \[
-\Li2(x) = - \int_0^x \frac{\log(1-t)}{t} dt.
+\LiTwo(x) = - \int_0^x \frac{\log(1-t)}{t} dt.
 \]
 The above relation defines a multivalued function in the complex plane, we
-choose a branch so that $\Li2(x)$ is real for $x$ real, $x < 1$ and we compute
+choose a branch so that $\LiTwo(x)$ is real for $x$ real, $x < 1$ and we compute
 only the real part for $x$ real, $x \geq 1$.
 
 When $x \in ]0, \frac{1}{2}]$, we use the series 
 (see \cite[Eq. (5)]{VoWe05}):
 \[
-\Li2(x) = \sum_{n=0}^{\infty} \frac{B_n}{(n+1)!} (-\log(1-x))^{n+1}
+\LiTwo(x) = \sum_{n=0}^{\infty} \frac{B_n}{(n+1)!} (-\log(1-x))^{n+1}
 \]
 where $B_n$ is the $n$-th Bernoulli number.
 
@@ -3883,26 +3884,26 @@ Otherwise, we perform an argument reduction using the following identities
 (see \cite{GiZa75}):
 
 \begin{tabular}{l r c l}
-$x \in [2, +\infty[ $&$ \Re(\Li2(x)) $&$=$&$ \frac{\pi^2}{3}
-- \frac{1}{2}\log^2(x) - \Li2\left(\frac{1}{x}\right) $\\
-$x \in ]1, 2[ $&$ \Re(\Li2(x)) $&$=$&$ \frac{\pi^2}{6}-\log(x)\left[\log(x-1)
-- \frac{1}{2} \log(x)\right] + \Li2\left(1 - \frac{1}{x}\right)  $\\
- &$ \Li2(1) $&$=$&$ \frac{\pi^2}{6} $\\
-$x \in \left]\frac{1}{2}, 1\right[ $&$ \Li2(x) $&$=$&$ \frac{\pi^2}{6}
-- \log(x) \log(1 - x) - \Li2(1 - x) $\\
- &$ \Li2(0) $&$=$&$ 0 $\\
+$x \in [2, +\infty[ $&$ \Re(\LiTwo(x)) $&$=$&$ \frac{\pi^2}{3}
+- \frac{1}{2}\log^2(x) - \LiTwo\left(\frac{1}{x}\right) $\\
+$x \in ]1, 2[ $&$ \Re(\LiTwo(x)) $&$=$&$ \frac{\pi^2}{6}-\log(x)\left[\log(x-1)
+- \frac{1}{2} \log(x)\right] + \LiTwo\left(1 - \frac{1}{x}\right)  $\\
+ &$ \LiTwo(1) $&$=$&$ \frac{\pi^2}{6} $\\
+$x \in \left]\frac{1}{2}, 1\right[ $&$ \LiTwo(x) $&$=$&$ \frac{\pi^2}{6}
+- \log(x) \log(1 - x) - \LiTwo(1 - x) $\\
+ &$ \LiTwo(0) $&$=$&$ 0 $\\
 $x \in [-1, 0[ $&$
-\Li2(x) $&$=$&$ -\frac{1}{2} \log^2(1-x) - \Li2\left(\frac{x}{x - 1}\right)$\\
-$x \in ]-\infty, -1[ $&$ \Li2(x) $&$=$&$ -\frac{\pi^2}{6} 
+\LiTwo(x) $&$=$&$ -\frac{1}{2} \log^2(1-x) - \LiTwo\left(\frac{x}{x - 1}\right)$\\
+$x \in ]-\infty, -1[ $&$ \LiTwo(x) $&$=$&$ -\frac{\pi^2}{6} 
 - \frac{1}{2} \log(1 -x) [2 \log(-x) - \log(1 - x)]
-+ \Li2\left(\frac{1}{1 - x}\right).$
++ \LiTwo\left(\frac{1}{1 - x}\right).$
 \end{tabular}
 
 
 Assume first $0 < x \leq \frac{1}{2}$, the odd Bernoulli numbers being zero
-(except $B_1 = -\frac{1}{2}$), we can rewrite $\Li2(x)$ in the form:
+(except $B_1 = -\frac{1}{2}$), we can rewrite $\LiTwo(x)$ in the form:
 \[
-\Li2(x) = - \frac{\log^2(1-x)}{4} + S(-\log(1-x))
+\LiTwo(x) = - \frac{\log^2(1-x)}{4} + S(-\log(1-x))
 \]
 where  
 \[
@@ -3957,12 +3958,12 @@ $w = B_{2k}z^{2k+1}/(2k+1)! (1+\theta)^{6k+1}$.
 
 
 
-When $x \in ]0, \frac{1}{2}]$, $\Li2(x)$ calculation is implemented as follows
+When $x \in ]0, \frac{1}{2}]$, $\LiTwo(x)$ calculation is implemented as follows
 \begin{quote}
 Algorithm {\tt li2\_0..+$\frac{1}{2}$}\\
 Input: $x$ with $x \in \left]0, \frac{1}{2}\right]$, the output precision
 $n$, and a rounding mode $\circ_n$ \\
-Output: $\circ_n(\Li2(x))$ \\
+Output: $\circ_n(\LiTwo(x))$ \\
 \begin{tabular}{l c r c l}
 $u \leftarrow \N(1-x)$ & &
 $\n{error}(u) $ & $ \leq $ & $ \frac{1}{2} \ulp(u)$\\
@@ -3985,17 +3986,17 @@ where $\kappa_s ={\rm max}(-1, \lceil\log_2(k+1)\rceil + 1 - \Exp(s),
 
 When $x$ is large and positive, we can use an asymptotic expansion near
 $+\infty$ using the fact that 
-$\Li2\left(\frac{1}{x}\right) = \frac{1}{x} + O\left(\frac{1}{x^2}\right)$
+$\LiTwo\left(\frac{1}{x}\right) = \frac{1}{x} + O\left(\frac{1}{x^2}\right)$
 (see below):
 \[
-\left|\Li2(x) + \frac{\log^2x}{2} - \frac{\pi^2}{3}\right| \leq \frac{2}{x}
+\left|\LiTwo(x) + \frac{\log^2x}{2} - \frac{\pi^2}{3}\right| \leq \frac{2}{x}
 \]
 which gives the following algorithm:
 \begin{quote}
 Algorithm {\tt li2\_asympt\_pos}\\
 Input: $x$ with $x \geq 38$, the output precision $n$, and a rounding mode
 $\circ_n$ \\
-Output: $\circ_n(\Re(\Li2(x)))$ if it can round exactly, a failure indicator
+Output: $\circ_n(\Re(\LiTwo(x)))$ if it can round exactly, a failure indicator
 if not\\
 $u \leftarrow \N(\log x)$\\
 $v \leftarrow \N(u^2)$\\
@@ -4013,7 +4014,7 @@ $s \leftarrow \N(g-h)$\\
 Else, if $x \in [2, 38[$ or if $x \geq 38$ but the above calculation cannot 
 give exact rounding, we use the relation
 \[
-\Li2(x) = -S\left(-\log(1-\frac{1}{x})\right)
+\LiTwo(x) = -S\left(-\log(1-\frac{1}{x})\right)
 + \frac{\log^2\left(1-\frac{1}{x}\right)}{4}
 - \frac{\log^2x}{2} + \frac{\pi^2}{3},
 \]
@@ -4022,7 +4023,7 @@ which is computed as follows:
 Algorithm {\tt li2\_2..+$\infty$}\\
 Input: $x$ with $x \in \left[2, +\infty\right[$, the output precision $n$,
 and a rounding mode $\circ_n$ \\
-Output: $\circ_n(\Re(\Li2(x)))$ \\
+Output: $\circ_n(\Re(\LiTwo(x)))$ \\
 \begin{tabular}{l c r c l}
 $y \leftarrow \N(-1/x)$ & &
 $\n{error}(y) $ & $ \leq $ & $\frac{1}{2} \ulp(y)$\\
@@ -4067,14 +4068,14 @@ with
 
 When $x \in ]1, 2[$, we use the relation
 \[
-\Li2(x) = S(\log x) + \frac{\log^2 x}{4} - \log x \log(x - 1) + \frac{\pi^2}{6}
+\LiTwo(x) = S(\log x) + \frac{\log^2 x}{4} - \log x \log(x - 1) + \frac{\pi^2}{6}
 \]
 which is implemented as follows
 \begin{quote}
 Algorithm {\tt li2\_1..2}\\
 Input: $x$ with $x \in ]1, 2[$, the output precision $n$, and a rounding mode
     $\circ_n$ \\
-Output: $\circ_n(\Re(\Li2(x)))$ \\
+Output: $\circ_n(\Re(\LiTwo(x)))$ \\
 \begin{tabular}{l c r c l}
 $l \leftarrow \pinf(\log x)$ & & $\n{error}(l) $ & $ \leq $ & $ \ulp(l)$\\
 $q \leftarrow \N(S(l))$ & &
@@ -4114,7 +4115,7 @@ that $r \geq 0$ and $-\log x \log(x-1) \geq 0$ for error($s$),
 and that $s \geq 0$ for error($t$).
 
 
-When $x=1$, we have a simpler value $\Li2(1) = \frac{\pi^2}{6}$ whose
+When $x=1$, we have a simpler value $\LiTwo(1) = \frac{\pi^2}{6}$ whose
 computation is implemented as follows
 
 \begin{quote}
@@ -4135,7 +4136,7 @@ $\n{error}(u) $ & $ \leq $ & $ \frac{19}{2}\ulp(u)$\\
 
 When $x \in \left]\frac{1}{2}, 1\right[$, we use the relation
 \[
-\Li2(x) = - S(-\log x) - \log x \log(1 - x) + \frac{\log^2 x}{4}
+\LiTwo(x) = - S(-\log x) - \log x \log(1 - x) + \frac{\log^2 x}{4}
 + \frac{\pi^2}{6}
 \]
 which is implemented as follows
@@ -4143,7 +4144,7 @@ which is implemented as follows
 Algorithm {\tt li2\_0.5..1}\\
 Input: $x$ with $x \in \left]\frac{1}{2}, 1\right[$, the output precision $n$,
     and a rounding mode $\circ_n$ \\
-Output: $\circ_n(Li2(x))$ \\
+Output: $\circ_n(LiTwo(x))$ \\
 \begin{tabular}{l c r c l}
 $l \leftarrow \pinf(-\log x)$ & & $\n{error}(l) $ & $ \leq $ & $ \ulp(l)$\\
 $q \leftarrow \N(-S(l))$ & &
@@ -4188,25 +4189,25 @@ where
 
 Near 0, we can use the relation
 \[
-\Li2(x) = \sum_{n=0}^{\infty}\frac{x^k}{k^2}
+\LiTwo(x) = \sum_{n=0}^{\infty}\frac{x^k}{k^2}
 \]
 which is true for $|x| \leq 1$ [FIXME: ref].
-If $x \leq 0$, we have $0 \leq \Li2(x) - x \leq \frac{x^2}{4}$ 
+If $x \leq 0$, we have $0 \leq \LiTwo(x) - x \leq \frac{x^2}{4}$ 
 and if $x$ is positive, 
-$0 \leq \Li2(x) - x \leq (\frac{\pi^2}{6}-1)x^2 \leq x^2 
+$0 \leq \LiTwo(x) - x \leq (\frac{\pi^2}{6}-1)x^2 \leq x^2 
 \leq 2^{2\Exp(x)+1}\ulp(x)$.
 
  
 When $x \in [-1, 0[$, we use the relation
 \[
-\Li2(x) = - S(-\log(1-x)) - \frac{\log^2(1-x)}{4}
+\LiTwo(x) = - S(-\log(1-x)) - \frac{\log^2(1-x)}{4}
 \]
 which is implemented as follows
 \begin{quote}
 Algorithm {\tt li2\_-1..0}\\
 Input: $x$ with $x \in ]-1, 0[$, the output precision $n$, and a rounding mode
     $\circ_n$ \\
-Output: $\circ_n(Li2(x))$ \\
+Output: $\circ_n(LiTwo(x))$ \\
 \begin{tabular}{l c r c l}
 $y \leftarrow \N(1 - x)$ & &
 $\n{error}(y) $ & $ \leq $ & $ \frac{1}{2}\ulp(y)$ \\
@@ -4233,7 +4234,7 @@ with
 When $x$ is large and negative, we can use an asymptotic expansion near 
 $-\infty$:
 \[
-\left|\Li2(x) + \frac{\log^2(-x)}{2} + \frac{\pi^2}{3}\right| \leq 
+\left|\LiTwo(x) + \frac{\log^2(-x)}{2} + \frac{\pi^2}{3}\right| \leq 
 \frac{1}{|x|}
 \]
 which gives the following algorithm:
@@ -4241,7 +4242,7 @@ which gives the following algorithm:
   Algorithm {\tt li2\_asympt\_neg}\\
   Input: $x$ with $x \leq -7$, the output precision $n$, and a rounding mode
   $\circ_n$ \\
-  Output: $\circ_n(\Li2(x))$ if it can round exactly, a failure indicator
+  Output: $\circ_n(\LiTwo(x))$ if it can round exactly, a failure indicator
   if not\\
   $l \leftarrow \N(\log(-x))$ \\
   $f \leftarrow \N(l^2)$\\
@@ -4259,7 +4260,7 @@ which gives the following algorithm:
 When $x \in ]-7, -1[$ or if the above computation cannot give exact rounding,
 we use the relation
 \[
-\Li2(x) = S\left(\log\left(1-\frac{1}{x}\right)\right) - \frac{\log^2(-x)}{4}
+\LiTwo(x) = S\left(\log\left(1-\frac{1}{x}\right)\right) - \frac{\log^2(-x)}{4}
 - \frac{\log(-x) \log(1 - x)}{2} + \frac{\log^2(1-x)}{4} + \frac{\pi^2}{6}
 \]
 which is implemented as follows
@@ -4267,7 +4268,7 @@ which is implemented as follows
 Algorithm {\tt li2\_-$\infty$..-1}\\
 Input: $x$ with $x \in ]-\infty, -1[$, the output precision $n$,
     and a rounding mode $\circ_n$ \\
-Output: $\circ_n(\Li2(x))$ \\
+Output: $\circ_n(\LiTwo(x))$ \\
 \begin{tabular}{l c r c l}
 $y \leftarrow \N(-1/x)$\\
 $z \leftarrow \N(1+y)$\\
@@ -4620,7 +4621,8 @@ the recurrence relation and closed-form expressions also allow their
 evaluation outside this interval. However, extending them beyond
 $\vert x \vert \leq 1$ comes at the cost of losing some of their most
 useful properties, most notably orthogonality, which is crucial in
-approximation and expansion methods. These polynomials are computed by MPFR
+approximation and expansion methods. We thus assume $|x| \le 1$.
+These polynomials are computed
 through Bonnet's recursion, a simple recursive formula that
 expresses $P_n(x)$ in terms of lower-degree polynomials.
 Here's the recursion step:
@@ -4661,13 +4663,8 @@ parameters validation and special cases (a)--(d).
   \KwData{mpfr\_ptr res, unsigned n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
   \KwResult{ternary value}
   \BlankLine
-  \tcc{The higher degree allowed is $2^{13}$}
-  \lIf{$~~(n>8192)~~$}{
-    res $\gets$ NaN;
-    \Return 0\;
-  }
   \tcc{We have to check the domain bounds of the parameter $x$}
-  \lIf{$~~(x<-1~\mathbf{or}~x>1)~~$}{
+  \lIf{$|x| > 1$}{
     res $\gets$ NaN;
     \Return 0\;
   }
@@ -4698,169 +4695,114 @@ parameters validation and special cases (a)--(d).
 \begin{algorithm}[H]
   \caption{\texttt{mpfr\_legendre} Bonnet's recursion}
   \label{algo:legendre-bonnet}
-  \KwData{mpfr\_ptr res, unsigned n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
-  \KwResult{ternary value}
-  \BlankLine
-  \tcc{Initializing all the variables to the working precision (realprec)}
-  init\_prec (realprec, $p_1$, $p_2$, $p_i$, first\_term, second\_term)\;
-  \tcc{Initializing the two base cases}
-  $p_2~\gets{}~1$\;
-  $p_1~\gets~\N(x)$\;
+  $b~\gets{}~1$;
+  $a~\gets~\N(x)$\;
   $i~\gets~2$\;
   \tcc{Loop from 2 to $n$, where $n$ is the degree of the polynomial}
-  \While{$i\leq{}n$}{
-    $\mathrm{first\_term}~\gets~\N{}(x\cdot{}(2i - 1))$\;
-    $\mathrm{second\_term}~\gets~\N{}(p_2\cdot{}(i - 1))$\;
-    $\mathrm{first\_term}~\gets~\N{}(\mathrm{first\_term}\cdot{}p_1)$\;
-    \tcc{Here we omit the cancellation check}
-    $p_i~\gets~\N{}(\mathrm{first\_term} - \mathrm{second\_term})$\;
-    $p_i~\gets~\N{}(p_i/i)$\;
-    $p_2~\gets~p_1$\;
-    $p_1~\gets~p_i$\;
-    $i++$\;
+  \While{$i \leq n$}{
+    $f~\gets~\N{}(x\cdot{}(2i - 1))$\;
+    $g~\gets~\N{}(b\cdot{}(i - 1))$\;
+    $h~\gets~\N{}(f\cdot{}a)$\;
+    $q~\gets~\N{}(h - g)$\;
+    $b~\gets~a$\;
+    $a~\gets~\N{}(q/i)$\;
+    $i~\gets~i+1$\;
   }
-  \tcc{Final rounding of the result with the input rounding mode}
-  \Return mpfr\_set(res, $p_i$, rnd\_mode)\;
-  \BlankLine
 \end{algorithm}
 \vspace{.3cm}
 
-\noindent In Algorithm \ref{algo:legendre-bonnet} above, you can find the
-pseudo-code implementation of the \textit{iterative} Bonnet's recursion
-with final rounding. Now, we have to bound the rounding error for the
-$n$-th iteration of the loop $\epsilon_n$. Let's start from the first
-initialization of $p_1$ and $p_2$, that is
-\begin{center}
-\begin{tabular}{p{.37\textwidth}p{.63\textwidth}}
-$p_1^0 \gets \N(x)$
-& $k_{p_1^0} \le \tfrac12$, since we are rounding to the nearest. \\[4pt]
-$p_2^0 \gets 1$
-& $k_{p_2^0}=0$, since $1$ is exact. \\[6pt]
-\end{tabular}
-\end{center}
-Then, in the first iteration of the loop we have
-\begin{center}
-\begin{tabular}{p{.37\textwidth}p{.63\textwidth}}
-$\text{first\_term} \gets \N((2i-1)\,x)$ &
-Multiplication by an exact integer: $c_{\text{first}}=\tfrac12$, so
-$k_{\text{first}} = k_2 = \tfrac12$.\\[4pt]
-$\text{first\_term} \gets \N(\text{first\_term}\cdot p_1^0)$
-& Using the generic multiplication rule:
-$k_3 \le c_3 + (1+c_{p_1^0}^+)k_{\text{first}} + (1+c_{\text{first}}^+)k_{p_1^0}$,
-with $c_3=\tfrac12$ and $c_{p_1^0}^+=c_{\text{first}}^+=1$.
-Thus $k_3 \le \tfrac12 + 2(k_{p_1^0}+k_2) = \tfrac12 + 2\Bigl(\tfrac12+\tfrac12\Bigr) = \tfrac52$. \\[4pt]
-$\text{second\_term} \gets \N((i-1)p_2^0)$ &
-Integer multiplication followed by rounding:
-$k_4 \le c_4 + (1+c_{p_2^0}^+)k_{p_2^0}$,
-with $c_4=\tfrac12$, $c_{p_2^0}^+=1$, $k_{p_2^0}\le \tfrac12$. Thence:
-$k_4 \le \tfrac12 + 2k_{p_2^0} \le \tfrac32.$ \\[4pt]
-$p_i \gets \N(\text{first\_term} - \text{second\_term})$ &
-Using the generic subtraction rule (same sign operands):
-$k_{p_i} \le c_{p_i} + k_3 + k_4, c_{p_i}=\tfrac12$. Thus:
-$k_{p_i} \le \tfrac12 + \tfrac52 + \tfrac32 = \tfrac92$.
-A runtime heuristic it's applied to handle eventual cancellation. \\[4pt]
-$p_i \gets \N(p_i/i)$ &
-Exact integer division. Using generic division:
-$k_{p_i}' \le c_{p_i'} + 2k_{p_i}, c_{p_i'}=\tfrac12$. Thus,
-$k_{p_i}' \le \frac12 + 2\cdot \frac92 = \frac{19}{2}$.
-\\[4pt]
-\end{tabular}
-\end{center}
-At this point we perform the swap (lines 12--13 in Algorithm \ref{algo:legendre-bonnet}),
-therefore
-\begin{center}
-\begin{tabular}{p{.37\textwidth}p{.63\textwidth}}
- $p_2^1 \gets p_1^0$
-& $k_{p_2^1} \le k_{p_1^0};\quad k_{p_2^1} \le \frac12$ \\[4pt]
-$p_1^1 \gets p_i$
-& $k_{p_1^1} \le k_{p_i};\quad k_{p_1^1} \le \frac{19}{2}$ \\[4pt]
-\end{tabular}
-\end{center}
-\vspace{.2cm}
+Algorithm \ref{algo:legendre-bonnet} shows how Bonnet's recursion is
+implemented. For the error analysis, we will name $a_i$ and $b_i$ the
+values of the variables $a$ and $b$ at the start of loop $i$,
+where $a_i$ approximates $P_{i-1}(x)$ and $b_i$ approximates
+$P_{i-2}(x)$,
+and $f_i$, $g_i$, $h_i$, $q_i$, $b_{i+1}$, $a_{i+1}$ the values of the variables
+$f$, $g$, $h$, $q$, $b$, $a$ computed during loop $i$.
+We are interested in the final value $a_{n+1}$, which approximates $P_n(x)$.
 
-\paragraph{\textbf{Generic error bound for one iteration.}}
+For the error analysis, we will associate to each variable, say $x_i$ at loop $i$,
+an integer $e_{x,i}$ such that the total rounding error on $x_i$ with respect
+to the exact value $X_i$ it approximates is bounded as follows:
+\[ |x_i - X_i| \le 2^{e_{x,i}}. \]
+This error bound $e_{x,i}$ will be computed at runtime within the code
+(due to the possible cancellation in $q = \N{}(h - g)$, it is not possible
+to compute an error bound a priori).
 
-Let $k_{p_1^i}$ and $k_{p_2^i}$ denote the relative--error coefficients of
-the two Legendre values at the beginning of iteration~$i$, we define
-$a_i := k_{p_1^i}$ and $b_i := k_{p_2^i}$.
+We assume all roundings are to nearest, with working precision $p$.
 
-From the error analysis of the first iteration, replacing
-the initial bounds by $a_i$ and $b_i$, we obtain the following recurrence
-for the error coefficients after the division by $i$ and the subsequent
-variable swap:
-\[
-  a_{i+1} \;\le\; 4a_i + 4b_i + \tfrac{11}{2}, \qquad
-  b_{i+1} = a_i.
-\]
-Substituting $b_i$ yields the second-order recurrence of the form
-\begin{equation} \label{eq:legendre-recurrence}
-\left\{
-\begin{aligned}
- &a_0 \le \frac12\\
- &a_1 \le \frac{19}{2}\\
- &a_{i+1} \le 4a_i + 4a_{i-1} + \frac{11}{2}
- \end{aligned}
- \right.
-\end{equation}
+\par\noindent
+\textbf{Analysis of $f_i = \N{}(x\cdot{}(2i - 1))$.} Here, we use the
+\texttt{mpfr\_mul\_ui} function, with exact input $x$ and $2i-1$
+(we assume $2i-1$ fits into a long).
+There is thus only one error, due to the rounding in $\N{}(x\cdot{}(2i - 1))$.
+This error is bounded by $\frac{1}{2} \ulp(f_i) \le \frac{1}{2} 2^{\Exp(f_i) - p}$:
+\[ e_{f,i} \le \Exp(f_i) - p - 1. \]
 
-We have the inhomogeneous inequality $a_{i+1}\le 4a_i+4a_{i-1}+\tfrac{11}{2}$,
-so the associated homogeneous recurrence is $a_{i+1} = 4a_i + 4a_{i-1}$. Looking
-for solutions of the form $a_i = r^i$, gives the characteristic polynomial $r^2 - 4r - 4 = 0$,
-which has the roots $r_{1,2} = 2 \pm 2\sqrt2$.
-Hence the homogeneous solution is
-\[
- a_i^{(h)} = A(2+2\sqrt2)^i + B(2-2\sqrt2)^i.
-\]
-In order to obtain the full solution, we add to the homogeneous solution we got,
-the constant particular solution given by $C = 4C + 4C + \frac{11}{2}$, where we
-indicated with $C$ each $a_i$, and we get $a_i^{(p)} = -\tfrac{11}{14}$.
-Thus the full solution is
-\[
-a_i^{(f)} = A(2+2\sqrt2)^i + B(2-2\sqrt2)^i - \tfrac{11}{14}.
-\]
-At this point, we can calculate constants $A, B$ by enforcing the base values $a_0, a_1$:
-\[
- A = \frac{7+5\sqrt2}{4},
- \qquad
- B = \frac{7-5\sqrt2}{4}.
-\]
-Therefore
-\begin{equation} \label{eq:legendre-error-bound}
- a_i
- \le \frac{7+5\sqrt2}{4}(2+2\sqrt2)^i
- + \frac{7-5\sqrt2}{4}(2-2\sqrt2)^i
- - \frac{11}{14}.
-\end{equation}
+\par\noindent
+\textbf{Analysis of $g_i = \N{}(b_i \cdot{}(i - 1))$.}
+Here we have two sources of error: the rounding error on $g_i$, and
+the induced error on $b_i$. The first one is bounded by $\frac{1}{2} \ulp(g_i)$,
+the second one by $2^{e_{b,i}} (i-1)$. Since $2^x+2^y \le 2^{\max(x,y)+1}$:
+\[ e_{g,i} \le \max(\Exp(g_i)-p, e_{b,i} + \lceil \log_2(i-1) \rceil + 1). \]
 
-Since $|2-2\sqrt2|<1$, we can estimate, for a large number of iterations:
-\[
- a_i \sim \frac{7+5\sqrt2}{4}(2+2\sqrt2)^i.
-\]
+\par\noindent
+\textbf{Analysis of $h_i = \N{}(f_i\cdot{}a_i)$.}
+Here we have three sources of error: the rounding error on $h_i$,
+the induced error on $f_i$, which approximates $(2i-1)x$,
+and the induced error on $a_i$, which approximates $P_{i-1}(x)$:
+\begin{eqnarray*}
+  |h_i - (2i-1)x P_{i-1}(x)| & \le &
+  |h_i - f_i a_i| + |f_i a_i - (2i-1)x a_i| + |(2i-1)x a_i - (2i-1)x P_{i-1}(x)| \\
+  & \le & 2^{\Exp(h_i)-p-1} + 2^{e_{f,i} + \Exp(a_i)} + 2^{\lceil \log_2(2i-1)
+                                     \rceil + \Exp(x) + e_{a,i}}.
+\end{eqnarray*}
+Since $2^x + 2^y + 2^z \le 2^{\max(x,y,z)+2}$, it follows:
+\[ e_{h,i} \le 2 + \max(\Exp(h_i)-p-1, e_{f,i} + \Exp(a_i),
+  \lceil \log_2(2i-1) \rceil + \Exp(x) + e_{a,i}). \]
 
-In the following table, we calculate the error bound for the first 10 iterations with
-the recurrence formula in Equation \ref{eq:legendre-recurrence}. We can see that
-the ratios $b_i/b_{i-1}$ converge rapidly to $2+2\sqrt2\approx 4.8284271247\dots$,
-the dominant root of Equation \ref{eq:legendre-error-bound}.
+\par\noindent
+\textbf{Analysis of $q_i = \N{}(h_i - g_i)$.}
+Here again, we have three sources of error: the rounding error on $q_i$,
+the induced error on $h_i$, which approximates $H_i := (2i-1)x P_{i-1}(x)$,
+and the induced error on $g_i$, which approximates $G_i := (i-1)P_{i-2}(x)$:
+\[ |q_i - (H_i - G_i)| \le 2^{\Exp(q_i)-p-1} + 2^{e_{h,i}} + 2^{e_{g,i}}. \]
+Using again $2^x + 2^y + 2^z \le 2^{\max(x,y,z)+2}$, it follows:
+\[ e_{q,i} \le 2 + \max(\Exp(q_i)-p-1, e_{h,i}, e_{g,i}). \]
 
-\begin{center}
-\begin{tabular}{p{.1\textwidth}p{.20\textwidth}p{.20\textwidth}p{.1\textwidth}p{.15\textwidth}}
-\hline
-$i$ & $b_i$ (exact) & $b_i$ (decimal) & $\lceil\log_2(b_i)\rceil$ & $b_i/b_{i-1}$ \\
-\hline
-0  & $\frac{1}{2}$         & $0.5$          & -- & --                 \\ [.6em]
-1  & $\frac{19}{2}$        & $9.5$          & 4  & $19.0$             \\ [.6em]
-2  & $\frac{91}{2}$        & $45.5$         & 6  & $4.789473684\dots$ \\ [.6em]
-3  & $\frac{451}{2}$       & $225.5$        & 8  & $4.956043956\dots$ \\ [.6em]
-4  & $\frac{2179}{2}$      & $1089.5$       & 11 & $4.831485588\dots$ \\ [.6em]
-5  & $\frac{10531}{2}$     & $5265.5$       & 13 & $4.832950895\dots$ \\ [.6em]
-6  & $\frac{50851}{2}$     & $25425.5$      & 15 & $4.828696230\dots$ \\ [.6em]
-7  & $\frac{245539}{2}$    & $122769.5$     & 17 & $4.828597274\dots$ \\ [.6em]
-8  & $\frac{1185571}{2}$   & $592785.5$     & 20 & $4.828442732\dots$ \\ [.6em]
-9  & $\frac{5724451}{2}$   & $2862225.5$    & 22 & $4.828433725\dots$ \\ [.6em]
-10 & $\frac{27640099}{2}$  & $13820049.5$   & 24 & $4.828427914\dots$ \\ [.6em]
-\hline
-\end{tabular}
-\end{center}
+\par\noindent
+\textbf{Analysis of $a_{i+1} = \N{}(q_i/i)$.}
+Here, we have two sources of error: the rounding error on $a_{i+1}$,
+which approximates $P_i(x)$, and the induced error on $q_i$, which
+approximates $Q_i := H_i - G_i$:
+\[ |a_{i+1} - P_i(x)| \le 2^{\Exp(a_{i+1})-p-1} + 2^{e_{q,i}}/i. \]
+Since $1/i$ is bounded by $2^{-\lfloor \log_2(i) \rfloor}$, and for
+$i \ge 2$, $-\lfloor \log_2(i) \rfloor \le -\lceil \log_2(i-1) \rceil +1$
+(Lemma~\ref{lemma8}),
+we can reuse the computation of $\lceil \log_2(i-1) \rceil$ done above:
+\[ e_{a,i+1} \le \max(\Exp(a_{i+1})-p, e_{q,i} - \lceil \log_2(i-1) \rceil + 2). \]
+At the end of the loop, we will get an approximation $a_{n+1}$ of $P_n(x)$ such
+that:
+\[ |a_{n+1} - P_n(x)| \le 2^{e_{a,n+1}}. \]
+This error bound will be used in the rounding test, and if it fails, we will try
+again with a larger working precision $p' > p$.
+
+\begin{lemma} \label{lemma8}
+  For $i \ge 2$ integer, we have
+  \[ \lfloor \log_2(i) \rfloor \ge \lceil \log_2(i-1) \rceil - 1. \]
+\end{lemma}
+\begin{proof}
+  First since $i \ge 2$, both $\log_2(i)$ and $\log_2(i-1)$ are well defined.
+  If $i$ and $i-1$ are in the same binade, with the bounds excluded, i.e.,
+  if $2^{k-1} < i-1 < i < 2^k$ for some integer $k$, then
+  $\lfloor \log_2(i) \rfloor = k-1$ and $\lceil \log_2(i-1) \rceil = k$,
+  thus the statement of the lemma holds.
+  It remains to deal with the cases where either $i$ or $i-1$ is a power of $2$.
+  If $i=2$, the statement holds.
+  If $i=2^k \ge 4$, then $\lfloor \log_2(i) \rfloor = k$ and
+  $\lceil \log_2(i-1) \rceil = k$, thus the statement holds.
+  Finally if $i=2^k+1$, then $\lfloor \log_2(i) \rfloor = k$ and
+  $\lceil \log_2(i-1) \rceil = k$, thus	the statement holds.
+\end{proof}
 
 \subsection{Hermite polynomials}
 
