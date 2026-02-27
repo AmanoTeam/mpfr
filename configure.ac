@@ -888,7 +888,7 @@ if test -n "$dev_version"; then
     $srcdir/tests/*.c\``
 fi
 
-dnl Check the size of unsigned and unsigned long
+dnl Check the size of unsigned int and unsigned long
 AC_CHECK_SIZEOF([unsigned int])
 AC_CHECK_SIZEOF([unsigned long])
 
