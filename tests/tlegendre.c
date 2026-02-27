@@ -29,8 +29,9 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define MPFR_PREC_100        100
 #define MPFR_PREC_200        200
 
-#define RANDOM_TESTS_BATCH 50
-#define DYADIC_BOUND       35
+#define RANDOM_TESTS_N_DEGREE 10
+#define RANDOM_TESTS_BATCH    20
+#define DYADIC_BOUND          35
 
 #define DUMP_NUMBERS(expected, got)   \
           do                          \
@@ -449,7 +450,8 @@ test_round (void)
   mpfr_free_cache ();
 }
 
-/* perform K random tests with degree n and precision p */
+/* perform K random tests with degree n and precision p
+   random tests contributed by Paul Zimmermann */
 static void
 test_random (int n, mpfr_prec_t p, unsigned long K)
 {
@@ -734,7 +736,7 @@ main (void)
   test_sample_with_precision (IEEE754_DOUBLE_PREC, ARBITRARILY_LOW_PREC);
   test_sample_with_precision (MPFR_PREC_100, ARBITRARILY_LOW_PREC);
   test_sample_with_precision (MPFR_PREC_200, ARBITRARILY_LOW_PREC);
-#if 0
+
   /* res precision is IEEE754_DOUBLE_PREC. It's higher than
      IEEE754_SINGLE_PREC and lower than MPFR_PREC_100 and
      MPFR_PREC_200 */
@@ -751,8 +753,8 @@ main (void)
   test_sample_with_precision (MPFR_PREC_100, MPFR_PREC_200);
   test_sample_with_precision (MPFR_PREC_200, MPFR_PREC_200);
 
-  /* random tests contributed by Paul Zimmermann */
-  random_test_suite (RANDOM_TESTS_BATCH, RANDOM_TESTS_BATCH);
+  /* preform RANDOM_TESTS_BATCH tests for each of the RANDOM_TESTS_N_DEGREE */
+  random_test_suite (RANDOM_TESTS_N_DEGREE, RANDOM_TESTS_BATCH);
 
   /* bug reported by Paul Zimmermann */
   bug20251001 ();
@@ -762,7 +764,7 @@ main (void)
 
   /* test suite contributed by Paul Zimmermann */
   test_exact_dyadic ();
-#endif
+
   tests_end_mpfr ();
   return 0;
 }

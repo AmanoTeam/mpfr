@@ -1,7 +1,7 @@
 /* legendre -- Compute the nth degree Legendre polynomial.
 
 Copyright 2025-2026 Free Software Foundation, Inc.
-Contributed by Matteo Nicoli.
+Contributed by Matteo Nicoli and Paul Zimmermann.
 
 This file is part of the GNU MPFR Library.
 
@@ -24,15 +24,13 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 #define MAX_DEGREE 8192 // 2^13
 
-static mpfr_prec_t
-max3 (mpfr_prec_t x, mpfr_prec_t y, mpfr_prec_t z)
-{
-  if (x >= y)
-   {
-    return x >= z ? x : z;
-   }
-  return y >= z ? y : z;
-}
+/* max (x, y, z) */
+#define MAX3(x,y,z)          \
+  (                          \
+    (x) >= (y)               \
+    ? (x) >= (z) ? (x) : (z) \
+    : (y) >= (z) ? (y) : (z) \
+  )
 
 int
 mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
@@ -44,7 +42,7 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
      for n >= 2, where x is not equal to -1, 0 or 1 */
   long i;
   mpfr_t p1, p2, pn, first_term, second_term;
-  mpfr_prec_t res_prec, realprec, x_prec;
+  mpfr_prec_t res_prec, realprec;
   mpfr_exp_t lost_bits;
   mpfr_exp_t b_i, log2_i_m1, f_i, g_i, h_i, q_i, a_i, a_n;
   int inex;
@@ -109,7 +107,6 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
     }
 
   res_prec = MPFR_PREC (res);
-  x_prec = MPFR_PREC (x);
   realprec = res_prec + 10;
   realprec += MPFR_INT_CEIL_LOG2 (realprec);
 
@@ -122,10 +119,10 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       i = 2;
 
       /* p1 = x, p2 = 1 */
-      inex = mpfr_set (p1, x, MPFR_RNDN); /* p1 is a is algorithms.tex */
-      mpfr_set_ui (p2, 1, MPFR_RNDN);     /* exact, p2 is b */
-      b_i = LONG_MIN;                     /* 2^b_i is the absolute error on p2 */
-      a_i = MPFR_GET_EXP(p1) - realprec - 1; /* 2^a_i is the absolute error on p1 */
+      inex = mpfr_set (p1, x, MPFR_RNDN);     /* p1 is a is algorithms.tex */
+      mpfr_set_ui (p2, 1, MPFR_RNDN);         /* exact, p2 is b */
+      b_i = LONG_MIN;                         /* 2^b_i is the absolute error on p2 */
+      a_i = MPFR_GET_EXP (p1) - realprec - 1; /* 2^a_i is the absolute error on p1 */
 
       while (i <= n)
         {
@@ -148,15 +145,15 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
              h_i <= 2 + max(exp(first_term)-p-1, f_i+exp(p1),
                             MPFR_INT_CEIL_LOG2(2*i-1)+MPFR_GET_EXP(x)+a_i) */
           inex |= mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
-          h_i = 2 + max3 (MPFR_GET_EXP (first_term) - realprec - 1,
+          h_i = 2 + MAX3 (MPFR_GET_EXP (first_term) - realprec - 1,
                           f_i + MPFR_GET_EXP (p1),
-                          MPFR_INT_CEIL_LOG2(2*i-1) + MPFR_GET_EXP(x) + a_i);
+                          MPFR_INT_CEIL_LOG2 (2*i-1) + MPFR_GET_EXP (x) + a_i);
 
           /* pn = first_term - second_term, with absolute error at step i
              bounded by
              q_i <= 2 + max(exp(pn)-p-1, error(first_term), error(second_term)) */
           inex |= mpfr_sub (pn, first_term, second_term, MPFR_RNDN);
-          q_i = 2 + max3 (MPFR_GET_EXP (pn) - realprec - 1, h_i, g_i);
+          q_i = 2 + MAX3 (MPFR_GET_EXP (pn) - realprec - 1, h_i, g_i);
 
           /* pn = pn/i, with absolute error at step i
              bounded by a_i <= max(exp(pn)-p, q_i-MPFR_INT_CEIL_LOG2(i-1)+2) */
@@ -176,7 +173,7 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
          Since ulp(p1) = 2^(EXP(p1)-realprec)
          we get the relative error is bounded by:
          2^(a_i - (EXP(p1) - realprec - 1)) */
-      lost_bits = a_i - (MPFR_GET_EXP(p1) - realprec);
+      lost_bits = a_i - (MPFR_GET_EXP (p1) - realprec);
 
       /* if inex=0, then all the computation was exact, thus p1 is exactly P_n(x),
          otherwise we call MPFR_CAN_ROUND() to check if we can deduce the correct
