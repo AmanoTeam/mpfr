@@ -4807,32 +4807,30 @@ again with a larger working precision $p' > p$.
 
 \subsection{Hermite polynomials}
 
-Physicist's Hermite polynomials $H_n(x)$, with $n \geq 0$, are widely used in
-physics to describe the energy eigenstates (wavefunctions) and energy levels
-of the quantum harmonic oscillator (QHO). They are a sequence of orthogonal
-polynomials defined in the domain $(-\infty,\infty)$. Unless otherwise stated,
-$H_n(x)$ refers to the physicist's convention; this differs from the
-probabilist's Hermite polynomials by a simple rescaling of the argument
-and normalization.
-These polynomials are computed by MPFR through the following recursion:
+Hermite polynomials $P_n(x)$, with $n \geq 0$, are a sequence of
+orthogonal polynomials defined in the domain $(-\infty,\infty)$. Unless
+otherwise stated, $P_n(x)$ refers to the physicist's convention; this differs
+from the probabilist's Hermite polynomials by a simple rescaling of the
+argument and normalization. These polynomials are computed by MPFR through
+the following three term recursion:
 \begin{equation} \label{eq:hermite-recursion}
   \begin{cases}
-      H_0(x) = 1\\
-      H_1(x) = 2x\\
-      H_n(x) = 2xH_{n-1}(x) - 2nH_{n-2}(x)
+      P_0(x) = 1\\
+      P_1(x) = 2x\\
+      P_{n+1}(x) = 2xP_{n}(x) - 2nP_{n-1}(x)
   \end{cases}
 \end{equation}
 Some values of $x$ and $n$ are treated as special cases in which the
-recurrence is not evaluated. These cases are:
+recurrence is not evaluated. These two cases are:
 \begin{itemize}
-\item[(a)] The base cases $H_0$ and $H_1$.
-\item[(b)] If $n \ge 1$ is odd, then $H_n(0) = 1$.
-\item[(c)] If $n \ge 1$ is even, then $H_n(0) = H_{2k}(0) = (-1)^k~\dfrac{(2k)!}{k!}$.
+\item[(a)] The base cases $P_0$ and $P_1$.
+\item[(b)] If $n \ge 1$ is odd, then $P_n(0) = 1$.
 \end{itemize}
-The fraction in (c) is computed with the Log-Gamma method to mitigate the
-overflow risk for large $n$.
-Let's start from the implementation of the case $H_{2k}(0)$ and its
-error analysis.
+
+\paragraph{\textbf{Recursion implementation and error analysis.}}
+
+Let's start from Algorithm \ref{algo:hermite-special} in which special cases
+are implemented.
 \vspace{.3cm}
 
 \begin{algorithm}[H]
@@ -4849,12 +4847,7 @@ error analysis.
     res $\gets$ 1;
     \Return 0\;
   }
-  \If{$~~(x=0)~~$}{
-    \vspace{.1cm}
-
-    $\quad$\lIf{$~~((n\&1) = 0)~~$}{
-      \Return zero\_x\_even\_degree (res, n, rnd\_mode)\;
-    }
+  \lIf{$~~(x=0~~\&\&~~(n\&1) != 0)~~$}{
     $\quad$res $\gets$ 0\;
     $\quad$\Return 0\;
   }
@@ -4869,60 +4862,21 @@ error analysis.
 \end{algorithm}
 \vspace{.3cm}
 
-\paragraph{\textbf{Implementation of $\mathbf{H_{2k}(0)}$ and error analysis.}}
-
-In Algorithm \ref{algo:hermite-zero-even-special}, you can find the pseudo-code
-implementation of the special case $H_{2k}(0)$ with final rounding.
-\vspace{.3cm}
-
-\begin{algorithm}[H]
-  \caption{\texttt{mpfr\_hermite} $H_{2k}(0)$}
-  \label{algo:hermite-zero-even-special}
-  \KwData{mpfr\_ptr res, unsigned n, mpfr\_rnd\_t rnd\_mode}
-  \KwResult{ternary value}
-  \BlankLine
-  $\text{first} \gets \N(n+1)$\;
-  $\text{second} \gets \N(\frac{n}{2}+1)$\;
-  $\text{gamma1} \gets \N(\log(\Gamma(\text{first})))$\;
-  $\text{gamma2} \gets \N(\log(\Gamma(\text{second})))$\;
-  $\text{sub} \gets \N(\text{gamma1} - \text{gamma2})$\;
-  $\text{e} \gets \N(\exp(\text{sub}))$\;
-  \tcc{Here we omit both the cancellation and the overflow check}
-  \lIf{$~~((n>>1)\&1)~~$}{
-    MPFR\_SET\_NEG (res)\;
-  }
-  \BlankLine
-\end{algorithm}
-\vspace{.3cm}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Error analysis for the special case
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\paragraph{\textbf{Recursion implementation and error analysis.}}
-
-In Algorithm \ref{algo:hermite-rec}, you can find the pseudo-code
-implementation of the recursion used to compute the (physicist's)
-Hermite polynomial with final rounding.
-\vspace{.3cm}
-
 \begin{algorithm}[H]
   \caption{\texttt{mpfr\_hermite} recursion}
   \label{algo:hermite-rec}
   \KwData{mpfr\_ptr res, unsigned n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
   \KwResult{ternary value}
   \BlankLine
-  \tcc{All the variables are initialized to the working precision (realprec)}
+  \tcc{All the following MPFR numbers are initialized to precision $p$}
   $b~\gets{}~1$;
   $~~a~\gets~\N{}(2x)$;
   $~~i~\gets~1$\;
-  \tcc{Loop from 1 to $n-1$, where $n$ is the degree of the polynomial}
   \While{$i<n$}{
     $f~\gets~\N{}(2 \cdot{} x)$\;
     $g~\gets~\N{}(b \cdot{} (2 * i))$\;
     $h\gets~\N{}(f \cdot{} a)$\;
     $q~\gets~\N{}(h - g)$\;
-    \tcc{Here we omit the cancellation check}
     \BlankLine
     $b~\gets~a$\;
     $a~\gets~q$\;
@@ -4932,6 +4886,14 @@ Hermite polynomial with final rounding.
   \BlankLine
 \end{algorithm}
 \vspace{.3cm}
+
+Algorithm \ref{algo:hermite-rec} shows how the recursion for Hermite polynomial
+is implemented in MPFR. In the error analysis below we will name $a_i$ and
+$b_i$ the values of the variables $a$ and $b$ at the start of loop $i$, where
+$a_i$ approximates $P_i(x)$ and $b_i$ approximates $P_{i-1}(x)$, and $f_i$,
+$g_i$, $h_i$, $q_i$, $b_i$, $a_i$ the values of the variables $f$, $g$, $h$,
+$q$, $b$, $a$ computed during loop $i$. We are interested in the final value
+$a_n$, which approximates $P_{n+1}(x)$.
 
 For the error analysis, we are going to use the same naming convention that
 we used for Legendre polynomials in Section
@@ -4948,17 +4910,17 @@ As for Legendre polynomials, we are going to assume all roundings are to
 nearest, with working precision p.
 
 \par\noindent
-\textbf{Analysis of $a_0 = \N{}(2\cdot{}x)$.} Here, we use the
-\texttt{mpfr\_mul\_ui} function, with exact input $x$ and 2 (we assume 2
-fits into a long). There is thus only one error, due to the rounding in
+\textbf{Analysis of $a = \N{}(2\cdot{}x)$.} This is error bound of the
+first initialization of the value $a$. Here, we use the
+\texttt{mpfr\_mul\_2ui} function to multiply the exact input $x$ by 2.
+Thus, we just have to consider the error due to the final rounding
 $\N{}(2\cdot{}x)$. This error is bounded by
 $\frac{1}{2} \ulp(a_0) \le \frac{1}{2} 2^{\Exp(a_0) - p}$:
 \[ e_{a_0} \le \Exp(a_0) - p - 1. \]
 
 \par\noindent
-\textbf{Analysis of $f_i = \N{}(2\cdot{}x)$.} As for $a_0$, we are using the
-\texttt{mpfr\_mul\_ui} function, so there is only one error, due to the
-final rounding. This error is bounded by
+\textbf{Analysis of $f_i = \N{}(2\cdot{}x)$.} As for $a_1$, there is only
+one error, due to the final rounding. This error is bounded by
 $\frac{1}{2} \ulp(f_i) \le \frac{1}{2} 2^{\Exp(f_i) - p}$:
 \[ e_{f,i} \le \Exp(f_i) - p - 1. \]
 
@@ -4978,11 +4940,11 @@ and the induced error on $a_i$, which approximates $P_{i-1}(x)$:
 \begin{eqnarray*}
   |h_i - 2x P_{i-1}(x)| & \le &
   |h_i - f_i a_i| + |f_i a_i - 2x a_i| + |2x a_i - 2x P_{i-1}(x)| \\
-  & \le & 2^{\Exp(h_i)-p-1} + 2^{e_{f,i} + \Exp(a_i)} + 2^{2 + \Exp(x) + e_{a,i}}.
+  & \le & 2^{\Exp(h_i)-p-1} + 2^{e_{f,i} + \Exp(a_i)} + 2^{1 + \Exp(x) + e_{a,i}}.
 \end{eqnarray*}
 Since $2^x + 2^y + 2^z \le 2^{\max(x,y,z)+2}$, it follows:
 \[ e_{h,i} \le 2 + \max(\Exp(h_i)-p-1, e_{f,i} + \Exp(a_i),
-  2 + \Exp(x) + e_{a,i}). \]
+  1 + \Exp(x) + e_{a,i}). \]
 
 \par\noindent
 \textbf{Analysis of $q_i = \N{}(h_i - g_i)$.}
@@ -4993,9 +4955,9 @@ and the induced error on $g_i$, which approximates $G_i := (2i)P_{i-2}(x)$:
 Using again $2^x + 2^y + 2^z \le 2^{\max(x,y,z)+2}$, it follows:
 \[ e_{q,i} \le 2 + \max(\Exp(q_i)-p-1, e_{h,i}, e_{g,i}). \]
 
-At the end of the loop, we will get an approximation $a_{n+1}$ of $P_n(x)$ such
+At the end of the loop, we will get an approximation $a_n$ of $P_{n+1}(x)$ such
 that:
-\[ |a_{n+1} - P_n(x)| \le 2^{e_{a,n+1}}. \]
+\[ |a_n - P_{n+1}(x)| \le 2^{e_{a,n}}. \]
 This error bound will be used in the rounding test, and if it fails, we will try
 again with a larger working precision $p' > p$.
 
