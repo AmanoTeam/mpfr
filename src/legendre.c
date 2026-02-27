@@ -44,7 +44,11 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
      for n >= 2, where x is not equal to -1, 0 or 1 */
   long i;
   mpfr_t p1, p2, pn, first_term, second_term;
-  mpfr_prec_t res_prec, realprec, x_prec, test_prec;
+  mpfr_prec_t res_prec, realprec, x_prec;
+  mpfr_exp_t lost_bits;
+  mpfr_exp_t b_i, log2_i_m1, f_i, g_i, h_i, q_i, a_i, a_n;
+  int inex;
+
   MPFR_GROUP_DECL (group);
   MPFR_ZIV_DECL (loop);
 
@@ -106,15 +110,8 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 
   res_prec = MPFR_PREC (res);
   x_prec = MPFR_PREC (x);
-  /* if x_prec > res_prec, then we use x_prec as the starting precision
-     for the Ziv's loop, otherwise we use res_prec. We add then a coefficient
-     that is proportional either to x_prec or res_prec + 10 safety bits */
-  realprec = x_prec > res_prec ? x_prec : res_prec + 10;
+  realprec = res_prec + 10;
   realprec += MPFR_INT_CEIL_LOG2 (realprec);
-
-  long abs_err_x = 1;
-  long b_i;
-  long log2_i_m1, f_i, g_i, h_i, q_i, a_i, a_n;
 
   MPFR_GROUP_INIT_5 (group, realprec,
                      p1, p2, pn, first_term, second_term);
@@ -125,69 +122,74 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       i = 2;
 
       /* p1 = x, p2 = 1 */
-      mpfr_set (p1, x, MPFR_RNDN);
-      mpfr_set_ui (p2, 1, MPFR_RNDN);
-      b_i = 0;
-      a_i = abs_err_x;
+      inex = mpfr_set (p1, x, MPFR_RNDN); /* p1 is a is algorithms.tex */
+      mpfr_set_ui (p2, 1, MPFR_RNDN);     /* exact, p2 is b */
+      b_i = LONG_MIN;                     /* 2^b_i is the absolute error on p2 */
+      a_i = MPFR_GET_EXP(p1) - realprec - 1; /* 2^a_i is the absolute error on p1 */
 
       while (i <= n)
         {
           log2_i_m1 = MPFR_INT_CEIL_LOG2(i-1);
 
           /* first_term = x * (2 * i - 1), with absolute error at step i
+             (denoted f_i in algorithms.tex)
              bounded by f_i <= exp(first_term) - p - 1 */
-          mpfr_mul_ui (first_term, x, 2 * i - 1, MPFR_RNDN);
+          inex |= mpfr_mul_ui (first_term, x, 2 * i - 1, MPFR_RNDN);
           f_i = MPFR_GET_EXP (first_term) - realprec - 1;
 
-          /* second_term = p2 * (i - 1), with absolute error at step i
-               bounded by g_i <= max(exp(second_term)-p, error(p2) + MPFR_INT_CEIL_LOG2(i-1)+1)
+          /* second_term = p2 * (i - 1), with absolute error at step i bounded by
+             g_i <= max(exp(second_term)-p, error(p2) + MPFR_INT_CEIL_LOG2(i-1)+1)
            */
-          mpfr_mul_ui (second_term, p2, i - 1, MPFR_RNDN);
+          inex |= mpfr_mul_ui (second_term, p2, i - 1, MPFR_RNDN);
           g_i = MAX (MPFR_GET_EXP (second_term) - realprec, b_i + log2_i_m1 + 1);
 
           /* first_term = first_term * p1, with absolute error at step i
              bounded by
-               h_i <= 2 + max(exp(first_term)-p-1, f_i+exp(p1), MPFR_INT_CEIL_LOG2(2*i-1)+MPFR_GET_EXP(x)+a_i) */
-          mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
-          h_i = 2 + max3 (MPFR_GET_EXP (first_term)-realprec-1, f_i + MPFR_GET_EXP (p1), MPFR_INT_CEIL_LOG2(2*i-1) + MPFR_GET_EXP(x)+a_i);
+             h_i <= 2 + max(exp(first_term)-p-1, f_i+exp(p1),
+                            MPFR_INT_CEIL_LOG2(2*i-1)+MPFR_GET_EXP(x)+a_i) */
+          inex |= mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
+          h_i = 2 + max3 (MPFR_GET_EXP (first_term) - realprec - 1,
+                          f_i + MPFR_GET_EXP (p1),
+                          MPFR_INT_CEIL_LOG2(2*i-1) + MPFR_GET_EXP(x) + a_i);
 
           /* pn = first_term - second_term, with absolute error at step i
              bounded by
-               q_i <= max(exp(pn)-p-1, error(first_term), error(second_term)) + 2 */
-          mpfr_sub (pn, first_term, second_term, MPFR_RNDN);
+             q_i <= 2 + max(exp(pn)-p-1, error(first_term), error(second_term)) */
+          inex |= mpfr_sub (pn, first_term, second_term, MPFR_RNDN);
           q_i = 2 + max3 (MPFR_GET_EXP (pn) - realprec - 1, h_i, g_i);
 
           /* pn = pn/i, with absolute error at step i
              bounded by a_i <= max(exp(pn)-p, q_i-MPFR_INT_CEIL_LOG2(i-1)+2) */
-          mpfr_div_ui (pn, pn, i, MPFR_RNDN);
+          inex |= mpfr_div_ui (pn, pn, i, MPFR_RNDN);
           a_n = MAX (MPFR_GET_EXP (pn) - realprec, q_i - log2_i_m1 + 2);
 
           /* p2 = p1, p1 = pn */
-          mpfr_set (p2, p1, MPFR_RNDN);
-          mpfr_set (p1, pn, MPFR_RNDN);
-          b_i = a_i;
-          a_i = a_n;
+          mpfr_swap (p2, p1); /* now p2 approximates P_{i-1}(x) */
+          mpfr_swap (p1, pn); /* now p1 approximates P_i(x) */
+          b_i = a_i;          /* 2^b_i is a bound on the absolute error on p2 */
+          a_i = a_n;          /* 2^a_i is a bound on the absolute error on p1 */
 
           i++;
         }
 
-      /* a_n is the absolute error of pn. Since ulp(pn) = 2^{1-realprec}
-         we get the relative error as:
-           MPFR_INT_CEIL_LOG2 (a_n) - realprec + 1 */
-      test_prec = realprec - MPFR_INT_CEIL_LOG2 (a_n) - realprec + 1;
-      if ((MPFR_INT_CEIL_LOG2 (a_n) - realprec + 1) < realprec) {
-      if (mpfr_min_prec (pn) < test_prec - 1)
-        break;
+      /* Now p1 approximates P_n(x), and 2^a_i is a bound on its absolute error.
+         Since ulp(p1) = 2^(EXP(p1)-realprec)
+         we get the relative error is bounded by:
+         2^(a_i - (EXP(p1) - realprec - 1)) */
+      lost_bits = a_i - (MPFR_GET_EXP(p1) - realprec);
 
-      if (MPFR_LIKELY (MPFR_CAN_ROUND (pn, test_prec, res_prec, rnd_mode)))
+      /* if inex=0, then all the computation was exact, thus p1 is exactly P_n(x),
+         otherwise we call MPFR_CAN_ROUND() to check if we can deduce the correct
+         rounding */
+      if (inex == 0 || (lost_bits < realprec &&
+                     MPFR_CAN_ROUND (p1, realprec - lost_bits, res_prec, rnd_mode)))
         break;
-      }
       MPFR_ZIV_NEXT (loop, realprec);
       MPFR_GROUP_REPREC_5 (group, realprec,
                            p1, p2, pn, first_term, second_term);
     }
   MPFR_ZIV_FREE (loop);
-  ternary_value = mpfr_set (res, pn, rnd_mode);
+  ternary_value = mpfr_set (res, p1, rnd_mode);
 
   MPFR_GROUP_CLEAR (group);
 
