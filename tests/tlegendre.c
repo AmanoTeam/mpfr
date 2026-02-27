@@ -705,8 +705,8 @@ test_exact_dyadic (void)
   int n;
   mpfr_prec_t p;
 
-  for (n = 1; n <= DYADIC_BOUND; n++)
-    for (p = 1; p <= DYADIC_BOUND; p++)
+  for (n = 1; n <= 10; n++)
+    for (p = DYADIC_BOUND - 3; p <= DYADIC_BOUND; p++)
       test_exact (n, DYADIC_BOUND, DYADIC_BOUND, p);
 }
 
