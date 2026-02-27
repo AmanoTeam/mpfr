@@ -113,9 +113,9 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
      for n >= 2, where x is not equal to -1, 0 or 1 */
   long i;
   mpfr_t p1, p2, pn, first_term, second_term;
-  mpfr_prec_t res_prec, realprec, x_prec, test_prec, err;
+  mpfr_prec_t res_prec, realprec, x_prec;
   mpfr_exp_t lost_bits;
-  mpfr_exp_t b_i, log2_i_m1, f_i, g_i, h_i, q_i, a_i, a_n;
+  mpfr_exp_t b_i, f_i, g_i, h_i, q_i, a_i, a_n;
   MPFR_GROUP_DECL (group);
   MPFR_ZIV_DECL (loop);
 
@@ -181,7 +181,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       i = 1;
       
       /* p1 = 2x, p2 = 1 */
-      inex |= mpfr_mul_ui (p1, x, 2, MPFR_RNDN);
+      inex = mpfr_mul_ui (p1, x, 2, MPFR_RNDN);
       mpfr_set_ui (p2, 1, MPFR_RNDN);
 
       b_i = LONG_MIN;                         /* 2^b_i is the absolute error on p2 */
@@ -211,7 +211,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
           mpfr_swap (p2, p1);
           mpfr_swap (p1, pn);
           b_i = a_i;
-          a_i = a_n;
+          a_i = q_i;
 
           i++;
         }
