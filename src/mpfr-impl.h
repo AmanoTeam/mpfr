@@ -2080,6 +2080,17 @@ typedef struct {
 
 /* Use LOGGING */
 
+/* GCC 16.0.1 20260216 development version gives such warnings when
+   logging is used, in particular due to the output of the "inexact"
+   variable in MPFR_LOG_FUNC of many functions. To keep changes
+   minimal in the 4.2 branch, let's avoid this issue by ignoring
+   these warnings.
+   References:
+     https://sympa.inria.fr/sympa/arc/mpfr/2026-02/msg00012.html
+     commit 140092bb990bef939f97518e744b156733bb2b4e in master
+*/
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+
 /* Note: the mpfr_log_level >= 0 below avoids to take into account
    Ziv loops used by the MPFR functions called by the mpfr_fprintf
    in LOG_PRINT. */
