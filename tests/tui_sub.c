@@ -1,6 +1,6 @@
 /* Test file for mpfr_ui_sub.
 
-Copyright 2000-2025 Free Software Foundation, Inc.
+Copyright 2000-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -272,8 +272,8 @@ check_overflow (void)
   set_emax (MPFR_EMAX_MAX);
 
   mpfr_inits2 (32, x, y1, y2, (mpfr_ptr) 0);
+  MPFR_SET_NEG (x);
   mpfr_setmax (x, MPFR_EMAX_MAX);
-  mpfr_neg (x, x, MPFR_RNDN);
   RND_LOOP_NO_RNDF (rnd_mode)
     {
       if (rnd_mode == MPFR_RNDU || rnd_mode == MPFR_RNDA)

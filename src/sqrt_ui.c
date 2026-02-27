@@ -1,6 +1,6 @@
 /* mpfr_sqrt_ui -- square root of a machine integer
 
-Copyright 2000-2004, 2006-2025 Free Software Foundation, Inc.
+Copyright 2000-2004, 2006-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -29,8 +29,7 @@ mpfr_sqrt_ui (mpfr_ptr r, unsigned long u, mpfr_rnd_t rnd_mode)
 
   MPFR_LOG_FUNC
     (("u=%lu rnd=%d", u, rnd_mode),
-     ("y[%Pd]=%.*Rg inexact=%d",
-      mpfr_get_prec(r), mpfr_log_prec, r, inex));
+     ("y[%Pd]=%.*Rg", mpfr_get_prec(r), mpfr_log_prec, r));
 
   if (u != 0)
     {

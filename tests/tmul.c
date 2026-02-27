@@ -1,6 +1,6 @@
 /* Test file for mpfr_mul.
 
-Copyright 1999, 2001-2025 Free Software Foundation, Inc.
+Copyright 1999, 2001-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -715,6 +715,7 @@ test_underflow (mpfr_prec_t pmax)
 
   mpfr_init2 (a0, MPFR_PREC_MIN);
   emin = mpfr_get_emin ();
+  MPFR_SET_POS (a0);
   mpfr_setmin (a0, emin);  /* 0.5 * 2^emin */
 
   /* for RNDN, we want b*c < 0.5 * 2^emin but RNDN(b*c, p) = 0.5 * 2^emin,

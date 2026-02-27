@@ -1,6 +1,6 @@
 /* mpfr_fmma, mpfr_fmms -- Compute a*b +/- c*d
 
-Copyright 2014-2025 Free Software Foundation, Inc.
+Copyright 2014-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -40,8 +40,7 @@ mpfr_fmma_aux (mpfr_ptr z, mpfr_srcptr a, mpfr_srcptr b, mpfr_srcptr c,
       mpfr_get_prec (b), mpfr_log_prec, b,
       mpfr_get_prec (c), mpfr_log_prec, c,
       mpfr_get_prec (d), mpfr_log_prec, d, rnd, neg),
-     ("z[%Pd]=%.*Rg inex=%d",
-      mpfr_get_prec (z), mpfr_log_prec, z, inex));
+     ("z[%Pd]=%.*Rg", mpfr_get_prec (z), mpfr_log_prec, z));
 
   MPFR_TMP_MARK (marker);
 

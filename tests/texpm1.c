@@ -1,6 +1,6 @@
 /* Test file for mpfr_expm1.
 
-Copyright 2001-2025 Free Software Foundation, Inc.
+Copyright 2001-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -45,7 +45,7 @@ test_expm1 (mpfr_ptr a, mpfr_srcptr b, mpfr_rnd_t rnd_mode)
 #endif
 
 #define TEST_FUNCTION test_expm1
-#define TEST_RANDOM_EMIN -36
+#define TEST_RANDOM_EMIN (-36)
 #define TEST_RANDOM_EMAX 36
 #include "tgeneric.c"
 

@@ -1,6 +1,6 @@
 /* tzeta -- test file for the Riemann Zeta function
 
-Copyright 2003-2025 Free Software Foundation, Inc.
+Copyright 2003-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -240,7 +240,7 @@ intermediate_overflow (void)
 }
 
 #define TEST_FUNCTION mpfr_zeta
-#define TEST_RANDOM_EMIN -48
+#define TEST_RANDOM_EMIN (-48)
 #define TEST_RANDOM_EMAX 31
 #include "tgeneric.c"
 

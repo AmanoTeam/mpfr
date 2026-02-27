@@ -1,6 +1,6 @@
 /* mpfr_set_f -- set a MPFR number from a GNU MPF number
 
-Copyright 1999-2025 Free Software Foundation, Inc.
+Copyright 1999-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -35,8 +35,7 @@ mpfr_set_f (mpfr_ptr y, mpf_srcptr x, mpfr_rnd_t rnd_mode)
 
   MPFR_LOG_FUNC
     (("rnd=%d", rnd_mode),
-     ("y[%Pd]=%.*Rg inexact=%d", mpfr_get_prec (y), mpfr_log_prec, y,
-      inexact));
+     ("y[%Pd]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y));
 
   sx = ABSIZ(x); /* number of limbs of the mantissa of x */
 

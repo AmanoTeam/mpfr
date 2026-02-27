@@ -1,6 +1,6 @@
 /* mpfr_fma -- Floating multiply-add
 
-Copyright 2001-2002, 2004, 2006-2025 Free Software Foundation, Inc.
+Copyright 2001-2002, 2004, 2006-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -119,8 +119,7 @@ mpfr_fma (mpfr_ptr s, mpfr_srcptr x, mpfr_srcptr y, mpfr_srcptr z,
       mpfr_get_prec (x), mpfr_log_prec, x,
       mpfr_get_prec (y), mpfr_log_prec, y,
       mpfr_get_prec (z), mpfr_log_prec, z, rnd_mode),
-     ("s[%Pd]=%.*Rg inexact=%d",
-      mpfr_get_prec (s), mpfr_log_prec, s, inexact));
+     ("s[%Pd]=%.*Rg", mpfr_get_prec (s), mpfr_log_prec, s));
 
   /* particular cases */
   if (MPFR_UNLIKELY( MPFR_IS_SINGULAR(x) || MPFR_IS_SINGULAR(y) ||

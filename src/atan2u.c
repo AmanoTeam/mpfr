@@ -2,7 +2,7 @@
                    atan2u(y,x,u) = 1-atan(|y/x|)*u/(2*pi) for x < 0
    mpfr_atan2pi -- atan2pi(x) = atan2u(u=2)
 
-Copyright 2021-2025 Free Software Foundation, Inc.
+Copyright 2021-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -174,8 +174,7 @@ mpfr_atan2u (mpfr_ptr z, mpfr_srcptr y, mpfr_srcptr x, unsigned long u,
       mpfr_get_prec(y), mpfr_log_prec, y,
       mpfr_get_prec(x), mpfr_log_prec, x,
       u, rnd_mode),
-     ("z[%Pd]=%.*Rg inexact=%d", mpfr_get_prec (z), mpfr_log_prec, z,
-      inex));
+     ("z[%Pd]=%.*Rg", mpfr_get_prec (z), mpfr_log_prec, z));
 
   /* Special cases */
   if (MPFR_ARE_SINGULAR (x, y))

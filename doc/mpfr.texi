@@ -1,11 +1,12 @@
 \input texinfo    @c -*-texinfo-*-
 @c %**start of header
 @setfilename mpfr.info
+@documentlanguage en_US
 @documentencoding UTF-8
 @c Note that the 5 occurrences of the version string in this file
 @c should be updated by the tools/update-version script.
 @set VERSION 4.3.0-dev
-@set UPDATED-MONTH July 2025
+@set UPDATED-MONTH February 2026
 @settitle GNU MPFR @value{VERSION}
 @synindex tp fn
 @iftex
@@ -25,7 +26,7 @@
 This manual documents how to install and use the Multiple Precision
 Floating-Point Reliable Library, version @value{VERSION}.
 
-Copyright 1991, 1993-2025 Free Software Foundation, Inc.
+Copyright 1991, 1993-2026 Free Software Foundation, Inc.
 
 Permission is granted to copy, distribute and/or modify this document under
 the terms of the GNU Free Documentation License, Version 1.3 or any later
@@ -271,7 +272,7 @@ log
 @end tex
 @ifnottex
 @macro pom
-±
+@U{00B1}
 @end macro
 @end ifnottex
 
@@ -723,13 +724,22 @@ gcc myprogram.c -lmpfr -lgmp
 @cindex Libtool
 MPFR is built using Libtool and an application can use that to link if
 desired, @MPFRpxreftop{libtool, GNU Libtool}
-@c Note: the .info extension has been added to avoid the following bug:
+@c Note: the .info extension had been added on 2009-01-19 to avoid a
+@c failure to open the expected libtool.info file:
 @c   https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=484740
-@c which occurs when reading the info file from the build directory:
+@c which occurred when reading the info file from the build directory:
 @c   info ./mpfr    or    info -f ./mpfr.info
-@c Due to a poor design, the "info" utility will not find the correct
-@c libtool info file if the .info extension is not provided, because of
-@c the "libtool" script in MPFR's directory!
+@c because of the "libtool" script that was present in the same directory
+@c (see commit 8cb5e35ef43d0a565511a1e6c0b261dcdc737ae1).
+@c This is no longer an issue thanks to the source reorganization done on
+@c 2010-08-17 (see commit a6c9580d75b967e0d121d606edf03515ada45a7a).
+@c This .info extension was removed on 2016-02-24 to avoid a warning with
+@c "make info" (see commit 6e28887462986b783c896ae3ef26dea922d91eba).
+@c Anyway, the above bug seems to be fixed: If I add a libtool script in
+@c the doc directory to mimic the old file hierarchy, "strace info ./mpfr"
+@c shows that this script is read, but the "info" utility resumes the
+@c search for the info file instead of failing, probably because the
+@c libtool script is not in the info format.
 
 If MPFR has been installed to a non-standard location, then it may be
 necessary to set up environment variables such as @samp{C_INCLUDE_PATH}
@@ -1334,6 +1344,7 @@ purpose.
 Initialize @var{x}, set its precision to be @strong{exactly}
 @var{prec} bits and its value to NaN@. (Warning: the corresponding
 MPF function initializes to zero instead.)
+The sign bit of this NaN value is unspecified.
 
 Normally, a variable should be initialized once only or at
 least be cleared, using @code{mpfr_clear}, between initializations.
@@ -1490,6 +1501,7 @@ a call to @code{mpfr_clear(@var{x})} followed by a call to
 @code{mpfr_init2(@var{x}, @var{prec})}, but more efficient as no allocation
 is done in case the current allocated space for the significand of @var{x}
 is enough.
+Similar to @code{mpfr_init2}, the sign bit of this NaN value is unspecified.
 The precision @var{prec} can be any integer between @code{MPFR_PREC_MIN} and
 @code{MPFR_PREC_MAX}.
 In case you want to keep the previous value stored in @var{x},
@@ -1540,11 +1552,11 @@ compiler or system provides the @samp{_Float16} data type
 Similarly, @code{mpfr_set_bfloat16} is built only if the
 compiler or system provides the @samp{__bf16} data type.
 To use the @code{mpfr_set_float128} function, see @ref{Nomenclature and Types}.
-If the system does not support the IEEE@tie{}754 standard,
-@code{mpfr_set_flt}, @code{mpfr_set_d}, @code{mpfr_set_ld},
+The functions @code{mpfr_set_flt}, @code{mpfr_set_d}, @code{mpfr_set_ld},
 @code{mpfr_set_decimal64} and @code{mpfr_set_decimal128}
-might not preserve the signed zeros
-(and in any case they don't preserve the sign bit of NaN)@.
+do not propagate the sign bit of NaN;
+if the system does not support the IEEE@tie{}754 standard,
+these functions might not preserve signed zeros either.
 The @code{mpfr_set_decimal64} and @code{mpfr_set_decimal128}
 functions are built only with the configure
 option @samp{--enable-decimal-float}, and when the compiler or
@@ -1554,8 +1566,8 @@ to use those functions, one should define the macro
 @code{mpfr_set_q} might fail if the numerator (or the
 denominator) cannot be represented as a @code{mpfr_t}.
 
-For @code{mpfr_set}, the sign of a NaN is propagated in order to mimic the
-IEEE@tie{}754 @code{copy} operation. But contrary to IEEE@tie{}754, the
+For @code{mpfr_set}, the sign bit of a NaN is propagated in order to mimic
+the IEEE@tie{}754 @code{copy} operation. But contrary to IEEE@tie{}754, the
 NaN flag is set as usual.
 
 Note: If you want to store a floating-point constant to a @code{mpfr_t},
@@ -2551,8 +2563,8 @@ For example, if @var{u} equals 360, @code{mpfr_atan2u} returns the
 arc-tangent in degrees, with values from @minus{}180 to 180.
 
 @code{atan2(@var{y}, 0)} does not raise any floating-point exception.
-Special values are handled as described in the ISO C99 and IEEE@tie{}754
-standards for the @code{atan2} function:
+Special values are handled as described in the ISO C99 (Annex@tie{}F)
+and IEEE@tie{}754 standards for the @code{atan2} function:
 @itemize @bullet
 @item @code{atan2(+0, -0)} returns @m{+\pi,+Pi}.
 @item @code{atan2(-0, -0)} returns @m{-\pi,@minus{}Pi}.
@@ -2576,6 +2588,20 @@ standards for the @code{atan2} function:
 @item @code{atan2(@var{y}, +Inf)} returns @minus{}0 for finite @tm{@var{y} < 0}.
 @end itemize
 @end deftypefun
+@c Note: The choice done by ISO C99 (which IEEE 754-2008 has copied) for
+@c the indeterminate forms atan2(±0,±0) and atan2(±inf,±inf) is explained
+@c in the C rationale
+@c   * page 180 (Section F.9 Mathematics <math.h>): "Generally, C99 eschews
+@c     a NaN result where a numerical value is useful. [...] The result of
+@c     atan2(+0,+0), which is equivalent to carg(+0 + i 0), is defined to
+@c     be +0. A significant benefit is supporting a clog that is equivalent
+@c     to log on the nonnegative real axis."
+@c   * page 181 (Section F.9.1.4 The atan2 functions): "The more contentious
+@c     cases are y and x both infinite or both zero. These deliver numeric
+@c     results instead of NaNs in order to preserve more identities and for
+@c     better utility. [...] The specification of atan2(∞,∞) as π/4 indicates
+@c     the reasonable quadrant, preserving some information in preference to
+@c     none."
 
 @deftypefun int mpfr_cosh (mpfr_t @var{rop}, const mpfr_t @var{op}, mpfr_rnd_t @var{rnd})
 @deftypefunx int mpfr_sinh (mpfr_t @var{rop}, const mpfr_t @var{op}, mpfr_rnd_t @var{rnd})
@@ -3322,9 +3348,9 @@ corresponding precision of @var{iop} and @var{fop} (equivalent to
 
 @deftypefun int mpfr_fmod (mpfr_t @var{r}, const mpfr_t @var{x}, const mpfr_t @var{y}, mpfr_rnd_t @var{rnd})
 @deftypefunx int mpfr_fmod_ui (mpfr_t @var{r}, const mpfr_t @var{x}, unsigned long int @var{y}, mpfr_rnd_t @var{rnd})
-@deftypefunx int mpfr_fmodquo (mpfr_t @var{r}, long int* @var{q}, const mpfr_t @var{x}, const mpfr_t @var{y}, mpfr_rnd_t @var{rnd})
+@deftypefunx int mpfr_fmodquo (mpfr_t @var{r}, long int *@var{q}, const mpfr_t @var{x}, const mpfr_t @var{y}, mpfr_rnd_t @var{rnd})
 @deftypefunx int mpfr_remainder (mpfr_t @var{r}, const mpfr_t @var{x}, const mpfr_t @var{y}, mpfr_rnd_t @var{rnd})
-@deftypefunx int mpfr_remquo (mpfr_t @var{r}, long int* @var{q}, const mpfr_t @var{x}, const mpfr_t @var{y}, mpfr_rnd_t @var{rnd})
+@deftypefunx int mpfr_remquo (mpfr_t @var{r}, long int *@var{q}, const mpfr_t @var{x}, const mpfr_t @var{y}, mpfr_rnd_t @var{rnd})
 Set @var{r} to the value of @tm{@var{x} @minus{} @var{n}@var{y}}, rounded
 according to the direction @var{rnd}, where @var{n} is the integer quotient
 of @var{x} divided by @var{y}, defined as follows: @var{n} is rounded
@@ -5072,7 +5098,6 @@ functions, and helped to the Microsoft Windows porting.
 Damien Stehl@'e contributed the @code{mpfr_get_ld_2exp} function.
 Charles Karney contributed the @code{mpfr_nrandom} and @code{mpfr_erandom}
 functions.
-Matteo Nicoli contributed the memory export/import functions.
 
 We would like to thank Jean-Michel Muller and Joris van der Hoeven for very
 fruitful discussions at the beginning of that project, Torbj@"orn Granlund
@@ -5098,7 +5123,7 @@ The MPFR-MPC workshop in June 2012 was partly supported by the ERC
 grant ANTICS of Andreas Enge.
 The MPFR-MPC workshop in January 2013 was partly supported by the ERC
 grant ANTICS, the GDR IM and the Caramel project-team, during which
-Mickaël Gastineau contributed the MPFRbench program,
+Micka@"el Gastineau contributed the MPFRbench program,
 Fredrik Johansson a faster version of @code{mpfr_const_euler},
 and Jianyang Pan a formally proven version of the @code{mpfr_add1sp1}
 internal routine.
@@ -5158,9 +5183,16 @@ Birkh@"auser, Boston, 3rd edition, 2016.
 @item
 Jean-Michel Muller, Nicolas Brisebarre, Florent de Dinechin,
 Claude-Pierre Jeannerod, Vincent Lef@`evre, Guillaume Melquiond,
-Nathalie Revol, Damien Stehl@'e and Serge Torr@`es,
+Nathalie Revol, Damien Stehl@'e and Serge Torres,
 "Handbook of Floating-Point Arithmetic",
-Birkh@"auser, Boston, 2009.
+Birkh@"auser, Boston, 1st edition, 2009.
+
+@item
+Jean-Michel Muller, Nicolas Brunie, Florent de Dinechin,
+Claude-Pierre Jeannerod, Mioara Joldes, Vincent Lef@`evre,
+Guillaume Melquiond, Nathalie Revol and Serge Torres,
+"Handbook of Floating-Point Arithmetic",
+Birkh@"auser, Cham, 2nd edition, 2018.
 
 @end itemize
 

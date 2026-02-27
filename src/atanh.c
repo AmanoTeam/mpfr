@@ -1,6 +1,6 @@
 /* mpfr_atanh -- Inverse Hyperbolic Tangente
 
-Copyright 2001-2025 Free Software Foundation, Inc.
+Copyright 2001-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -110,8 +110,7 @@ mpfr_atanh (mpfr_ptr y, mpfr_srcptr xt, mpfr_rnd_t rnd_mode)
 
   MPFR_LOG_FUNC
     (("x[%Pd]=%.*Rg rnd=%d", mpfr_get_prec (xt), mpfr_log_prec, xt, rnd_mode),
-    ("y[%Pd]=%.*Rg inexact=%d",
-     mpfr_get_prec (y), mpfr_log_prec, y, inexact));
+    ("y[%Pd]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y));
 
   /* Special cases */
   if (MPFR_UNLIKELY (MPFR_IS_SINGULAR (xt)))

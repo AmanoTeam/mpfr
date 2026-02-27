@@ -1,6 +1,6 @@
 /* mpfr_log10 -- logarithm in base 10.
 
-Copyright 2001-2025 Free Software Foundation, Inc.
+Copyright 2001-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -35,8 +35,7 @@ mpfr_log10 (mpfr_ptr r, mpfr_srcptr a, mpfr_rnd_t rnd_mode)
 
   MPFR_LOG_FUNC
     (("a[%Pd]=%.*Rg rnd=%d", mpfr_get_prec (a), mpfr_log_prec, a, rnd_mode),
-     ("r[%Pd]=%.*Rg inexact=%d",
-      mpfr_get_prec (r), mpfr_log_prec, r, inexact));
+     ("r[%Pd]=%.*Rg", mpfr_get_prec (r), mpfr_log_prec, r));
 
   /* If a is NaN, the result is NaN */
   if (MPFR_UNLIKELY (MPFR_IS_SINGULAR (a)))

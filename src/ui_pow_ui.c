@@ -1,6 +1,6 @@
 /*  mpfr_ui_pow_ui -- compute the power between two machine integers
 
-Copyright 1999-2025 Free Software Foundation, Inc.
+Copyright 1999-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -36,8 +36,7 @@ mpfr_ui_pow_ui (mpfr_ptr x, unsigned long int k, unsigned long int n,
 
   MPFR_LOG_FUNC
     (("k=%lu n=%lu rnd=%d", k, n, rnd),
-     ("y[%Pd]=%.*Rg inexact=%d",
-      mpfr_get_prec (x), mpfr_log_prec, x, inexact));
+     ("y[%Pd]=%.*Rg", mpfr_get_prec (x), mpfr_log_prec, x));
 
   if (MPFR_UNLIKELY (n <= 1))
     {

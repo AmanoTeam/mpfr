@@ -1,6 +1,6 @@
 /* mpfr_mul_2si -- multiply a floating-point number by a power of two
 
-Copyright 1999, 2001-2025 Free Software Foundation, Inc.
+Copyright 1999, 2001-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -29,8 +29,7 @@ mpfr_mul_2si (mpfr_ptr y, mpfr_srcptr x, long int n, mpfr_rnd_t rnd_mode)
   MPFR_LOG_FUNC
     (("x[%Pd]=%.*Rg n=%ld rnd=%d",
       mpfr_get_prec (x), mpfr_log_prec, x, n, rnd_mode),
-     ("y[%Pd]=%.*Rg inexact=%d",
-      mpfr_get_prec (y), mpfr_log_prec, y, inexact));
+     ("y[%Pd]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y));
 
   if (MPFR_UNLIKELY (MPFR_IS_SINGULAR (x)))
     return mpfr_set (y, x, rnd_mode);

@@ -1,6 +1,6 @@
 /* test file for digamma function
 
-Copyright 2009-2025 Free Software Foundation, Inc.
+Copyright 2009-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -73,6 +73,7 @@ bug20210206 (void)
   for (precx = MPFR_PREC_MIN; precx < 150; precx++)
     {
       mpfr_init2 (x, precx);
+      MPFR_SET_POS (x);
       mpfr_setmax (x, __gmpfr_emax);
       for (i = 0; i < NPREC; i++)
         mpfr_digamma (y[i], x, MPFR_RNDA);

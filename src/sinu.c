@@ -1,7 +1,7 @@
 /* mpfr_sinu  -- sinu(x) = sin(2*pi*x/u)
    mpfr_sinpi -- sinpi(x) = sin(pi*x)
 
-Copyright 2020-2025 Free Software Foundation, Inc.
+Copyright 2020-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -41,11 +41,10 @@ mpfr_sinu (mpfr_ptr y, mpfr_srcptr x, unsigned long u, mpfr_rnd_t rnd_mode)
   MPFR_ZIV_DECL (loop);
   MPFR_SAVE_EXPO_DECL (expo);
 
-  MPFR_LOG_FUNC (
-    ("x[%Pd]=%.*Rg u=%lu rnd=%d", mpfr_get_prec (x), mpfr_log_prec, x, u,
-     rnd_mode),
-    ("y[%Pd]=%.*Rg inexact=%d", mpfr_get_prec (y), mpfr_log_prec, y,
-     inexact));
+  MPFR_LOG_FUNC
+    (("x[%Pd]=%.*Rg u=%lu rnd=%d", mpfr_get_prec (x), mpfr_log_prec, x, u,
+      rnd_mode),
+     ("y[%Pd]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y));
 
   if (u == 0 || MPFR_UNLIKELY (MPFR_IS_SINGULAR (x)))
     {

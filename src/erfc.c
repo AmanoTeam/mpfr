@@ -1,6 +1,6 @@
 /* mpfr_erfc -- The Complementary Error Function of a floating-point number
 
-Copyright 2005-2025 Free Software Foundation, Inc.
+Copyright 2005-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -132,7 +132,7 @@ mpfr_erfc (mpfr_ptr y, mpfr_srcptr x, mpfr_rnd_t rnd)
 
   MPFR_LOG_FUNC
     (("x[%Pd]=%.*Rg rnd=%d", mpfr_get_prec (x), mpfr_log_prec, x, rnd),
-     ("y[%Pd]=%.*Rg inexact=%d", mpfr_get_prec (y), mpfr_log_prec, y, inex));
+     ("y[%Pd]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y));
 
   if (MPFR_UNLIKELY (MPFR_IS_SINGULAR (x)))
     {

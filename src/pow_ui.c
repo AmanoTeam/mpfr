@@ -1,6 +1,6 @@
 /* mpfr_pow_ui -- compute the power of a floating-point by a machine integer
 
-Copyright 1999-2025 Free Software Foundation, Inc.
+Copyright 1999-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -45,8 +45,7 @@ POW_U (mpfr_ptr y, mpfr_srcptr x, UTYPE n, mpfr_rnd_t rnd)
   MPFR_LOG_FUNC
     (("x[%Pd]=%.*Rg n=%" FSPEC "u rnd=%d",
       mpfr_get_prec (x), mpfr_log_prec, x, n, rnd),
-     ("y[%Pd]=%.*Rg inexact=%d",
-      mpfr_get_prec (y), mpfr_log_prec, y, inexact));
+     ("y[%Pd]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y));
 
   /* x^0 = 1 for any x, even a NaN */
   if (MPFR_UNLIKELY (n == 0))

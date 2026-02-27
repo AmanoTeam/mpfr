@@ -1,6 +1,6 @@
 /* mpfr_log_ui -- compute natural logarithm of an unsigned long
 
-Copyright 2014-2025 Free Software Foundation, Inc.
+Copyright 2014-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -100,8 +100,7 @@ mpfr_log_ui (mpfr_ptr x, unsigned long n, mpfr_rnd_t rnd_mode)
 
   MPFR_LOG_FUNC
     (("n=%lu rnd=%d", n, rnd_mode),
-     ("y[%Pd]=%.*Rg inexact=%d",
-      mpfr_get_prec(x), mpfr_log_prec, x, inexact));
+     ("y[%Pd]=%.*Rg", mpfr_get_prec(x), mpfr_log_prec, x));
 
   if (n <= 2)
     {

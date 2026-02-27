@@ -1,6 +1,6 @@
 /* mpfr_ai -- Airy function Ai
 
-Copyright 2010-2025 Free Software Foundation, Inc.
+Copyright 2010-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -68,9 +68,9 @@ mpfr_ai1 (mpfr_ptr y, mpfr_srcptr x, mpfr_rnd_t rnd)
   int test1, test2;
 
   /* Logging */
-  MPFR_LOG_FUNC (
-    ("x[%Pd]=%.*Rg rnd=%d", mpfr_get_prec (x), mpfr_log_prec, x, rnd),
-    ("y[%Pd]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y) );
+  MPFR_LOG_FUNC
+    (("x[%Pd]=%.*Rg rnd=%d", mpfr_get_prec (x), mpfr_log_prec, x, rnd),
+     ("y[%Pd]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y));
 
   /* Save current exponents range */
   MPFR_SAVE_EXPO_MARK (expo);
@@ -340,9 +340,9 @@ mpfr_ai2 (mpfr_ptr y, mpfr_srcptr x, mpfr_rnd_t rnd)
   int test0, test1;
 
   /* Logging */
-  MPFR_LOG_FUNC (
-    ("x[%Pd]=%.*Rg rnd=%d", mpfr_get_prec (x),  mpfr_log_prec, x, rnd),
-    ("y[%Pd]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y));
+  MPFR_LOG_FUNC
+    (("x[%Pd]=%.*Rg rnd=%d", mpfr_get_prec (x),  mpfr_log_prec, x, rnd),
+     ("y[%Pd]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y));
 
   /* Save current exponents range */
   MPFR_SAVE_EXPO_MARK (expo);

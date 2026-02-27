@@ -1,6 +1,6 @@
 /* mpfr_div -- divide two floating-point numbers
 
-Copyright 1999, 2001-2025 Free Software Foundation, Inc.
+Copyright 1999, 2001-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -768,11 +768,11 @@ mpfr_div (mpfr_ptr q, mpfr_srcptr u, mpfr_srcptr v, mpfr_rnd_t rnd_mode)
   int like_rndz;
   MPFR_TMP_DECL(marker);
 
-  MPFR_LOG_FUNC (
-    ("u[%Pd]=%.*Rg v[%Pd]=%.*Rg rnd=%d",
-     mpfr_get_prec(u), mpfr_log_prec, u,
-     mpfr_get_prec (v),mpfr_log_prec, v, rnd_mode),
-    ("q[%Pd]=%.*Rg inexact=%d", mpfr_get_prec(q), mpfr_log_prec, q, inex));
+  MPFR_LOG_FUNC
+    (("u[%Pd]=%.*Rg v[%Pd]=%.*Rg rnd=%d",
+      mpfr_get_prec(u), mpfr_log_prec, u,
+      mpfr_get_prec (v),mpfr_log_prec, v, rnd_mode),
+     ("q[%Pd]=%.*Rg", mpfr_get_prec(q), mpfr_log_prec, q));
 
   /**************************************************************************
    *                                                                        *

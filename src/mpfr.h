@@ -1,6 +1,6 @@
 /* mpfr.h -- Include file for mpfr.
 
-Copyright 1999-2025 Free Software Foundation, Inc.
+Copyright 1999-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -235,7 +235,8 @@ typedef uintmax_t mpfr_uexp_t;
    The mpfr_sgn macro uses the fact that __MPFR_EXP_NAN and __MPFR_EXP_ZERO
    are the smallest values. For a n-bit type, EXP_MAX is 2^(n-1)-1,
    EXP_ZERO is 1-2^(n-1), EXP_NAN is 2-2^(n-1), EXP_INF is 3-2^(n-1).
-   This may change in the future. MPFR code should not be based on these
+   This might change in the future, but would break the ABI.
+   Source code using the MPFR library should not be based on these
    representations (but if this is absolutely needed, protect the code
    with a static assertion). */
 #define __MPFR_EXP_MAX ((mpfr_exp_t) (((mpfr_uexp_t) -1) >> 1))

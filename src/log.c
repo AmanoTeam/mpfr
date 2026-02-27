@@ -1,6 +1,6 @@
 /* mpfr_log -- natural logarithm of a floating-point number
 
-Copyright 1999-2025 Free Software Foundation, Inc.
+Copyright 1999-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -50,8 +50,7 @@ mpfr_log (mpfr_ptr r, mpfr_srcptr a, mpfr_rnd_t rnd_mode)
 
   MPFR_LOG_FUNC
     (("a[%Pd]=%.*Rg rnd=%d", mpfr_get_prec (a), mpfr_log_prec, a, rnd_mode),
-     ("r[%Pd]=%.*Rg inexact=%d", mpfr_get_prec (r), mpfr_log_prec, r,
-      inexact));
+     ("r[%Pd]=%.*Rg", mpfr_get_prec (r), mpfr_log_prec, r));
 
   /* Special cases */
   if (MPFR_UNLIKELY (MPFR_IS_SINGULAR (a)))

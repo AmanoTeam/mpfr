@@ -1,6 +1,6 @@
 /* Test file for mpfr_gamma_inc
 
-Copyright 2016-2025 Free Software Foundation, Inc.
+Copyright 2016-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -26,7 +26,7 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define TEST_RANDOM_POS2 0 /* the 2nd argument is never negative */
 #define TGENERIC_NOWARNING 1
 #define TEST_RANDOM_EMAX 8
-#define TEST_RANDOM_EMIN -32
+#define TEST_RANDOM_EMIN (-32)
 #define REDUCE_EMAX TEST_RANDOM_EMAX
 #define REDUCE_EMIN TEST_RANDOM_EMIN
 #include "tgeneric.c"

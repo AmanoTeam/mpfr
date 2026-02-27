@@ -1,6 +1,6 @@
 /* Test file for mpfr_exp.
 
-Copyright 1999, 2001-2025 Free Software Foundation, Inc.
+Copyright 1999, 2001-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -224,7 +224,7 @@ check_large (void)
 }
 
 #define TEST_FUNCTION test_exp
-#define TEST_RANDOM_EMIN -36
+#define TEST_RANDOM_EMIN (-36)
 #define TEST_RANDOM_EMAX 36
 #include "tgeneric.c"
 

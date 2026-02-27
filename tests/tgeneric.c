@@ -1,7 +1,7 @@
 /* Generic test file for functions with one or two arguments (the second being
    either mpfr_t or double or unsigned long).
 
-Copyright 2001-2025 Free Software Foundation, Inc.
+Copyright 2001-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -66,7 +66,7 @@ If not, see <https://www.gnu.org/licenses/>. */
 #endif
 
 #ifndef TEST_RANDOM_EMIN
-#define TEST_RANDOM_EMIN -256
+#define TEST_RANDOM_EMIN (-256)
 #endif
 
 #ifndef TEST_RANDOM_EMAX

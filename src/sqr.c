@@ -1,6 +1,6 @@
 /* mpfr_sqr -- Floating-point square
 
-Copyright 2004-2025 Free Software Foundation, Inc.
+Copyright 2004-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -516,8 +516,7 @@ mpfr_sqr (mpfr_ptr a, mpfr_srcptr b, mpfr_rnd_t rnd_mode)
 
   MPFR_LOG_FUNC
     (("x[%Pd]=%.*Rg rnd=%d", mpfr_get_prec (b), mpfr_log_prec, b, rnd_mode),
-     ("y[%Pd]=%.*Rg inexact=%d",
-      mpfr_get_prec (a), mpfr_log_prec, a, inexact));
+     ("y[%Pd]=%.*Rg", mpfr_get_prec (a), mpfr_log_prec, a));
 
   /* deal with special cases */
   if (MPFR_UNLIKELY(MPFR_IS_SINGULAR(b)))

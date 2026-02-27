@@ -1,6 +1,6 @@
 /* mpfr_add1 -- internal function to perform a "real" addition
 
-Copyright 1999-2025 Free Software Foundation, Inc.
+Copyright 1999-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -572,7 +572,7 @@ mpfr_add1 (mpfr_ptr a, mpfr_srcptr b, mpfr_srcptr c, mpfr_rnd_t rnd_mode)
     }
 
  set_exponent:
-  if (MPFR_UNLIKELY (exp < __gmpfr_emin))  /* possible if b and c are UBF's */
+  if (MPFR_UNLIKELY (exp < __gmpfr_emin))  /* possible if b and c are UBFs */
     {
       if (rnd_mode == MPFR_RNDN &&
           (exp < __gmpfr_emin - 1 ||

@@ -1,6 +1,6 @@
 /* mpfr_const_log2 -- compute natural logarithm of 2
 
-Copyright 1999, 2001-2025 Free Software Foundation, Inc.
+Copyright 1999, 2001-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -118,9 +118,9 @@ mpfr_const_log2_internal (mpfr_ptr x, mpfr_rnd_t rnd_mode)
   MPFR_TMP_DECL(marker);
   MPFR_ZIV_DECL(loop);
 
-  MPFR_LOG_FUNC (
-    ("rnd_mode=%d", rnd_mode),
-    ("x[%Pd]=%.*Rg inex=%d", mpfr_get_prec(x), mpfr_log_prec, x, inexact));
+  MPFR_LOG_FUNC
+    (("rnd_mode=%d", rnd_mode),
+     ("x[%Pd]=%.*Rg", mpfr_get_prec(x), mpfr_log_prec, x));
 
   w = n + MPFR_INT_CEIL_LOG2 (n) + 3;
 

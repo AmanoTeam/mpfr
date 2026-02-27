@@ -1,7 +1,7 @@
 /* mpfr_acosu  -- acosu(x)  = acos(x)*u/(2*pi)
    mpfr_acospi -- acospi(x) = acos(x)/pi
 
-Copyright 2021-2025 Free Software Foundation, Inc.
+Copyright 2021-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -37,8 +37,7 @@ mpfr_acosu (mpfr_ptr y, mpfr_srcptr x, unsigned long u, mpfr_rnd_t rnd_mode)
   MPFR_LOG_FUNC
     (("x[%Pd]=%.*Rg u=%lu rnd=%d", mpfr_get_prec(x), mpfr_log_prec, x, u,
       rnd_mode),
-     ("y[%Pd]=%.*Rg inexact=%d", mpfr_get_prec (y), mpfr_log_prec, y,
-      inexact));
+     ("y[%Pd]=%.*Rg", mpfr_get_prec (y), mpfr_log_prec, y));
 
   /* Singular cases */
   if (MPFR_UNLIKELY (MPFR_IS_SINGULAR (x)))

@@ -1,7 +1,7 @@
 /* mpfr_div_d -- divide a multiple precision floating-point number
                  by a machine double precision float
 
-Copyright 2007-2025 Free Software Foundation, Inc.
+Copyright 2007-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -30,10 +30,10 @@ mpfr_div_d (mpfr_ptr a, mpfr_srcptr b, double c, mpfr_rnd_t rnd_mode)
   mp_limb_t tmp_man[MPFR_LIMBS_PER_DOUBLE];
   MPFR_SAVE_EXPO_DECL (expo);
 
-  MPFR_LOG_FUNC (
-    ("b[%Pd]=%.*Rg c%.20g rnd=%d", mpfr_get_prec (b), mpfr_log_prec, b, c,
-     rnd_mode),
-    ("a[%Pd]=%.*Rg", mpfr_get_prec (a), mpfr_log_prec, a));
+  MPFR_LOG_FUNC
+    (("b[%Pd]=%.*Rg c%.20g rnd=%d", mpfr_get_prec (b), mpfr_log_prec, b, c,
+      rnd_mode),
+     ("a[%Pd]=%.*Rg", mpfr_get_prec (a), mpfr_log_prec, a));
 
   MPFR_SAVE_EXPO_MARK (expo);
 
