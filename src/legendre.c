@@ -105,7 +105,13 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
     }
 
   res_prec = MPFR_PREC (res);
-  realprec = res_prec + 10;
+  /* Analyzing all the test cases where the result is not exact (inex != 0),
+     we find that the average number of bits lost per iteration, i.e.,
+     lost_bits/(n-1), is about 3.82. We thus add 4*n guard bits.
+     For revision 94a5659, we have a total of 615575 such tests.
+     With 4n+12 below, we get a probability of failure of 4.7%.
+     With 4n+20, we get a probability of failure of 0.7%. */
+  realprec = res_prec + 4 * n + 20;
   realprec += MPFR_INT_CEIL_LOG2 (realprec);
 
   MPFR_GROUP_INIT_5 (group, realprec,
