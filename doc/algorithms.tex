@@ -4612,6 +4612,7 @@ independently by Mark Dickinson:
 The smallest bound is $e=186564318007$ for $b=7$ and $b=49$.
 
 \subsection{Legendre polynomials}
+\label{subsec:legendre-polynomials}
 
 Legendre polynomials $P_n(x)$, with $n \geq 0$ and $\vert x \vert \leq 1$, form
 a sequence of orthogonal polynomials that have many applications in physics and
@@ -4829,9 +4830,7 @@ recurrence is not evaluated. These cases are:
 \item[(c)] If $n \ge 1$ is even, then $H_n(0) = H_{2k}(0) = (-1)^k~\dfrac{(2k)!}{k!}$.
 \end{itemize}
 The fraction in (c) is computed with the Log-Gamma method to mitigate the
-overflow risk for large $n$. Unfortunately, also Algorithm
-\ref{algo:hermite-zero-even-special} is subject to overflow when $n$ is
-huge, but as of now, MPFR restricts it to $8192$, i.e., $2^{13}$.
+overflow risk for large $n$.
 Let's start from the implementation of the case $H_{2k}(0)$ and its
 error analysis.
 \vspace{.3cm}
@@ -4842,8 +4841,7 @@ error analysis.
   \KwData{mpfr\_ptr res, unsigned n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
   \KwResult{ternary value}
   \BlankLine
-  \tcc{The higher degree allowed is $2^{13}$}
-  \lIf{$~~(IS\_NAN (x)~||~IS\_INF (x)~||~n>8192)~~$}{
+  \lIf{$~~(IS\_NAN (x)~||~IS\_INF (x))~~$}{
     res $\gets$ NaN;
     \Return 0\;
   }
@@ -4897,21 +4895,9 @@ implementation of the special case $H_{2k}(0)$ with final rounding.
 \end{algorithm}
 \vspace{.3cm}
 
-Here's the error analysis of the special case $H_{2k}(0)$.
-\begin{center}
-\begin{tabular}{p{.37\textwidth}p{.63\textwidth}}
-$\text{gamma1} \gets \N(\log(\Gamma(\text{first})))$
-& $k_1 \le \tfrac12$. \\[4pt]
-$\text{gamma2} \gets \N(\log(\Gamma(\text{second})))$
-& $k_2 \le \tfrac12$. \\[4pt]
-$\text{sub} \gets \N(\text{gamma1} - \text{gamma2})$
-& $k_3 \le c_3 + k_1 + k_2;~c_3=\frac12$. Thus:
-$k_3 \le \frac12 + \frac12 + \frac12 = \frac32$.
-A runtime heuristic it's applied to handle eventual cancellation. \\[4pt]
-$\text{e} \gets \N(\exp(\text{sub}))$
-& $k_4 \le e^{k_3 2^{e_{s}} - p}~2^{e_{s}+1}~k_3$. \\[4pt]
-\end{tabular}
-\end{center}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Error analysis for the special case
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \paragraph{\textbf{Recursion implementation and error analysis.}}
 
@@ -4927,109 +4913,91 @@ Hermite polynomial with final rounding.
   \KwResult{ternary value}
   \BlankLine
   \tcc{All the variables are initialized to the working precision (realprec)}
-  $p_2~\gets{}~1$;
-  $~~p_1~\gets~\N(2x)$;
+  $b~\gets{}~1$;
+  $~~a~\gets~\N{}(2x)$;
   $~~i~\gets~1$\;
   \tcc{Loop from 1 to $n-1$, where $n$ is the degree of the polynomial}
   \While{$i<n$}{
-    $\mathrm{first\_term}~\gets~\N{}(2\cdot{}x)$\;
-    $\mathrm{second\_term}~\gets~\N{}(p_2\cdot{}(2 * i))$\;
-    $\mathrm{first\_term}~\gets~\N{}(\mathrm{first\_term}\cdot{}p_1)$\;
-    $p_i~\gets~\N{}(\mathrm{first\_term} - \mathrm{second\_term})$\;
+    $f~\gets~\N{}(2 \cdot{} x)$\;
+    $g~\gets~\N{}(b \cdot{} (2 * i))$\;
+    $h\gets~\N{}(f \cdot{} a)$\;
+    $q~\gets~\N{}(h - g)$\;
     \tcc{Here we omit the cancellation check}
     \BlankLine
-    $p_2~\gets~p_1$\;
-    $p_1~\gets~p_i$\;
-    $i++$\;
+    $b~\gets~a$\;
+    $a~\gets~q$\;
+    $i~\gets~i + 1$\;
   }
   \Return mpfr\_set(res, $p_i$, rnd\_mode)\;
   \BlankLine
 \end{algorithm}
 \vspace{.3cm}
 
-Now, we have to bound the rounding error for the $n$-th iteration of the loop.
-This analysis is quite similar to the one performed for Legendre polynomials,
-so we won't repeat all the steps here. We just report the main differences.
-The only significative difference is the last division, that is missing here.
-So we get $k_{p_1^1} \le \frac92$ instead of $k_{p_1^1} \le \frac{19}{2}$.
-Here's the error analysis of the first iteration of the loop:
-\begin{center}
-\begin{tabular}{p{.37\textwidth}p{.63\textwidth}}
-$p_2^1 \gets p_1^0$
-& $k_{p_2^1} \le k_{p_1^0};\quad k_{p_2^1} \le \frac12$ \\[4pt]
-$p_1^1 \gets p_i$
-& $k_{p_1^1} \le k_{p_i};\quad k_{p_1^1} \le \frac92$ \\[4pt]
-\end{tabular}
-\end{center}
+For the error analysis, we are going to use the same naming convention that
+we used for Legendre polynomials in Section
+\ref{subsec:legendre-polynomials}, so we will associate to each variable,
+say $x_i$ at loop $i$, an integer $e_{x,i}$ such that the total rounding
+error on $x_i$ with respect to the exact value $X_i$ it approximates is
+bounded as follows:
+\[ |x_i - X_i| \le 2^{e_{x,i}}. \]
+This error bound $e_{x,i}$ will be computed at runtime within the code
+(due to the possible cancellation in $q = \N{}(h - g)$, it is not possible
+to compute an error bound \textit{a priori}).
 
-\noindent From this, we can now derive the recurrence:
-\[
-  a_{i+1} \;\le\; 2a_i + 2b_i + \tfrac52, \qquad
-  b_{i+1} = a_i.
-\]
-As we can see, it only differs from the Legendre case in the coefficients.
-Substituting $b_i$ yields the second-order recurrence of the form
-\begin{equation} \label{eq:hermite-recurrence}
-\left\{
-\begin{aligned}
-  &a_0 \le \frac12 \\
-  &a_1 \le \frac92 \\
-  &a_{i+1} \le 2a_i + 2a_{i-1} + \frac52
-\end{aligned}
-\right.
-\end{equation}
-As in the previous analysis, to analyze the error growth, we start considering
-the homogeneous relation $a_{i+1} \le 2a_i + 2a_{i-1}$, and we look for
-solutions of the form $a_i = r^i$.
-So, substituting into the recurrence gives $r^{i+1} = 2r^i + 2r^{i-1}$, and
-dividing by $r^{i-1}$ (with $r \neq 0$) yields the characteristic equation
-$r^2 - 2r - 2 = 0$, and its roots are $r_{1,2} = 1 \pm \sqrt{3}$. The general
-solution of the homogeneous recurrence is therefore
-\[
-  b_i \le A(1+\sqrt3)^i + B(1-\sqrt3)^i,
-\]
-Substituting the bounds for $b_0$ and $b_1$ gives
-\[
-  A \le \frac{4 + \sqrt3}{\sqrt3},
-  \qquad
-  B \le \frac{\sqrt3 - 4}{\sqrt3}.
-\]
+As for Legendre polynomials, we are going to assume all roundings are to
+nearest, with working precision p.
 
-In order to get the full solution, we first remove the constant term by seeking
-a constant particular solution $a_i = C$. Substituting into the recurrence
-yields $C = 2C + 2C + \tfrac52 = 4C + \tfrac52$, which implies $C = -\frac56$.
-Therefore,
-\begin{equation} \label{eq:hermite-error-bound}
-  a_i
-  \le \frac{4+\sqrt3}{\sqrt3}(1+\sqrt3)^i
-     + \frac{\sqrt3-4}{\sqrt3}(1-\sqrt3)^i
-     - \tfrac56.
-\end{equation}
-Since $|1-\sqrt3|<1$, the second exponential term decays exponentially.
-Thus, for large $i$,
-\[
-  a_i \sim \frac{4+\sqrt3}{\sqrt3}(1+\sqrt3)^i,
-\]
+\par\noindent
+\textbf{Analysis of $a_0 = \N{}(2\cdot{}x)$.} Here, we use the
+\texttt{mpfr\_mul\_ui} function, with exact input $x$ and 2 (we assume 2
+fits into a long). There is thus only one error, due to the rounding in
+$\N{}(2\cdot{}x)$. This error is bounded by
+$\frac{1}{2} \ulp(a_0) \le \frac{1}{2} 2^{\Exp(a_0) - p}$:
+\[ e_{a_0} \le \Exp(a_0) - p - 1. \]
 
-\begin{center}
-\begin{tabular}{p{.1\textwidth}p{.20\textwidth}p{.20\textwidth}p{.1\textwidth}p{.15\textwidth}}
-\hline
-$i$ & $b_i$ (exact) & $b_i$ (decimal) & $\lceil\log_2(b_i)\rceil$ & $b_i/b_{i-1}$ \\
-\hline
-0  & $\frac{1}{2}$      & $0.5$      & -- & --                 \\ [.6em]
-1  & $\frac{9}{2}$      & $4.5$      & 3  & $9.0$              \\ [.6em]
-2  & $\frac{25}{2}$     & $12.5$     & 4  & $2.777777777\dots$ \\ [.6em]
-3  & $\frac{73}{2}$     & $36.5$     & 6  & $2.92$             \\ [.6em]
-4  & $\frac{201}{2}$    & $100.5$    & 7  & $2.753424657\dots$ \\ [.6em]
-5  & $\frac{553}{2}$    & $276.5$    & 9  & $2.751243781\dots$ \\ [.6em]
-6  & $\frac{1513}{2}$   & $756.5$    & 10 & $2.735985533\dots$ \\ [.6em]
-7  & $\frac{4137}{2}$   & $2068.5$   & 12 & $2.734302709\dots$ \\ [.6em]
-8  & $\frac{11305}{2}$  & $5652.5$   & 13 & $2.732656514\dots$ \\ [.6em]
-9  & $\frac{30889}{2}$  & $15444.5$  & 14 & $2.732330827\dots$ \\ [.6em]
-10 & $\frac{84393}{2}$  & $42196.5$	 & 16 & $2.732137654\dots$ \\ [.6em]
-\hline
-\end{tabular}
-\end{center}
+\par\noindent
+\textbf{Analysis of $f_i = \N{}(2\cdot{}x)$.} As for $a_0$, we are using the
+\texttt{mpfr\_mul\_ui} function, so there is only one error, due to the
+final rounding. This error is bounded by
+$\frac{1}{2} \ulp(f_i) \le \frac{1}{2} 2^{\Exp(f_i) - p}$:
+\[ e_{f,i} \le \Exp(f_i) - p - 1. \]
+
+\par\noindent
+\textbf{Analysis of $g_i = \N{}(b_i \cdot{}(2i))$.}
+Here we have two sources of error: the rounding error on $g_i$, and
+the induced error on $b_i$. The first one is bounded by
+$\frac{1}{2} \ulp(g_i)$, the second one by $2^{e_{b,i}} (2i)$.
+Since $2^x+2^y \le 2^{\max(x,y)+1}$:
+\[ e_{g,i} \le \max(\Exp(g_i)-p, e_{b,i} + \lceil \log_2(2i) \rceil + 1). \]
+
+\par\noindent
+\textbf{Analysis of $h_i = \N{}(f_i\cdot{}a_i)$.}
+Here we have three sources of error: the rounding error on $h_i$,
+the induced error on $f_i$, which approximates $2x$,
+and the induced error on $a_i$, which approximates $P_{i-1}(x)$:
+\begin{eqnarray*}
+  |h_i - 2x P_{i-1}(x)| & \le &
+  |h_i - f_i a_i| + |f_i a_i - 2x a_i| + |2x a_i - 2x P_{i-1}(x)| \\
+  & \le & 2^{\Exp(h_i)-p-1} + 2^{e_{f,i} + \Exp(a_i)} + 2^{2 + \Exp(x) + e_{a,i}}.
+\end{eqnarray*}
+Since $2^x + 2^y + 2^z \le 2^{\max(x,y,z)+2}$, it follows:
+\[ e_{h,i} \le 2 + \max(\Exp(h_i)-p-1, e_{f,i} + \Exp(a_i),
+  2 + \Exp(x) + e_{a,i}). \]
+
+\par\noindent
+\textbf{Analysis of $q_i = \N{}(h_i - g_i)$.}
+Here again, we have three sources of error: the rounding error on $q_i$,
+the induced error on $h_i$, which approximates $H_i := 2x P_{i-1}(x)$,
+and the induced error on $g_i$, which approximates $G_i := (2i)P_{i-2}(x)$:
+\[ |q_i - (H_i - G_i)| \le 2^{\Exp(q_i)-p-1} + 2^{e_{h,i}} + 2^{e_{g,i}}. \]
+Using again $2^x + 2^y + 2^z \le 2^{\max(x,y,z)+2}$, it follows:
+\[ e_{q,i} \le 2 + \max(\Exp(q_i)-p-1, e_{h,i}, e_{g,i}). \]
+
+At the end of the loop, we will get an approximation $a_{n+1}$ of $P_n(x)$ such
+that:
+\[ |a_{n+1} - P_n(x)| \le 2^{e_{a,n+1}}. \]
+This error bound will be used in the rounding test, and if it fails, we will try
+again with a larger working precision $p' > p$.
 
 \subsection{Summary}
 

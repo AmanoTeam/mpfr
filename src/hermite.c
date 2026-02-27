@@ -22,6 +22,9 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
 
+/* max (x, y, z) */
+#define MAX3(x,y,z) (MAX (x, MAX (y, z)))
+
 static int
 zero_x_even_degree (mpfr_ptr res, unsigned n, mpfr_rnd_t rnd_mode)
 {
@@ -101,38 +104,18 @@ clear:
   return ternary_value;
 }
 
-static mpfr_prec_t
-error_extra_bits (unsigned n)
-{
-  /* pre-computed error bits for n <= 10, see the table in algorithms.tex */
-  const mpfr_prec_t extra_bits[] = { 0, 0, 3, 4, 6, 7, 9, 10, 12, 13, 14 };
-  double log2_r1, log2_A, asym_bits;
-
-  if (n <= 10)
-    return extra_bits[n];
-
-  /* for larger n we use the asymptotic analysis shown in algorithms.tex,
-     in particular we have:
-       - log2_r1 = log2(1*sqrt(3)) = 1.4499843134764958;
-       - log2_A = log2((4+sqrt(3))/sqrt(3)) = 1.726570147010381;
-       - asym_bits = log2_A + n*(log2_r1) + 1 */
-  log2_r1 = 1.4499843134764958;
-  log2_A = 1.726570147010381;
-  asym_bits = log2_A + n * log2_r1 + 1.0;
-
-  return MPFR_CEIL (asym_bits);
-}
-
 int
 mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 {
-  int ternary_value = 0;
+  int ternary_value = 0, inex;
 
   /* the following variables are used (and consequently initialized) only
      for n >= 2, where x is not equal to -1, 0 or 1 */
-  unsigned i;
+  long i;
   mpfr_t p1, p2, pn, first_term, second_term;
   mpfr_prec_t res_prec, realprec, x_prec, test_prec, err;
+  mpfr_exp_t lost_bits;
+  mpfr_exp_t b_i, log2_i_m1, f_i, g_i, h_i, q_i, a_i, a_n;
   MPFR_GROUP_DECL (group);
   MPFR_ZIV_DECL (loop);
 
@@ -189,10 +172,6 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   realprec = x_prec > res_prec ? x_prec : res_prec + 10;
   realprec += MPFR_INT_CEIL_LOG2 (realprec);
 
-  /* the error is set to error_extra_bits, plus 2 extra bits of safety for
-     the final rounding */
-  err = error_extra_bits (n) + 2;
-
   MPFR_GROUP_INIT_5 (group, realprec,
                      p1, p2, pn, first_term, second_term);
 
@@ -200,34 +179,47 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   for (;;)
     {
       i = 1;
-
+      
       /* p1 = 2x, p2 = 1 */
-      mpfr_mul_ui (p1, x, 2, MPFR_RNDN);
+      inex |= mpfr_mul_ui (p1, x, 2, MPFR_RNDN);
       mpfr_set_ui (p2, 1, MPFR_RNDN);
+
+      b_i = LONG_MIN;                         /* 2^b_i is the absolute error on p2 */
+      a_i = MPFR_GET_EXP (p1) - realprec - 1; /* 2^a_i is the absolute error on p1 */
+
       while (i < n)
         {
           /* first_term = 2x */
-          mpfr_mul_ui (first_term, x, 2, MPFR_RNDN);
-          /* first_term *= p1 */
-          mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
+          inex |= mpfr_mul_ui (first_term, x, 2, MPFR_RNDN);
+          f_i = MPFR_GET_EXP (first_term) - realprec - 1;
+
           /* second_term = p2 * 2i */
-          mpfr_mul_ui (second_term, p2, 2 * i, MPFR_RNDN);
+          inex |= mpfr_mul_ui (second_term, p2, 2 * i, MPFR_RNDN);
+          g_i = MAX (MPFR_GET_EXP (second_term) - realprec,
+                     b_i + MPFR_INT_CEIL_LOG2 (2*i) + 1);
+
+          /* first_term = first_term * p1 */
+          inex |= mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
+          h_i = 2 + MAX3 (MPFR_GET_EXP (first_term) - realprec - 1,
+                          f_i + MPFR_GET_EXP (p1), 2 + MPFR_GET_EXP (x) + a_i);
+
           /* pn = first_term - second_term */
-          mpfr_sub (pn, first_term, second_term, MPFR_RNDN);
+          inex |= mpfr_sub (pn, first_term, second_term, MPFR_RNDN);
+          q_i = 2 + MAX3 (MPFR_GET_EXP (pn) - realprec - 1, h_i, g_i);
 
           /* p2 = p1, p1 = pn */
-          mpfr_set (p2, p1, MPFR_RNDN);
-          mpfr_set (p1, pn, MPFR_RNDN);
+          mpfr_swap (p2, p1);
+          mpfr_swap (p1, pn);
+          b_i = a_i;
+          a_i = a_n;
 
           i++;
         }
 
-      test_prec = realprec - err;
+      lost_bits = a_i - (MPFR_GET_EXP (p1) - realprec);
 
-      if (mpfr_min_prec (pn) < test_prec - 1)
-        break;
-
-      if (MPFR_LIKELY (MPFR_CAN_ROUND (pn, test_prec, res_prec, rnd_mode)))
+      if (inex == 0 || (lost_bits < realprec && 
+              MPFR_CAN_ROUND (p1, realprec - lost_bits, res_prec, rnd_mode)))
         break;
 
       MPFR_ZIV_NEXT (loop, realprec);
