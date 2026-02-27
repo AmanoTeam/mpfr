@@ -23,12 +23,7 @@ If not, see <https://www.gnu.org/licenses/>. */
 #include "mpfr-impl.h"
 
 /* max (x, y, z) */
-#define MAX3(x,y,z)          \
-  (                          \
-    (x) >= (y)               \
-    ? (x) >= (z) ? (x) : (z) \
-    : (y) >= (z) ? (y) : (z) \
-  )
+#define MAX3(x,y,z) (MAX (x, MAX (y, z)))
 
 int
 mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
