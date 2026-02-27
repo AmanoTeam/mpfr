@@ -124,7 +124,7 @@ error_extra_bits (unsigned n)
 }
 
 int
-mpfr_hermite (mpfr_ptr res, unsigned n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
+mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 {
   int ternary_value = 0;
 
@@ -142,7 +142,7 @@ mpfr_hermite (mpfr_ptr res, unsigned n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   /* NaN are checke *before* any other check, according to C++ specs:
      "If the argument is NaN, NaN is returned [...]".
      We extended to +/-Inf as well. */
-  if (MPFR_IS_NAN (x) || MPFR_IS_INF (x) || n > 8192)
+  if (MPFR_IS_NAN (x) || MPFR_IS_INF (x))
     {
       MPFR_SET_NAN (res);
       /* as specified in the documentation, "[...] a NaN result
