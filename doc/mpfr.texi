@@ -3809,8 +3809,8 @@ This file is normally selected from the processor type.
 @end deftypefun
 
 @deftypefun int mpfr_unique_bytes (const mpfr_t @var{x}, mpfr_bytes_t *@var{bytes})
-Compute a unique representation of the MPFR number @var{x}.
-A unique representation is a byte sequence maintains the consistency with
+Store in @var{bytes} a unique representation of the MPFR number @var{x}.
+A unique representation is a byte sequence maintaining the consistency with
 @code{mpfr_cmp3}, meaning that if two numbers are considered equal
 by @code{mpfr_cmp3}, they will have the same unique byte representation.
 Notably, +0.0 and -0.0 have the same unique byte representation.
@@ -3845,20 +3845,20 @@ This function is experimental, and does not yet support digest sizes
 other than 32 bits.
 
 Note: The user maintains the ownership of the context @var{ctx}, and it must be
-already allocated once passed to the init function.
+already allocated when passed to @code{mpfr_digest_init}.
 @end deftypefun
 
 @deftypefun int mpfr_digest_update (mpfr_digest_ctx_t *@var{ctx}, const unsigned char *@var{data}, size_t @var{len})
 Update the context @var{ctx} with the hash digest of the byte sequences in
 @var{data}, of length @var{len} bytes.
-Return 1 if successful, and a 0 if an error occurred.
+Return 1 if successful, and 0 if an error occurred.
 @end deftypefun
 
 @deftypefun int mpfr_digest_update_m (mpfr_digest_ctx_t *@var{ctx}, const mpfr_t @var{x})
 Update the digest context @var{ctx} with the data of the MPFR number
 @var{x}. The MPFR number is converted to a unique byte representation
 using @code{mpfr_unique_bytes} before being used in the update function.
-Return 1 if successful, and a 0 if an error occurred.
+Return 1 if successful, and 0 if an error occurred.
 
 Note: This function maintains the consistency with
 @code{mpfr_cmp3}, meaning that if two numbers are considered equal by
@@ -3869,26 +3869,26 @@ Note: This function maintains the consistency with
 @deftypefun int mpfr_digest_final (const mpfr_digest_ctx_t *@var{ctx}, mpfr_digest_t *@var{digest})
 Finalize the computation of the hash digest in the context @var{ctx},
 and store the result in the buffer pointed to by @var{digest}, which
-must be already allocated by the user and be large enough to hold
+must be already allocated and be large enough to hold
 the digest (as specified when initializing the context).
-Return 1 if successful, and a 0 if an error occurred.
+Return 1 if successful, and 0 if an error occurred.
 @end deftypefun
 
 @deftypefun int mpfr_hash32_update (mpfr_digest_ctx_t *@var{ctx}, const unsigned char *@var{bytes}, size_t @var{l})
-It's the default function MPFR provides to update a 32-bit hash digest using
+This is the default function to update a 32-bit hash digest using
 the FNV-1a hash algorithm. It can be used as the @var{update_fn} argument
 of @code{mpfr_digest_init}. The function updates the hash state in
 @code{ctx->state} with the byte sequence in @var{bytes} of length
 @var{l} bytes.
-Return 1 if successful, and a 0 if an error occurred.
+Return 1 if successful, and 0 if an error occurred.
 @end deftypefun
 
 @deftypefun int mpfr_hash32_final (const mpfr_digest_ctx_t *@var{ctx}, mpfr_digest_t *@var{digest})
-It's the default function MPFR provides to finalize a 32-bit hash digest
+This is the default function to finalize a 32-bit hash digest
 using the FNV-1a hash algorithm. It can be used as the @var{final_fn} argument
 of @code{mpfr_digest_init}. The function stores the final hash digest in
 the buffer pointed to by @var{digest}, which must be already allocated
-by the user and be large enough to hold a 32-bit digest.
+and be large enough to hold a 32-bit digest.
 Return 1 if successful, and a 0 if an error occurred.
 @end deftypefun
 
@@ -3912,7 +3912,8 @@ Note: This function maintains the consistency with
 @code{mpfr_cmp3}, meaning that if two numbers are considered equal by
 @code{mpfr_cmp3}, they should have the same hash digest. Notably,
 +0.0 and -0.0 have the same digest.
-For more details on the way the hash digest is computed, see doc/algorithms.pdf
+For more details on the way the hash digest is computed, see the document
+``The MPFR library: algorithms and proofs''.
 @end deftypefun
 
 @node Exception Related Functions, Memory Handling Functions, Miscellaneous Functions, MPFR Interface
@@ -4714,6 +4715,10 @@ use @code{mpfr_get_z_exp}.
 @item @code{mpfr_digest_update_m} in MPFR@tie{}4.3.
 
 @item @code{mpfr_digest_final} in MPFR@tie{}4.3.
+
+@item @code{mpfr_hash32_update} in MPFR@tie{}4.3.
+
+@item @code{mpfr_hash32_final} in MPFR@tie{}4.3.
 
 @item @code{mpfr_hash32} in MPFR@tie{}4.3.
 
