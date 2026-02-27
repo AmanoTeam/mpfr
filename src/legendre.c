@@ -22,8 +22,6 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
 
-#define MAX_DEGREE 8192 // 2^13
-
 /* max (x, y, z) */
 #define MAX3(x,y,z)          \
   (                          \
@@ -54,12 +52,12 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
     (("x[%Pd]=%.*Rg rnd=%d", MPFR_PREC (x), mpfr_log_prec, x, rnd_mode),
      ("legendre[%Pd]=%.*Rg", MPFR_PREC (res), mpfr_log_prec, res));
 
-  /* first, check if x belongs to the domain [-1,1] and 0 <= n <= MAX_DEGREE.
+  /* first, check if x belongs to the domain [-1,1].
      If it's not, res is set to NAN, and 0 is returned */
   is_within_domain &= mpfr_lessequal_p (x, __gmpfr_one);
   is_within_domain &= mpfr_greaterequal_p (x, __gmpfr_mone);
 
-  if (!is_within_domain || n > MAX_DEGREE)
+  if (!is_within_domain)
     {
       MPFR_SET_NAN (res);
       /* as specified in the documentation, "[...] a NaN result

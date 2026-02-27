@@ -4663,11 +4663,6 @@ parameters validation and special cases (a)--(d).
   \KwData{mpfr\_ptr res, unsigned n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
   \KwResult{ternary value}
   \BlankLine
-  \tcc{The higher degree allowed is $2^{13}$}
-  \lIf{$~~(n>8192)~~$}{
-    res $\gets$ NaN;
-    \Return 0\;
-  }
   \tcc{We have to check the domain bounds of the parameter $x$}
   \lIf{$|x| > 1$}{
     res $\gets$ NaN;
