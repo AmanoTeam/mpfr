@@ -40,6 +40,8 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   mpfr_exp_t b_i, log2_i_m1, f_i, g_i, h_i, q_i, a_i, a_n;
   int inex;
 
+  MPFR_ASSERTN(n >= 0); /* check n is non-negative */
+
   MPFR_GROUP_DECL (group);
   MPFR_ZIV_DECL (loop);
 
