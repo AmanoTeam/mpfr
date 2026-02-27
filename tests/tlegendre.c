@@ -450,8 +450,7 @@ test_round (void)
   mpfr_free_cache ();
 }
 
-/* perform K random tests with degree n and precision p
-   random tests contributed by Paul Zimmermann */
+/* perform K random tests with degree n and precision p */
 static void
 test_random (int n, mpfr_prec_t p, unsigned long K)
 {
@@ -753,16 +752,13 @@ main (void)
   test_sample_with_precision (MPFR_PREC_100, MPFR_PREC_200);
   test_sample_with_precision (MPFR_PREC_200, MPFR_PREC_200);
 
-  /* preform RANDOM_TESTS_BATCH tests for each of the RANDOM_TESTS_N_DEGREE */
+  /* perform RANDOM_TESTS_BATCH tests for each of the RANDOM_TESTS_N_DEGREE */
   random_test_suite (RANDOM_TESTS_N_DEGREE, RANDOM_TESTS_BATCH);
 
-  /* bug reported by Paul Zimmermann */
   bug20251001 ();
 
-  /* bug reported by Matteo Nicoli */
   bug20260205 ();
 
-  /* test suite contributed by Paul Zimmermann */
   test_exact_dyadic ();
 
   tests_end_mpfr ();
