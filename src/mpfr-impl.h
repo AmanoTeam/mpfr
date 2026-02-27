@@ -2308,6 +2308,16 @@ __MPFR_DECLSPEC extern unsigned int mpfr_log_type;
 
 #endif /* MPFR_USE_LOGGING */
 
+/**************************************************************
+ ******************  Hash digest structure  *******************
+ **************************************************************/
+
+struct mpfr_digest_ctx_t {
+  mpfr_digest_t hash;
+  size_t digest_size;
+  hash_update_fn_t update_fn;
+  hash_final_fn_t final_fn;
+};
 
 /**************************************************************
  ************  Group Initialize Functions Macros  *************

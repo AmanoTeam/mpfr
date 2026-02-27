@@ -407,12 +407,7 @@ typedef int (*hash_update_fn_t) (struct mpfr_digest_ctx_t *,
 typedef int (*hash_final_fn_t) (const struct mpfr_digest_ctx_t *,
                                 mpfr_digest_t *);
 
-typedef struct mpfr_digest_ctx_t {
-  mpfr_digest_t hash;
-  size_t digest_size;
-  hash_update_fn_t update_fn;
-  hash_final_fn_t final_fn;
-} mpfr_digest_ctx_t;
+typedef struct mpfr_digest_ctx_t mpfr_digest_ctx_t;
 
 /* Note: In order to be declared, some functions need a specific
    system header to be included *before* "mpfr.h". If the user

@@ -4624,7 +4624,7 @@ For further information and theoretical details, refer to \cite{fnv-17}.
   fnv32\_prime $\gets$ 0x01000193\;
   fnv32\_basis $\gets$ 0x811C9DC5\;
   hash $\gets$ fvn32\_basis\;
-  \For{$\ivar\gets 0$ \KwTo buffer\_size}{
+  \For{$\ivar\gets 0$ \KwTo buffer\_size - 1}{
     byte $\gets$ buffer[i]\;
     hash $\gets$ hash XOR byte\;
     hash $\gets$ hash * fvn32\_prime\;
