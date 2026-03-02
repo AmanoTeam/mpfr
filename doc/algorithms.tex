@@ -4812,19 +4812,22 @@ orthogonal polynomials defined in the domain $(-\infty,\infty)$. Unless
 otherwise stated, $P_n(x)$ refers to the physicist's convention; this differs
 from the probabilist's Hermite polynomials by a simple rescaling of the
 argument and normalization. These polynomials are computed by MPFR through
-the following three term recursion:
+the following recursion:
 \begin{equation} \label{eq:hermite-recursion}
   \begin{cases}
-      P_0(x) = 1\\
-      P_1(x) = 2x\\
-      P_{n+1}(x) = 2xP_{n}(x) - 2nP_{n-1}(x)
+      P_0(x) = 1, \\
+      P_1(x) = 2x, \\
+      P_{n+1}(x) = 2xP_{n}(x) - 2nP_{n-1}(x).
   \end{cases}
 \end{equation}
+The polynomial $P_n(x)$ is even for $n$ even, i.e.,
+$P_n(-x) = P_n(x)$, and odd for $n$ odd, i.e., $P_n(-x) = -P_n(x)$.
 Some values of $x$ and $n$ are treated as special cases in which the
-recurrence is not evaluated. These two cases are:
+recurrence is not evaluated. These two cases are, where (b) follows
+from the fact that $P_n$ is odd for $n$ odd:
 \begin{itemize}
 \item[(a)] The base cases $P_0$ and $P_1$.
-\item[(b)] If $n \ge 1$ is odd, then $P_n(0) = 1$.
+\item[(b)] If $n$ is odd, then $P_n(0) = 0$.
 \end{itemize}
 
 \paragraph{\textbf{Recursion implementation and error analysis.}}
@@ -4856,7 +4859,7 @@ are implemented.
     \Return 0\;
   }
   \lIf{$~~(n=1)~~$}{
-    \Return mpfr\_mul\_ui(res, x, 2, rnd\_mode)\;
+    \Return mpfr\_mul\_2ui(res, x, 1, rnd\_mode)\;
   }
   \BlankLine
 \end{algorithm}
@@ -4882,8 +4885,6 @@ are implemented.
     $a~\gets~q$\;
     $i~\gets~i + 1$\;
   }
-  \Return mpfr\_set(res, $p_i$, rnd\_mode)\;
-  \BlankLine
 \end{algorithm}
 \vspace{.3cm}
 
@@ -4891,9 +4892,9 @@ Algorithm \ref{algo:hermite-rec} shows how the recursion for Hermite polynomial
 is implemented in MPFR. In the error analysis below we will name $a_i$ and
 $b_i$ the values of the variables $a$ and $b$ at the start of loop $i$, where
 $a_i$ approximates $P_i(x)$ and $b_i$ approximates $P_{i-1}(x)$, and $f_i$,
-$g_i$, $h_i$, $q_i$, $b_i$, $a_i$ the values of the variables $f$, $g$, $h$,
+$g_i$, $h_i$, $q_i$, $b_{i+1}$, $a_{i+1}$ the values of the variables $f$, $g$, $h$,
 $q$, $b$, $a$ computed during loop $i$. We are interested in the final value
-$a_n$, which approximates $P_{n+1}(x)$.
+$a_n$, which approximates $P_n(x)$.
 
 For the error analysis, we are going to use the same naming convention that
 we used for Legendre polynomials in Section
@@ -4911,12 +4912,15 @@ nearest, with working precision p.
 
 \par\noindent
 \textbf{Analysis of $a = \N{}(2\cdot{}x)$.} This is error bound of the
-first initialization of the value $a$. Here, we use the
+first initialization of the value $a$, say $a_1$, which approximates $P_1(x)=2x$.
+Here, we use the
 \texttt{mpfr\_mul\_2ui} function to multiply the exact input $x$ by 2.
 Thus, we just have to consider the error due to the final rounding
-$\N{}(2\cdot{}x)$. This error is bounded by
-$\frac{1}{2} \ulp(a_0) \le \frac{1}{2} 2^{\Exp(a_0) - p}$:
-\[ e_{a_0} \le \Exp(a_0) - p - 1. \]
+$\N{}(2\cdot{}x)$. (If the precision of $a$ is less than that of $x$,
+the multiplication $a = \N{}(2\cdot{}x)$ can yield a rounding error.)
+This error is bounded by
+$\frac{1}{2} \ulp(a_1) \le \frac{1}{2} 2^{\Exp(a_1) - p}$:
+\[ e_{a_1} \le \Exp(a_1) - p - 1. \]
 
 \par\noindent
 \textbf{Analysis of $f_i = \N{}(2\cdot{}x)$.} As for $a_1$, there is only
@@ -4936,10 +4940,10 @@ Since $2^x+2^y \le 2^{\max(x,y)+1}$:
 \textbf{Analysis of $h_i = \N{}(f_i\cdot{}a_i)$.}
 Here we have three sources of error: the rounding error on $h_i$,
 the induced error on $f_i$, which approximates $2x$,
-and the induced error on $a_i$, which approximates $P_{i-1}(x)$:
+and the induced error on $a_i$, which approximates $P_i(x)$:
 \begin{eqnarray*}
-  |h_i - 2x P_{i-1}(x)| & \le &
-  |h_i - f_i a_i| + |f_i a_i - 2x a_i| + |2x a_i - 2x P_{i-1}(x)| \\
+  |h_i - 2x P_i(x)| & \le &
+  |h_i - f_i a_i| + |f_i a_i - 2x a_i| + |2x a_i - 2x P_i(x)| \\
   & \le & 2^{\Exp(h_i)-p-1} + 2^{e_{f,i} + \Exp(a_i)} + 2^{1 + \Exp(x) + e_{a,i}}.
 \end{eqnarray*}
 Since $2^x + 2^y + 2^z \le 2^{\max(x,y,z)+2}$, it follows:
@@ -4949,15 +4953,15 @@ Since $2^x + 2^y + 2^z \le 2^{\max(x,y,z)+2}$, it follows:
 \par\noindent
 \textbf{Analysis of $q_i = \N{}(h_i - g_i)$.}
 Here again, we have three sources of error: the rounding error on $q_i$,
-the induced error on $h_i$, which approximates $H_i := 2x P_{i-1}(x)$,
-and the induced error on $g_i$, which approximates $G_i := (2i)P_{i-2}(x)$:
+the induced error on $h_i$, which approximates $H_i := 2x P_i(x)$,
+and the induced error on $g_i$, which approximates $G_i := (2i)P_{i-1}(x)$:
 \[ |q_i - (H_i - G_i)| \le 2^{\Exp(q_i)-p-1} + 2^{e_{h,i}} + 2^{e_{g,i}}. \]
 Using again $2^x + 2^y + 2^z \le 2^{\max(x,y,z)+2}$, it follows:
 \[ e_{q,i} \le 2 + \max(\Exp(q_i)-p-1, e_{h,i}, e_{g,i}). \]
 
-At the end of the loop, we will get an approximation $a_n$ of $P_{n+1}(x)$ such
+At the end of the loop, we will get an approximation $a_n$ of $P_n(x)$ such
 that:
-\[ |a_n - P_{n+1}(x)| \le 2^{e_{a,n}}. \]
+\[ |a_n - P_n(x)| \le 2^{e_{a,n}}. \]
 This error bound will be used in the rounding test, and if it fails, we will try
 again with a larger working precision $p' > p$.
 
