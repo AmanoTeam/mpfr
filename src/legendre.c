@@ -142,9 +142,11 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
              h_i <= 2 + max(exp(first_term)-p-1, f_i+exp(p1),
                             MPFR_INT_CEIL_LOG2(2*i-1)+MPFR_GET_EXP(x)+a_i) */
           inex |= mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
-          h_i = 2 + MAX3 (MPFR_GET_EXP (first_term) - realprec - 1,
-                          f_i + MPFR_GET_EXP (p1),
-                          MPFR_INT_CEIL_LOG2 (2*i-1) + MPFR_GET_EXP (x) + a_i);
+          h_i = 1 + MAX (MPFR_GET_EXP (first_term) - realprec - 1,
+                         f_i + MPFR_GET_EXP (p1));
+          if (!x_is_zero)
+            h_i = 1 + MAX (h_i,
+                           MPFR_INT_CEIL_LOG2 (2*i-1) + MPFR_GET_EXP (x) + a_i);
 
           /* pn = first_term - second_term, with absolute error at step i
              bounded by

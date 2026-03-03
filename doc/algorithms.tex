@@ -4756,9 +4756,17 @@ and the induced error on $a_i$, which approximates $P_{i-1}(x)$:
   & \le & 2^{\Exp(h_i)-p-1} + 2^{e_{f,i} + \Exp(a_i)} + 2^{\lceil \log_2(2i-1)
                                      \rceil + \Exp(x) + e_{a,i}}.
 \end{eqnarray*}
-Since $2^x + 2^y + 2^z \le 2^{\max(x,y,z)+2}$, it follows:
-\[ e_{h,i} \le 2 + \max(\Exp(h_i)-p-1, e_{f,i} + \Exp(a_i),
-  \lceil \log_2(2i-1) \rceil + \Exp(x) + e_{a,i}). \]
+If $x = 0$, $\Exp(x)$ is not defined, but in this case, the third term is $0$,
+thus so is its error bound. Writing
+\[e_\mathrm{aux} = 1 + \max(\Exp(h_i)-p-1, e_{f,i} + \Exp(a_i)),\]
+it follows:
+\[\left\{
+\begin{array}{lcl}
+  e_{h,i} \le e_\mathrm{aux} & \text{ if } & x = 0 \\
+  e_{h,i} \le 1 + \max(e_\mathrm{aux},
+    \lceil \log_2(2i-1) \rceil + \Exp(x) + e_{a,i}) & \text{ if } & x \ne 0.
+\end{array}
+\right.\]
 
 \par\noindent
 \textbf{Analysis of $q_i = \N{}(h_i - g_i)$.}
