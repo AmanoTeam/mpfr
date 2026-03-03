@@ -718,44 +718,49 @@ test_zero (void)
   mpq_t q, r;
   mpq_init (q);
   mpq_init (r);
-  for (n = 0; n <= 100; n+=2) {
-    /* invariant: q = Pn(0) for n even */
-    if (n == 0)
-      mpq_set_ui (q, 1, 1); /* P_0(0) = 1 */
-    else {
-      mpq_set_si (r, -(n-1), n);
-      mpq_mul (q, q, r);
+  for (n = 0; n <= 100; n+=2)
+    {
+      /* invariant: q = Pn(0) for n even */
+      if (n == 0)
+        mpq_set_ui (q, 1, 1); /* P_0(0) = 1 */
+      else
+        {
+          mpq_set_si (r, -(n-1), n);
+          mpq_mul (q, q, r);
+        }
+      for (p = 1; p <= 100; p++)
+        {
+          mpfr_t x, y, z;
+          int ret, ret2, rnd;
+          mpfr_init2 (x, p);
+          mpfr_init2 (y, p);
+          mpfr_init2 (z, p);
+          mpfr_set_ui (x, 0, MPFR_RNDN);
+          RND_LOOP_NO_RNDF (rnd)
+            {
+              ret = mpfr_legendre (y, n, x, (mpfr_rnd_t) rnd);
+              ret2 = mpfr_set_q (z, q, (mpfr_rnd_t) rnd);
+              if (mpfr_cmp (y, z))
+                {
+                  printf ("test_zero failed for n=%ld p=%lu rnd=%s\n",
+                          n, p, mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                  DUMP_NUMBERS(z, y);
+                  exit (1);
+                }
+              if (ret * ret2 < 0 || (!!ret ^ !!ret2))
+                {
+                  printf ("test_zero: incompatible ternary values for "
+                          "n=%ld p=%lu rnd=%s\n",
+                          n, p, mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                  printf ("got %d expected %d\n", ret, ret2);
+                  exit (1);
+                }
+            }
+          mpfr_clear (x);
+          mpfr_clear (y);
+          mpfr_clear (z);
+        }
     }
-    for (p = 1; p <= 100; p++)
-      {
-        mpfr_t x, y, z;
-        int ret, ret2, rnd;
-        mpfr_init2 (x, p);
-        mpfr_init2 (y, p);
-        mpfr_init2 (z, p);
-        mpfr_set_ui (x, 0, MPFR_RNDN);
-        RND_LOOP_NO_RNDF (rnd)
-          {
-            ret = mpfr_legendre (y, n, x, (mpfr_rnd_t) rnd);
-            ret2 = mpfr_set_q (z, q, (mpfr_rnd_t) rnd);
-            if (mpfr_cmp (y, z)) {
-              printf ("test_zero failed for n=%ld p=%lu rnd=%s\n",
-                      n, p, mpfr_print_rnd_mode (rnd));
-              DUMP_NUMBERS(z, y);
-              exit (1);
-            }
-            if (ret * ret2 < 0 || (!!ret ^ !!ret2)) {
-              printf ("test_zero: incompatible ternary values for n=%ld p=%lu rnd=%s\n",
-                      n, p, mpfr_print_rnd_mode (rnd));
-              printf ("got %d expected %d\n", ret, ret2);
-              exit (1);
-            }
-          }
-        mpfr_clear (x);
-        mpfr_clear (y);
-        mpfr_clear (z);
-      }
-  }
   mpq_clear (q);
   mpq_clear (r);
 }
