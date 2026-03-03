@@ -104,15 +104,17 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   MPFR_ZIV_INIT (loop, realprec);
   for (;;)
     {
+      mpfr_exp_t exp_p1;
       i = 2;
 
       /* p1 = x, p2 = 1 */
       inex = mpfr_set (p1, x, MPFR_RNDN);     /* p1 is a is algorithms.tex */
+      /* If x is 0, set exp_p1 arbitrarily to 0 (necessarily n is even).
+         In that case P_2n(0) = (-1)^n*(2n)!/(n!)^2/2^(2n). */
+      exp_p1 = (MPFR_IS_ZERO(x)) ? 0 : MPFR_GET_EXP(p1);
       mpfr_set_ui (p2, 1, MPFR_RNDN);         /* exact, p2 is b */
       b_i = MPFR_EXP_MIN;                     /* 2^b_i: absolute error on p2 */
-      a_i = MPFR_GET_EXP (p1) - realprec - 1; /* 2^a_i: absolute error on p1 */
-      /* FIXME: This is incorrect if x is 0, as 0 does not have an exponent
-         (the case x = 0 with n even is not handled above). */
+      a_i = exp_p1 - realprec - 1;            /* 2^a_i: absolute error on p1 */
 
       while (i <= n)
         {
