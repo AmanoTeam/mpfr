@@ -123,6 +123,13 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
         {
           log2_i_m1 = MPFR_INT_CEIL_LOG2(i-1);
 
+          /* FIXME: The code is still incorrect on x = 0 because 0 does not
+             have an exponent. But there are many simplifications is this
+             case. However, the first_term may also underflow, giving 0,
+             and yielding the same issues. Intermediate overflows are not
+             taken into account either... If they are not necessarily real
+             overflows (due to the cancellation), UBF might be a solution. */
+
           /* first_term = x * (2 * i - 1), with absolute error at step i
              (denoted f_i in algorithms.tex)
              bounded by f_i <= exp(first_term) - p - 1 */
