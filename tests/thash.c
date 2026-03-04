@@ -425,7 +425,8 @@ test_pi_incremental_hashing (void)
 static digest32_t
 djb2(digest32_t hash, const unsigned char *bytes, size_t bytes_len)
 {
-    for (size_t i = 0; i < bytes_len; i++)
+    size_t i;
+    for (i = 0; i < bytes_len; i++)
       {
         hash = ((hash << 5) + hash) + bytes[i];
       }
