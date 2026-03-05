@@ -711,7 +711,7 @@ test_exact_dyadic (void)
 
 /* test x=0 for n even */
 static void
-test_zero (void)
+test_zero_even (void)
 {
   long n;
   mpfr_prec_t p;
@@ -765,12 +765,51 @@ test_zero (void)
   mpq_clear (r);
 }
 
+static void
+test_zero_odd (void)
+{
+  int i;
+  mpfr_t x, res;
+
+  mpfr_init2 (x,IEEE754_DOUBLE_PREC);
+  mpfr_init2 (res,IEEE754_DOUBLE_PREC);
+  mpfr_set_ui (x, 0, MPFR_RNDN);
+
+  for (i = 1; i < 100; i += 2)
+    {
+      mpfr_legendre (res, i, x, MPFR_RNDN);
+      if (!MPFR_IS_ZERO (res))
+        {
+          printf ("P_%d(0) should be 0; got ", i);
+          mpfr_out_str (stdout, 10, 0, res, MPFR_RNDD);
+          printf ("\n");
+          exit (1);
+        }
+
+      if ((i % 4) == 1 && MPFR_IS_NEG (res))
+        {
+          printf ("P_%d(0) should be +0; got -0\n", i);
+          exit (1);
+        }
+
+      if ((i % 4) == 3 && MPFR_IS_POS (res))
+        {
+          printf ("P_%d(0) should be -0; got +0\n", i);
+          exit (1);
+        }
+    }
+
+  mpfr_clear (x);
+  mpfr_clear (res);
+}
+
 int
 main (void)
 {
   tests_start_mpfr ();
 
-  test_zero ();
+  test_zero_even ();
+  test_zero_odd ();
 
   /* The canonical domain of Legendre polynomials is [-1,1]. mpfr_legendre
      should return false for any x outside of the canonical domain */

@@ -86,8 +86,17 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   /* Pn(0) = 0 if n is odd */
   if (x_is_zero && (n & 1) == 1)
     {
-      /* FIXME: What about the sign of zero? */
       MPFR_SET_ZERO (res);
+
+      /* Rationale: the a*x term of the Taylor expansion of P_n around x = 0
+         (with n odd) has a > 0 for n mod 4 == 1, and a < 0 for n mod 4 == 3.
+         Thus mpfr_legendre evaluates P_n(0) = +0 for n mod 4 == 1, and
+         P_n(0) = -0 for n mod 4 == 3 */
+      if ((n & 3) == 3)
+        MPFR_SET_NEG (res);
+      else
+        MPFR_SET_POS (res);
+
       MPFR_RET (0);
     }
 
@@ -121,7 +130,7 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 
       while (i <= n)
         {
-          log2_i_m1 = MPFR_INT_CEIL_LOG2(i-1);
+          log2_i_m1 = MPFR_INT_CEIL_LOG2 (i - 1);
 
           /* FIXME: The code is still incorrect on x = 0 because 0 does not
              have an exponent. But there are many simplifications is this
