@@ -37,7 +37,7 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   mpfr_t p1, p2, pn, first_term, second_term;
   mpfr_prec_t res_prec, realprec;
   mpfr_exp_t lost_bits;
-  mpfr_exp_t b_i, log2_i_m1, f_i, g_i, h_i, q_i, a_i, a_n;
+  mpfr_exp_t b_i, log2_i_m1, g_i, h_i, q_i, a_i, a_n;
   unsigned int inex;
   int x_is_zero;
 
@@ -116,37 +116,74 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   MPFR_ZIV_INIT (loop, realprec);
   for (;;)
     {
-      mpfr_exp_t exp_p1;
-      i = 2;
-
       /* p1 = x, p2 = 1 */
       inex = mpfr_set (p1, x, MPFR_RNDN);     /* p1 is a is algorithms.tex */
       /* If x is 0, set exp_p1 arbitrarily to 0 (necessarily n is even).
          In that case P_2n(0) = (-1)^n*(2n)!/(n!)^2/2^(2n). */
-      exp_p1 = x_is_zero ? 0 : MPFR_GET_EXP(p1);
       mpfr_set_ui (p2, 1, MPFR_RNDN);         /* exact, p2 is b */
-      b_i = MPFR_EXP_MIN;                     /* 2^b_i: absolute error on p2 */
-      a_i = exp_p1 - realprec - 1;            /* 2^a_i: absolute error on p1 */
 
-      while (i <= n)
+      /* In the loop:
+           2^a_i is a bound on the absolute error on p1.
+           2^b_i is a bound on the absolute error on p2.
+         a_i and b_i come from the previous iteration, and initialized
+         below for the first iteration (i = 2). */
+      a_i = x_is_zero ? MPFR_EXP_MIN : MPFR_GET_EXP (p1) - realprec - 1;
+      b_i = MPFR_EXP_MIN;
+
+      for (i = 2; i <= n; i++)
         {
-          log2_i_m1 = MPFR_INT_CEIL_LOG2 (i - 1);
+          MPFR_LOG_MSG (("i = %ld\n", i));
+          MPFR_LOG_VAR (p1);
+          MPFR_LOG_VAR (p2);
 
-          /* FIXME: The code is still incorrect on x = 0 because 0 does not
-             have an exponent. But there are many simplifications is this
-             case. Overflows are not possible in [-1,1], but the exponent
-             range needs to be extended as usual. Intermediate underflows
-             are probably harmless, but must be taken into account in the
-             error analysis. Final underflows (in mpfr_sub or mpfr_div_ui)
-             might also be possible, and also need to be taken into account.
+          /* FIXME: Extend the exponent range as usual? (There are currently
+             no failures in the testsuite, but the tests may be incomplete.)
+             Intermediate underflows are probably harmless, but must be
+             taken into account in the error analysis. Final underflows
+             (in mpfr_sub or mpfr_div_ui) might also be possible, and also
+             need to be taken into account.
              Note: in the extended exponent range, underflows could occur
              only in very high precisions (thus only on 32-bit machines). */
 
-          /* first_term = x * (2 * i - 1), with absolute error at step i
-             (denoted f_i in algorithms.tex)
-             bounded by f_i <= exp(first_term) - p - 1 */
-          inex |= mpfr_mul_ui (first_term, x, 2 * i - 1, MPFR_RNDN);
-          f_i = MPFR_GET_EXP (first_term) - realprec - 1;
+          if (x_is_zero)
+            {
+              /* Special case when x = 0: first_term = 0, exact. */
+              if ((i & 1) != 0)
+                {
+                  /* If i is odd, then p2 = 0, thus second_term = 0 too,
+                     and pn = 0, exact. */
+                  MPFR_ASSERTD (MPFR_IS_ZERO (p2));
+                  MPFR_SET_ZERO (pn);
+                  a_n = MPFR_EXP_MIN;
+                  goto end_of_loop;
+                }
+
+              MPFR_SET_ZERO (first_term);
+              h_i = MPFR_EXP_MIN;
+            }
+          else
+            {
+              mpfr_exp_t f_i;
+
+              /* first_term = x * (2 * i - 1), with absolute error at step i
+                 (denoted f_i in algorithms.tex)
+                 bounded by f_i <= exp(first_term) - p - 1 */
+              inex |= mpfr_mul_ui (first_term, x, 2 * i - 1, MPFR_RNDN);
+              f_i = MPFR_GET_EXP (first_term) - realprec - 1;
+
+              /* first_term = first_term * p1, with absolute error at step i
+                 bounded by
+                 h_i <= 2 + max(exp(first_term)-p-1, f_i+exp(p1),
+                                MPFR_INT_CEIL_LOG2(2*i-1)+MPFR_GET_EXP(x)+a_i)
+              */
+              inex |= mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
+              h_i = 2 + MAX3 (MPFR_GET_EXP (first_term) - realprec - 1,
+                              f_i + MPFR_GET_EXP (p1),
+                              MPFR_INT_CEIL_LOG2 (2*i-1)
+                              + MPFR_GET_EXP (x) + a_i);
+            }
+
+          log2_i_m1 = MPFR_INT_CEIL_LOG2 (i - 1);
 
           /* second_term = p2 * (i - 1), with absolute error at step i
              bounded by
@@ -155,17 +192,6 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
           inex |= mpfr_mul_ui (second_term, p2, i - 1, MPFR_RNDN);
           g_i = MAX (MPFR_GET_EXP (second_term) - realprec,
                      b_i + log2_i_m1 + 1);
-
-          /* first_term = first_term * p1, with absolute error at step i
-             bounded by
-             h_i <= 2 + max(exp(first_term)-p-1, f_i+exp(p1),
-                            MPFR_INT_CEIL_LOG2(2*i-1)+MPFR_GET_EXP(x)+a_i) */
-          inex |= mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
-          h_i = 1 + MAX (MPFR_GET_EXP (first_term) - realprec - 1,
-                         f_i + MPFR_GET_EXP (p1));
-          if (!x_is_zero)
-            h_i = 1 + MAX (h_i,
-                           MPFR_INT_CEIL_LOG2 (2*i-1) + MPFR_GET_EXP (x) + a_i);
 
           /* pn = first_term - second_term, with absolute error at step i
              bounded by
@@ -179,13 +205,12 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
           inex |= mpfr_div_ui (pn, pn, i, MPFR_RNDN);
           a_n = MAX (MPFR_GET_EXP (pn) - realprec, q_i - log2_i_m1 + 2);
 
+        end_of_loop:
           /* p2 = p1, p1 = pn */
           mpfr_swap (p2, p1); /* now p2 approximates P_{i-1}(x) */
           mpfr_swap (p1, pn); /* now p1 approximates P_i(x) */
           b_i = a_i;          /* 2^b_i is a bound on the absolute error on p2 */
           a_i = a_n;          /* 2^a_i is a bound on the absolute error on p1 */
-
-          i++;
         }
 
       /* Now p1 approximates P_n(x), and 2^a_i is a bound on its absolute error.
