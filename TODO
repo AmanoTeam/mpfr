@@ -288,6 +288,9 @@ Table of contents:
   functions. For example mpfr_frac_floor(x) = x - floor(x). (The current
   mpfr_frac function corresponds to mpfr_rint_trunc.)
 - scaled erfc (https://sympa.inria.fr/sympa/arc/mpfr/2009-05/msg00054.html)
+- scaled incomplete Gamma functions g(a,x) and G(a,x), see p. 561 of
+  "The Mathematical Function Handbook" by Nelson Beebe
+- psiln(x) = psi(x) - ln(x), p. 537 of "The Mathematical Function Handbook"
 - asec, acsc, acot, asech, acsch and acoth (mail from Björn Terelius on mpfr
   list, 18 June 2009)
 
