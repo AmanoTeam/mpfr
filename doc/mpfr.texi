@@ -5,7 +5,7 @@
 @c Note that the 5 occurrences of the version string in this file
 @c should be updated by the tools/update-version script.
 @set VERSION 4.3.0-dev
-@set UPDATED-MONTH December 2025
+@set UPDATED-MONTH March 2026
 @settitle GNU MPFR @value{VERSION}
 @synindex tp fn
 @iftex
@@ -2222,10 +2222,11 @@ This function is experimental, and does not yet handle intermediate overflows
 and underflows.
 @end deftypefun
 
-@deftypefun int mpfr_legendre (mpfr_t @var{res}, unsigned @var{n}, const mpfr_t @var{x}, mpfr_rnd_t @var{rnd})
+@deftypefun int mpfr_legendre (mpfr_t @var{res}, long int @var{n}, const mpfr_t @var{x}, mpfr_rnd_t @var{rnd})
 @var{res} is set with the value of Legendre's polynomial P_@var{n}(@var{x}),
 rounded in the direction of @var{rnd}, where @var{n} stands for the degree of
-the polynomial. If the input variable @var{x} is outside the [-1,1] domain,
+the polynomial (@var{n} is assumed to be non-negative).
+If the input variable @var{x} is outside the [-1,1] domain,
 then @var{res} is set to NaN and 0 is returned.
 @end deftypefun
 
@@ -4985,7 +4986,8 @@ functions, and helped to the Microsoft Windows porting.
 Damien Stehl@'e contributed the @code{mpfr_get_ld_2exp} function.
 Charles Karney contributed the @code{mpfr_nrandom} and @code{mpfr_erandom}
 functions.
-Matteo Nicoli contributed the memory export/import functions.
+Matteo Nicoli contributed the memory export/import functions,
+and the @code{mpfr_legendre} function.
 
 We would like to thank Jean-Michel Muller and Joris van der Hoeven for very
 fruitful discussions at the beginning of that project, Torbj@"orn Granlund

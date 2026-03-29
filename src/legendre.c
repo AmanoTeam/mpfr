@@ -37,8 +37,9 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   mpfr_t p1, p2, pn, first_term, second_term;
   mpfr_prec_t res_prec, realprec;
   mpfr_exp_t lost_bits;
-  mpfr_exp_t b_i, log2_i_m1, f_i, g_i, h_i, q_i, a_i, a_n;
-  int inex;
+  mpfr_exp_t b_i, log2_i_m1, g_i, h_i, q_i, a_i, a_n;
+  unsigned int inex;
+  int x_is_zero;
 
   MPFR_GROUP_DECL (group);
   MPFR_ZIV_DECL (loop);
@@ -46,6 +47,8 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   MPFR_LOG_FUNC
     (("x[%Pd]=%.*Rg rnd=%d", MPFR_PREC (x), mpfr_log_prec, x, rnd_mode),
      ("legendre[%Pd]=%.*Rg", MPFR_PREC (res), mpfr_log_prec, res));
+
+  MPFR_ASSERTN(n >= 0); /* check n is non-negative */
 
   /* first, check if x belongs to the domain [-1,1].
      If it's not, res is set to NAN, and 0 is returned */
@@ -55,9 +58,7 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   if (!is_within_domain)
     {
       MPFR_SET_NAN (res);
-      /* as specified in the documentation, "[...] a NaN result
-         (Not-a-Number) always corresponds to an exact return value." */
-      return 0;
+      MPFR_RET_NAN;
     }
 
   /* 1 and -1 are the (respectively) upper and lower bound of the Legendre
@@ -65,38 +66,38 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
      using Bonnet's recursion. Both 1 and -1 are exactly representable,
      so we this will always return 0 */
   if (mpfr_equal_p (x, __gmpfr_one))
-    {
-      mpfr_set_ui (res, 1, rnd_mode);
-      return 0;
-    }
+    return mpfr_set_si (res, 1, rnd_mode);
   if (mpfr_equal_p (x, __gmpfr_mone))
-    {
-      mpfr_set_si (res, (n&1) == 0 ? 1 : -1, rnd_mode);
-      return 0;
-    }
+    return mpfr_set_si (res, (n & 1) == 0 ? 1 : -1, rnd_mode);
 
   /* P_0 = 1 */
   if (n == 0)
-    {
-      mpfr_set_ui (res, 1, rnd_mode);
-      /* 1 is exactly representable in MPFR regardless of precision,
-         so this will always return 0 */
-      return 0;
-    }
+    return mpfr_set_si (res, 1, rnd_mode);
+
   /* P_1 = x */
   if (n == 1)
     {
       /* result is set to x. The ternary value of mpfr_set is returned */
-      return mpfr_set(res, x, rnd_mode);
+      return mpfr_set (res, x, rnd_mode);
     }
 
+  x_is_zero = MPFR_IS_ZERO (x);
+
   /* Pn(0) = 0 if n is odd */
-  if (MPFR_IS_ZERO (x) && (n&1) == 1)
+  if (x_is_zero && (n & 1) == 1)
     {
       MPFR_SET_ZERO (res);
-      /* 0 is exactly representable in MPFR regardless of precision,
-         so this will always return 0 */
-      return 0;
+
+      /* Rationale: the a*x term of the Taylor expansion of P_n around x = 0
+         (with n odd) has a > 0 for n mod 4 == 1, and a < 0 for n mod 4 == 3.
+         Thus mpfr_legendre evaluates P_n(0) = +0 for n mod 4 == 1, and
+         P_n(0) = -0 for n mod 4 == 3 */
+      if ((n & 3) == 3)
+        MPFR_SET_NEG (res);
+      else
+        MPFR_SET_POS (res);
+
+      MPFR_RET (0);
     }
 
   res_prec = MPFR_PREC (res);
@@ -115,42 +116,87 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   MPFR_ZIV_INIT (loop, realprec);
   for (;;)
     {
-      i = 2;
-
       /* p1 = x, p2 = 1 */
       inex = mpfr_set (p1, x, MPFR_RNDN);     /* p1 is a is algorithms.tex */
+      /* If x is 0, set exp_p1 arbitrarily to 0 (necessarily n is even).
+         In that case P_2n(0) = (-1)^n*(2n)!/(n!)^2/2^(2n). */
       mpfr_set_ui (p2, 1, MPFR_RNDN);         /* exact, p2 is b */
-      b_i = LONG_MIN;                         /* 2^b_i is the absolute error on p2 */
-      a_i = MPFR_GET_EXP (p1) - realprec - 1; /* 2^a_i is the absolute error on p1 */
 
-      while (i <= n)
+      /* In the loop:
+           2^a_i is a bound on the absolute error on p1.
+           2^b_i is a bound on the absolute error on p2.
+         a_i and b_i come from the previous iteration, and initialized
+         below for the first iteration (i = 2). */
+      a_i = x_is_zero ? MPFR_EXP_MIN : MPFR_GET_EXP (p1) - realprec - 1;
+      b_i = MPFR_EXP_MIN;
+
+      for (i = 2; i <= n; i++)
         {
-          log2_i_m1 = MPFR_INT_CEIL_LOG2(i-1);
+          MPFR_LOG_MSG (("i = %ld\n", i));
+          MPFR_LOG_VAR (p1);
+          MPFR_LOG_VAR (p2);
 
-          /* first_term = x * (2 * i - 1), with absolute error at step i
-             (denoted f_i in algorithms.tex)
-             bounded by f_i <= exp(first_term) - p - 1 */
-          inex |= mpfr_mul_ui (first_term, x, 2 * i - 1, MPFR_RNDN);
-          f_i = MPFR_GET_EXP (first_term) - realprec - 1;
+          /* FIXME: Extend the exponent range as usual? (There are currently
+             no failures in the testsuite, but the tests may be incomplete.)
+             Intermediate underflows are probably harmless, but must be
+             taken into account in the error analysis. Final underflows
+             (in mpfr_sub or mpfr_div_ui) might also be possible, and also
+             need to be taken into account.
+             Note: in the extended exponent range, underflows could occur
+             only in very high precisions (thus only on 32-bit machines). */
 
-          /* second_term = p2 * (i - 1), with absolute error at step i bounded by
-             g_i <= max(exp(second_term)-p, error(p2) + MPFR_INT_CEIL_LOG2(i-1)+1)
-           */
-          inex |= mpfr_mul_ui (second_term, p2, i - 1, MPFR_RNDN);
-          g_i = MAX (MPFR_GET_EXP (second_term) - realprec, b_i + log2_i_m1 + 1);
+          if (x_is_zero)
+            {
+              /* Special case when x = 0: first_term = 0, exact. */
+              if ((i & 1) != 0)
+                {
+                  /* If i is odd, then p2 = 0, thus second_term = 0 too,
+                     and pn = 0, exact. */
+                  MPFR_ASSERTD (MPFR_IS_ZERO (p2));
+                  MPFR_SET_ZERO (pn);
+                  a_n = MPFR_EXP_MIN;
+                  goto end_of_loop;
+                }
 
-          /* first_term = first_term * p1, with absolute error at step i
+              MPFR_SET_ZERO (first_term);
+              h_i = MPFR_EXP_MIN;
+            }
+          else
+            {
+              mpfr_exp_t f_i;
+
+              /* first_term = x * (2 * i - 1), with absolute error at step i
+                 (denoted f_i in algorithms.tex)
+                 bounded by f_i <= exp(first_term) - p - 1 */
+              inex |= mpfr_mul_ui (first_term, x, 2 * i - 1, MPFR_RNDN);
+              f_i = MPFR_GET_EXP (first_term) - realprec - 1;
+
+              /* first_term = first_term * p1, with absolute error at step i
+                 bounded by
+                 h_i <= 2 + max(exp(first_term)-p-1, f_i+exp(p1),
+                                MPFR_INT_CEIL_LOG2(2*i-1)+MPFR_GET_EXP(x)+a_i)
+              */
+              inex |= mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
+              h_i = 2 + MAX3 (MPFR_GET_EXP (first_term) - realprec - 1,
+                              f_i + MPFR_GET_EXP (p1),
+                              MPFR_INT_CEIL_LOG2 (2*i-1)
+                              + MPFR_GET_EXP (x) + a_i);
+            }
+
+          log2_i_m1 = MPFR_INT_CEIL_LOG2 (i - 1);
+
+          /* second_term = p2 * (i - 1), with absolute error at step i
              bounded by
-             h_i <= 2 + max(exp(first_term)-p-1, f_i+exp(p1),
-                            MPFR_INT_CEIL_LOG2(2*i-1)+MPFR_GET_EXP(x)+a_i) */
-          inex |= mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
-          h_i = 2 + MAX3 (MPFR_GET_EXP (first_term) - realprec - 1,
-                          f_i + MPFR_GET_EXP (p1),
-                          MPFR_INT_CEIL_LOG2 (2*i-1) + MPFR_GET_EXP (x) + a_i);
+             g_i <= max(exp(second_term)-p,
+                        error(p2) + MPFR_INT_CEIL_LOG2(i-1)+1) */
+          inex |= mpfr_mul_ui (second_term, p2, i - 1, MPFR_RNDN);
+          g_i = MAX (MPFR_GET_EXP (second_term) - realprec,
+                     b_i + log2_i_m1 + 1);
 
           /* pn = first_term - second_term, with absolute error at step i
              bounded by
-             q_i <= 2 + max(exp(pn)-p-1, error(first_term), error(second_term)) */
+             q_i <= 2 + max(exp(pn)-p-1,
+                            error(first_term), error(second_term)) */
           inex |= mpfr_sub (pn, first_term, second_term, MPFR_RNDN);
           q_i = 2 + MAX3 (MPFR_GET_EXP (pn) - realprec - 1, h_i, g_i);
 
@@ -159,13 +205,12 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
           inex |= mpfr_div_ui (pn, pn, i, MPFR_RNDN);
           a_n = MAX (MPFR_GET_EXP (pn) - realprec, q_i - log2_i_m1 + 2);
 
+        end_of_loop:
           /* p2 = p1, p1 = pn */
           mpfr_swap (p2, p1); /* now p2 approximates P_{i-1}(x) */
           mpfr_swap (p1, pn); /* now p1 approximates P_i(x) */
           b_i = a_i;          /* 2^b_i is a bound on the absolute error on p2 */
           a_i = a_n;          /* 2^a_i is a bound on the absolute error on p1 */
-
-          i++;
         }
 
       /* Now p1 approximates P_n(x), and 2^a_i is a bound on its absolute error.
@@ -174,11 +219,12 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
          2^(a_i - (EXP(p1) - realprec - 1)) */
       lost_bits = a_i - (MPFR_GET_EXP (p1) - realprec);
 
-      /* if inex=0, then all the computation was exact, thus p1 is exactly P_n(x),
-         otherwise we call MPFR_CAN_ROUND() to check if we can deduce the correct
-         rounding */
-      if (inex == 0 || (lost_bits < realprec &&
-                     MPFR_CAN_ROUND (p1, realprec - lost_bits, res_prec, rnd_mode)))
+      /* if inex=0, then all the computation was exact, thus p1 is exactly
+         P_n(x), otherwise we call MPFR_CAN_ROUND() to check if we can deduce
+         the correct rounding */
+      if (inex == 0 ||
+          (lost_bits < realprec &&
+           MPFR_CAN_ROUND (p1, realprec - lost_bits, res_prec, rnd_mode)))
         break;
       MPFR_ZIV_NEXT (loop, realprec);
       MPFR_GROUP_REPREC_5 (group, realprec,
