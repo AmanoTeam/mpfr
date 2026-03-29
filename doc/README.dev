@@ -1692,6 +1692,42 @@ main (int argc, char *argv[])
   return 0;
 }
 
+For orthogonal polynomials (e.g. mpfr_legendre, mpfr_hermite), you can
+use the random test suite provided by tests/torthopoly.c. In your test
+file (say tpoly.c), define MPFR_ORTHOGONAL_POLY_FN to the function
+under test and include torthopoly.c:
+
+  #define MPFR_ORTHOGONAL_POLY_FN mpfr_poly
+  #include "torthopoly.c"
+
+This provides two functions: test_poly_random(n, p, K), which tests the
+polynomial of degree n at precision p with K random values of x in
+[-1,1]; and random_poly_suite(num_degrees, ntests, p), which picks
+num_degrees random degrees between 2 and 128 and runs ntests random
+tests for each at precision p. Additionally, you can define
+RANDOM_TESTS_BATCH to control the number of random degrees and tests
+per degree. For example:
+
+  #define RANDOM_TESTS_N_DEGREE 10
+  #define RANDOM_TESTS_BATCH    20
+
+Then in main(), call:
+
+  random_poly_suite (RANDOM_TESTS_N_DEGREE, RANDOM_TESTS_BATCH,
+                     IEEE754_DOUBLE_PREC);
+
+By default, random values of x are generated in [-1,1]. You can change
+the domain by defining X_LOWER_BOUND and X_HIGHER_BOUND before including
+torthopoly.c.
+
+Note: at the moment, the domain must contain 0. For
+example, for Hermite polynomials tested on [-128,128]:
+
+  #define MPFR_ORTHOGONAL_POLY_FN mpfr_hermite
+  #define X_LOWER_BOUND -128.0
+  #define X_HIGHER_BOUND 128.0
+  #include "torthopoly.c"
+
    ---------------------------------------------------------------------
 
 Here is how the test suite works since the full Automake 1.13 support

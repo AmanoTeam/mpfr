@@ -21,7 +21,13 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-test.h"
 
-#define RANDOM_TESTS_BATCH 50
+#define MPFR_ORTHOGONAL_POLY_FN mpfr_hermite
+#define X_LOWER_BOUND -128.0
+#define X_HIGHER_BOUND 128.0
+#include "torthopoly.c"
+
+#define RANDOM_TESTS_N_DEGREE 10
+#define RANDOM_TESTS_BATCH    20
 
 static void
 test_special_cases (void)
@@ -272,3 +278,9 @@ main (void)
   tests_end_mpfr ();
   return 0;
 }
+
+#undef MPFR_ORTHOGONAL_POLY_FN
+#define X_LOWER_BOUND
+#define X_HIGHER_BOUND
+#undef RANDOM_TESTS_N_DEGREE
+#undef RANDOM_TESTS_BATCH

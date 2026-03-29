@@ -224,11 +224,6 @@ int tests_run_within_valgrind (void);
               mpfr_dump (got);        \
             } while (0);
 
-/* orthogonal polynomials */
-typedef int (*orth_polynomial_t)(mpfr_ptr, unsigned, mpfr_srcptr, mpfr_rnd_t);
-void test_poly_random (int, mpfr_prec_t, unsigned long, orth_polynomial_t);
-void random_poly_suite (int, int, mpfr_prec_t, orth_polynomial_t);
-
 int mpfr_set_machine_rnd_mode (mpfr_rnd_t);
 int have_subnorm_dbl (void);
 int have_subnorm_flt (void);
@@ -237,7 +232,6 @@ mp_limb_t randlimb (void);
 unsigned long randulong (void);
 long randlong (void);
 void randseed (unsigned int);
-void random_array (int *, int, int, int);
 void mpfr_random2 (mpfr_ptr, mp_size_t, mpfr_exp_t, gmp_randstate_t);
 int ulp (double, double);
 double dbl (double, int);

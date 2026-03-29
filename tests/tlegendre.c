@@ -21,6 +21,9 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-test.h"
 
+#define MPFR_ORTHOGONAL_POLY_FN mpfr_legendre
+#include "torthopoly.c"
+
 #define ARBITRARILY_LOW_PREC 10
 
 #define RANDOM_TESTS_N_DEGREE 10
@@ -751,8 +754,8 @@ main (void)
   test_sample_with_precision (MPFR_PREC_100, MPFR_PREC_200);
   test_sample_with_precision (MPFR_PREC_200, MPFR_PREC_200);
 
-  random_poly_suite (RANDOM_TESTS_BATCH, RANDOM_TESTS_BATCH,
-                     IEEE754_DOUBLE_PREC, mpfr_legendre);
+  random_poly_suite (RANDOM_TESTS_N_DEGREE, RANDOM_TESTS_BATCH,
+                     IEEE754_DOUBLE_PREC);
 
   bug20251001 ();
 
@@ -763,3 +766,7 @@ main (void)
   tests_end_mpfr ();
   return 0;
 }
+
+#undef MPFR_ORTHOGONAL_POLY_FN
+#undef RANDOM_TESTS_N_DEGREE
+#undef RANDOM_TESTS_BATCH
