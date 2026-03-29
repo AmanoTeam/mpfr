@@ -25,85 +25,6 @@ If not, see <https://www.gnu.org/licenses/>. */
 /* max (x, y, z) */
 #define MAX3(x,y,z) (MAX (x, MAX (y, z)))
 
-static int
-zero_x_even_degree (mpfr_ptr res, unsigned n, mpfr_rnd_t rnd_mode)
-{
-  int ternary_value;
-  mpfr_exp_t exp_sub;
-  mpfr_t first, second, gamma1, gamma2, sub, e;
-  mpfr_prec_t res_prec, realprec, test_prec, err;
-  MPFR_ZIV_DECL (loop);
-  MPFR_GROUP_DECL (group);
-  MPFR_BLOCK_DECL (flags);
-
-  res_prec = MPFR_PREC (res);
-  realprec = res_prec + 10;
-  /* we start */
-  err = (mpfr_exp_t) MPFR_INT_CEIL_LOG2 (n) + 2;
-  MPFR_GROUP_INIT_6 (group, realprec, first, second, gamma1,
-                      gamma2, sub, e);
-
-  MPFR_ZIV_INIT (loop, realprec);
-  for (;;)
-    {
-      mpfr_set_ui (first, n + 1, MPFR_RNDN);
-      mpfr_set_ui (second, (n >> 1) + 1, MPFR_RNDN);
-      mpfr_lngamma (gamma1, first, MPFR_RNDN);
-      mpfr_lngamma (gamma2, second, MPFR_RNDN);
-      mpfr_sub (sub, gamma1, gamma2, MPFR_RNDN);
-
-      /* exp may overflow */
-      MPFR_BLOCK (flags, mpfr_exp (e, sub, MPFR_RNDN));
-
-      /* in case of overflow, res is set to NaN, and 0 is returned. We skip
-         both the last set and the sign set by jumping to mpfr_clear */
-      if (MPFR_OVERFLOW (flags))
-        {
-          MPFR_SET_NAN (res);
-          ternary_value = 0;
-          goto clear;
-        }
-
-      /* in algorithms.tex there is a detail error analysis for this algorithm.
-         Here we use a practical heuristic like the following.
-         Let s be the exact value and sub = s + ds its MPFR approximation,
-         with |ds| <= k3 * ulp(s) = k3 * 2^(Exp(s) - w), where k3 = 3/2.
-         For w large enough, we have |ds| <= 1/2, hence
-            |exp(ds) - 1| <= 4/3 * |ds|.
-         Therefore,
-             exp(sub) = exp(s) * (1 + 2^(Exp(s)+2-w)) up to rounding.
-         Including the final rounding error of mpfr_exp, we get
-             e = exp(s) * (1 + 2^(err-w)),
-         with:
-             err = Exp(s) + 3   if Exp(s)+2 > 0;
-                   2            if Exp(s)+2 = 0;
-                   1            if Exp(s)+2 < 0. */
-      exp_sub = MPFR_GET_EXP (sub);
-      err = (exp_sub + 2 > 0)
-            ? exp_sub + 3
-            : (exp_sub + 2 == 0) ? 2 : 1;
-      test_prec = realprec - err;
-
-      if (mpfr_min_prec (e) < test_prec - 1)
-        break;
-
-      if (MPFR_LIKELY (MPFR_CAN_ROUND (e, test_prec, res_prec, rnd_mode)))
-        break;
-    }
-
-  ternary_value = mpfr_set (res, e, rnd_mode);
-
-  /* -1^k is negative iff k = n/2 is odd */
-  if (((n >> 1) & 1))
-    MPFR_SET_NEG (res);
-
-clear:
-  MPFR_ZIV_FREE (loop);
-  MPFR_GROUP_CLEAR (group);
-
-  return ternary_value;
-}
-
 int
 mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 {
@@ -115,7 +36,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   mpfr_t p1, p2, pn, first_term, second_term;
   mpfr_prec_t res_prec, realprec, x_prec;
   mpfr_exp_t lost_bits;
-  mpfr_exp_t b_i, f_i, g_i, h_i, q_i, a_i, a_n;
+  mpfr_exp_t b_i, f_i, g_i, h_i, q_i, a_i;
   MPFR_GROUP_DECL (group);
   MPFR_ZIV_DECL (loop);
 
@@ -143,16 +64,9 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       return 0;
     }
 
-  if (MPFR_IS_ZERO (x))
+  /* H_n(0) when n is an odd number is always 0 */
+  if (MPFR_IS_ZERO (x) && (n & 1))
     {
-      /* H_n(0) when n is an even number (i.e. n=2k) is -1^k * (2k!)/k!.
-         Here we are computing it with the Log-Gamma method to avoid overflow
-         for large n, so we have exp(lngamma(2*k + 1) - lngamma(k + 1)), with
-         k = n / 2. see algorithms.tex for further details */
-      if ((n&1) == 0)
-        return zero_x_even_degree (res, n, rnd_mode);
-
-      /* H_n(0) when n is an odd number is always 0 */
       MPFR_SET_ZERO (res);
       /* 0 is exactly representable in MPFR regardless of precision,
           so this will always return 0 */

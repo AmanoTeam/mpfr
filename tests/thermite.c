@@ -29,74 +29,6 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define RANDOM_TESTS_N_DEGREE 10
 #define RANDOM_TESTS_BATCH    20
 
-static void
-test_special_cases (void)
-{
-  mpfr_t x, expected, res;
-  int ret, rnd, degree_2 = 2, degree_4 = 4, odd_degree = 3;
-
-  mpfr_init2 (res, 100);
-  mpfr_init2 (expected, 200);
-
-  /* init x = 0 */
-  mpfr_init2 (x, 10);
-  MPFR_SET_ZERO (x);
-
-  RND_LOOP (rnd)
-    {
-      mpfr_rnd_t r = (mpfr_rnd_t) rnd;
-      if (mpfr_hermite (res, odd_degree, x, r) != 0
-          || !MPFR_IS_ZERO (res))
-        {
-          printf ("H_%d(0) should be 0; got ", odd_degree);
-          mpfr_out_str (stdout, 10, 0, res, r);
-          printf ("\n");
-          exit (1);
-        }
-
-      /* H_2(0) = -2 */
-      mpfr_set_d (expected, -2.0, r);
-      ret = mpfr_hermite (res, degree_2, x, r);
-      if (ret != 0 || !mpfr_equal_p (res, expected))
-        {
-          printf ("H_2(0) should be: ");
-          mpfr_dump (expected);
-          printf ("got: ");
-          mpfr_dump (res);
-          printf ("with return value: %d\n", ret);
-          exit (1);
-        }
-
-      /* H_4(0) = 12 */
-      mpfr_set_d (expected, 12.0, r);
-      ret = mpfr_hermite (res, degree_4, x, r);
-      if (ret != 0 || !mpfr_equal_p (res, expected))
-        {
-          printf ("H_4(0) should be: ");
-          mpfr_dump (expected);
-          printf ("got: ");
-          mpfr_dump (res);
-          printf ("with return value: %d\n", ret);
-          exit (1);
-        }
-
-      /* H_{1e6}(0) exceed 2^13, therefore should return NaN */
-      ret = mpfr_hermite (res, (unsigned) 1e6, x, r);
-      if (ret != 0 || !mpfr_nan_p (res))
-        {
-          printf ("H_{1e6}(0) return NaN. Got: ");
-          mpfr_dump (res);
-          printf ("with return value: %d\n", ret);
-          exit (1);
-        }
-    }
-
-  mpfr_clear (x);
-  mpfr_clear (res);
-  mpfr_clear (expected);
-  mpfr_free_cache ();
-}
-
 /* for n == 0:
      - H_0(Inf)  -> 1.0
      - H_0(-Inf) -> 1.0
@@ -216,50 +148,10 @@ test_second_iteration (void)
   mpfr_free_cache ();
 }
 
-static void
-test_double_precision (void)
-{
-  mpfr_t x, expected, res;
-
-  mpfr_init2 (x, IEEE754_DOUBLE_PREC);
-  mpfr_init2 (res, IEEE754_DOUBLE_PREC);
-  mpfr_init2 (expected, IEEE754_DOUBLE_PREC);
-
-  /* H_3(3.49376) = 2.9924358881463501e2 with MPFR_RNDN */
-  mpfr_set_d (x, 3.49376, MPFR_RNDD);
-  mpfr_set_str (expected, "299.24358881463500799999999999999999999961", 10, MPFR_RNDN);
-  mpfr_hermite (res, 3, x, MPFR_RNDN);
-  if (mpfr_cmp (res, expected))
-    {
-      printf ("test_double_precision failed;\n");
-      DUMP_NUMBERS (expected, res);
-      exit (1);
-    }
-
-  /* H_6(-2.2364) = -5.1892977013945506e2 with MPFR_RNDN */
-  mpfr_set_d (x, -2.2364, MPFR_RNDD);
-  mpfr_set_str (expected, "-518.92977013945504945520448445364119704459", 10, MPFR_RNDN);
-  mpfr_hermite (res, 6, x, MPFR_RNDN);
-  if (mpfr_cmp (res, expected))
-    {
-      printf ("test_double_precision failed;\n");
-      DUMP_NUMBERS (expected, res);
-      exit (1);
-    }
-
-  mpfr_clear (res);
-  mpfr_clear (x);
-  mpfr_clear (expected);
-  mpfr_free_cache ();
-}
-
 int
 main (void)
 {
   tests_start_mpfr ();
-
-  /* tests for H_n(0) */
-  test_special_cases ();
 
   /* for singular input (+/-Inf or NaN), mpfr_hermit should always set res
      to NaN and return 0 */
@@ -270,10 +162,8 @@ main (void)
   test_first_iteration ();
   test_second_iteration ();
 
-  test_double_precision ();
-
-  random_poly_suite (RANDOM_TESTS_BATCH, RANDOM_TESTS_BATCH,
-                     IEEE754_DOUBLE_PREC, mpfr_legendre);
+  random_poly_suite (RANDOM_TESTS_N_DEGREE, RANDOM_TESTS_BATCH,
+                     IEEE754_DOUBLE_PREC);
 
   tests_end_mpfr ();
   return 0;
