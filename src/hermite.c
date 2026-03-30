@@ -80,9 +80,6 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       return mpfr_mul_ui (res, x, 2, rnd_mode);
     }
 
-  /* if x_prec > res_prec, then we use x_prec as the starting precision
-     for the Ziv's loop, otherwise we use res_prec. We add then a coefficient
-     that is proportional either to x_prec or res_prec + 10 safety bits */
   realprec = x_prec > res_prec ? x_prec : res_prec + 10;
   realprec += MPFR_INT_CEIL_LOG2 (realprec);
 
@@ -141,7 +138,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
                            p1, p2, pn, first_term, second_term);
     }
   MPFR_ZIV_FREE (loop);
-  ternary_value = mpfr_set (res, pn, rnd_mode);
+  ternary_value = mpfr_set (res, p1, rnd_mode);
 
   MPFR_GROUP_CLEAR (group);
 

@@ -148,6 +148,57 @@ test_second_iteration (void)
   mpfr_free_cache ();
 }
 
+static void
+test_double_precision (void)
+{
+  mpfr_t x, expected, res;
+
+  mpfr_init2 (x, IEEE754_DOUBLE_PREC);
+  mpfr_init2 (res, IEEE754_DOUBLE_PREC);
+  mpfr_init2 (expected, IEEE754_DOUBLE_PREC);
+
+  /* H_3(3.49376) = 2.9924358881463502e2 with MPFR_RNDN */
+  mpfr_set_d (x, 3.49376, MPFR_RNDN);
+  mpfr_set_str (expected, "299.24358881463500800000000000000", 10, MPFR_RNDN);
+
+  mpfr_hermite (res, 3, x, MPFR_RNDN);
+  if (mpfr_cmp (res, expected))
+    {
+      printf ("test_double_precision failed;\n");
+      DUMP_NUMBERS (expected, res);
+      exit (1);
+    }
+
+  /* H_6(-6.25) = 3.1102803906250000e6 with MPFR_RNDN */
+  mpfr_set_d (x, -6.25, MPFR_RNDN);
+  mpfr_set_str (expected, "3.11028039062500000000000000000e6", 10, MPFR_RNDN);
+
+  mpfr_hermite (res, 6, x, MPFR_RNDN);
+  if (mpfr_cmp (res, expected))
+    {
+      printf ("test_double_precision failed;\n");
+      DUMP_NUMBERS (expected, res);
+      exit (1);
+    }
+
+  /* H_2(0.0001) = -1.9999999600000000e0 with MPFR_RNDN */
+  mpfr_set_d (x, 0.0001, MPFR_RNDN);
+  mpfr_set_str (expected, "-1.999999960000000000000000000000", 10, MPFR_RNDN);
+
+  mpfr_hermite (res, 2, x, MPFR_RNDN);
+  if (mpfr_cmp (res, expected))
+    {
+      printf ("test_double_precision failed;\n");
+      DUMP_NUMBERS (expected, res);
+      exit (1);
+    }
+
+  mpfr_clear (res);
+  mpfr_clear (x);
+  mpfr_clear (expected);
+  mpfr_free_cache ();
+}
+
 int
 main (void)
 {
@@ -162,6 +213,10 @@ main (void)
   test_first_iteration ();
   test_second_iteration ();
 
+  /* test physicist's Hermite polynomials with fixed test cases in double
+     precision */
+  test_double_precision ();
+
   random_poly_suite (RANDOM_TESTS_N_DEGREE, RANDOM_TESTS_BATCH,
                      IEEE754_DOUBLE_PREC);
 
@@ -170,7 +225,7 @@ main (void)
 }
 
 #undef MPFR_ORTHOGONAL_POLY_FN
-#define X_LOWER_BOUND
-#define X_HIGHER_BOUND
+#undef X_LOWER_BOUND
+#undef X_HIGHER_BOUND
 #undef RANDOM_TESTS_N_DEGREE
 #undef RANDOM_TESTS_BATCH
