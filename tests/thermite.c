@@ -28,6 +28,7 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 #define RANDOM_TESTS_N_DEGREE 10
 #define RANDOM_TESTS_BATCH    20
+#define DYADIC_BOUND          10
 
 /* for n == 0:
      - H_0(Inf)  -> 1.0
@@ -199,6 +200,108 @@ test_double_precision (void)
   mpfr_free_cache ();
 }
 
+/* Exhaustive test of degree-n Hermite polynomial with all fractions
+   a/2^b with |a| <= A and 0 <= b <= B, for precision p.
+   Assume n >= 1. */
+static void
+test_exact (int n, int A, int B, mpfr_prec_t p)
+{
+  mpq_t *H0, *H1, t, u;
+  int i, j, a, b, rnd;
+  mpfr_t x, y, z;
+
+  H0 = (mpq_t*) malloc ((n + 1) * sizeof (mpq_t));
+  H1 = (mpq_t*) malloc ((n + 1) * sizeof (mpq_t));
+  for (i = 0; i <= n; i++) {
+    mpq_init (H0[i]); /* set to 0 */
+    mpq_init (H1[i]); /* set to 0 */
+  }
+  mpq_init (t);
+  mpq_init (u);
+  /* use the physicist's Hermite recurrence:
+     H_0(x) = 1, H_1(x) = 2x,
+     H_j(x) = 2x * H_{j-1}(x) - 2(j-1) * H_{j-2}(x)
+     In coefficient form:
+     H_j[i] = 2 * H_{j-1}[i-1] - 2*(j-1) * H_{j-2}[i] */
+  mpq_set_ui (H0[0], 1, 1); /* H_0 = 1 */
+  mpq_set_ui (H1[1], 2, 1); /* H_1 = 2x */
+  for (j = 2; j <= n; j++) {
+    /* H[j] = 2x * H[j-1] - 2(j-1) * H[j-2]
+       thus H[j][i] = 2 * H[j-1][i-1] - 2*(j-1) * H[j-2][i].
+       Invariant: H[j-2] is stored in H0, and H[j-1] in H1. */
+    for (i = 0; i <= j; i++) {
+      if (i == 0)
+        mpq_set_ui (t, 0, 1);
+      else {
+        mpq_set_ui (t, 2, 1);
+        mpq_mul (t, t, H1[i-1]);
+      }
+      /* t = 2 * H[j-1][i-1] */
+      mpq_set_ui (u, 2*(j-1), 1);
+      mpq_mul (u, u, H0[i]);
+      /* u = 2*(j-1) * H[j-2][i] */
+      mpq_sub (H0[i], t, u);
+      /* now H0[i] contains H[j][i] */
+    }
+    /* swap H0 and H1 */
+    for (i = 0; i <= j; i++)
+      mpq_swap (H0[i], H1[i]);
+  }
+
+  mpfr_init2 (x, 64);
+  mpfr_init2 (y, p);
+  mpfr_init2 (z, p);
+
+  for (a = -A; a <= A; a++)
+    for (b = 0; b <= B; b++) {
+      /* compute t = Hn(a/2^b) */
+      mpq_set_si (u, a, 1ul<<b);
+      mpq_set (t, H1[n]);
+      for (i = n-1; i >= 0; i--) {
+        mpq_mul (t, t, u);
+        mpq_add (t, t, H1[i]);
+      }
+
+      /* now t = Hn(a/2^b) exactly */
+
+      mpfr_set_si_2exp (x, a, -b, MPFR_RNDN);
+      RND_LOOP (rnd) {
+        mpfr_rnd_t r = (mpfr_rnd_t) rnd;
+        mpfr_set_q (y, t, (mpfr_rnd_t) rnd); /* expected result */
+        mpfr_hermite (z, n, x, r);
+        if (mpfr_cmp (y, z)) {
+          printf ("Error in test_exact for n=%d a=%d b=%d p=%lu rnd=%s\n",
+                  n, a, b, p, mpfr_print_rnd_mode (r));
+          DUMP_NUMBERS (y, z);
+          exit (1);
+        }
+      }
+    }
+
+  for (i = 0; i <= n; i++) {
+    mpq_clear (H0[i]);
+    mpq_clear (H1[i]);
+  }
+  free (H0);
+  free (H1);
+  mpq_clear (t);
+  mpq_clear (u);
+  mpfr_clear (x);
+  mpfr_clear (y);
+  mpfr_clear (z);
+}
+
+static void
+test_exact_dyadic (void)
+{
+  int n;
+  mpfr_prec_t p;
+
+  for (n = 1; n <= 10; n++)
+    for (p = DYADIC_BOUND - 3; p <= DYADIC_BOUND; p++)
+      test_exact (n, DYADIC_BOUND, DYADIC_BOUND, p);
+}
+
 int
 main (void)
 {
@@ -219,6 +322,8 @@ main (void)
 
   random_poly_suite (RANDOM_TESTS_N_DEGREE, RANDOM_TESTS_BATCH,
                      IEEE754_DOUBLE_PREC);
+
+  test_exact_dyadic ();
 
   tests_end_mpfr ();
   return 0;
