@@ -212,10 +212,11 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
 
   H0 = (mpq_t*) malloc ((n + 1) * sizeof (mpq_t));
   H1 = (mpq_t*) malloc ((n + 1) * sizeof (mpq_t));
-  for (i = 0; i <= n; i++) {
-    mpq_init (H0[i]); /* set to 0 */
-    mpq_init (H1[i]); /* set to 0 */
-  }
+  for (i = 0; i <= n; i++)
+    {
+      mpq_init (H0[i]); /* set to 0 */
+      mpq_init (H1[i]); /* set to 0 */
+    }
   mpq_init (t);
   mpq_init (u);
   /* use the physicist's Hermite recurrence:
@@ -225,63 +226,71 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
      H_j[i] = 2 * H_{j-1}[i-1] - 2*(j-1) * H_{j-2}[i] */
   mpq_set_ui (H0[0], 1, 1); /* H_0 = 1 */
   mpq_set_ui (H1[1], 2, 1); /* H_1 = 2x */
-  for (j = 2; j <= n; j++) {
-    /* H[j] = 2x * H[j-1] - 2(j-1) * H[j-2]
-       thus H[j][i] = 2 * H[j-1][i-1] - 2*(j-1) * H[j-2][i].
-       Invariant: H[j-2] is stored in H0, and H[j-1] in H1. */
-    for (i = 0; i <= j; i++) {
-      if (i == 0)
-        mpq_set_ui (t, 0, 1);
-      else {
-        mpq_set_ui (t, 2, 1);
-        mpq_mul (t, t, H1[i-1]);
-      }
-      /* t = 2 * H[j-1][i-1] */
-      mpq_set_ui (u, 2*(j-1), 1);
-      mpq_mul (u, u, H0[i]);
-      /* u = 2*(j-1) * H[j-2][i] */
-      mpq_sub (H0[i], t, u);
-      /* now H0[i] contains H[j][i] */
+  for (j = 2; j <= n; j++)
+    {
+      /* H[j] = 2x * H[j-1] - 2(j-1) * H[j-2]
+         thus H[j][i] = 2 * H[j-1][i-1] - 2*(j-1) * H[j-2][i].
+         Invariant: H[j-2] is stored in H0, and H[j-1] in H1. */
+      for (i = 0; i <= j; i++)
+        {
+          if (i == 0)
+            mpq_set_ui (t, 0, 1);
+          else
+            {
+              mpq_set_ui (t, 2, 1);
+              mpq_mul (t, t, H1[i-1]);
+            }
+          /* t = 2 * H[j-1][i-1] */
+          mpq_set_ui (u, 2*(j-1), 1);
+          mpq_mul (u, u, H0[i]);
+          /* u = 2*(j-1) * H[j-2][i] */
+          mpq_sub (H0[i], t, u);
+          /* now H0[i] contains H[j][i] */
+        }
+      /* swap H0 and H1 */
+      for (i = 0; i <= j; i++)
+        mpq_swap (H0[i], H1[i]);
     }
-    /* swap H0 and H1 */
-    for (i = 0; i <= j; i++)
-      mpq_swap (H0[i], H1[i]);
-  }
 
   mpfr_init2 (x, 64);
   mpfr_init2 (y, p);
   mpfr_init2 (z, p);
 
   for (a = -A; a <= A; a++)
-    for (b = 0; b <= B; b++) {
-      /* compute t = Hn(a/2^b) */
-      mpq_set_si (u, a, 1ul<<b);
-      mpq_set (t, H1[n]);
-      for (i = n-1; i >= 0; i--) {
-        mpq_mul (t, t, u);
-        mpq_add (t, t, H1[i]);
+    for (b = 0; b <= B; b++)
+      {
+        /* compute t = Hn(a/2^b) */
+        mpq_set_si (u, a, 1ul<<b);
+        mpq_set (t, H1[n]);
+        for (i = n-1; i >= 0; i--)
+          {
+            mpq_mul (t, t, u);
+            mpq_add (t, t, H1[i]);
+          }
+
+        /* now t = Hn(a/2^b) exactly */
+
+        mpfr_set_si_2exp (x, a, -b, MPFR_RNDN);
+        RND_LOOP (rnd)\
+          {
+            mpfr_rnd_t r = (mpfr_rnd_t) rnd;
+            mpfr_set_q (y, t, (mpfr_rnd_t) rnd); /* expected result */
+            mpfr_hermite (z, n, x, r);
+            if (mpfr_cmp (y, z))
+              {
+                printf ("Error in test_exact for n=%d a=%d b=%d p=%lu rnd=%s\n",
+                        n, a, b, p, mpfr_print_rnd_mode (r));
+                DUMP_NUMBERS (y, z);
+                exit (1);
+              }
+          }
       }
 
-      /* now t = Hn(a/2^b) exactly */
-
-      mpfr_set_si_2exp (x, a, -b, MPFR_RNDN);
-      RND_LOOP (rnd) {
-        mpfr_rnd_t r = (mpfr_rnd_t) rnd;
-        mpfr_set_q (y, t, (mpfr_rnd_t) rnd); /* expected result */
-        mpfr_hermite (z, n, x, r);
-        if (mpfr_cmp (y, z)) {
-          printf ("Error in test_exact for n=%d a=%d b=%d p=%lu rnd=%s\n",
-                  n, a, b, p, mpfr_print_rnd_mode (r));
-          DUMP_NUMBERS (y, z);
-          exit (1);
-        }
-      }
+  for (i = 0; i <= n; i++)
+    {
+      mpq_clear (H0[i]);
+      mpq_clear (H1[i]);
     }
-
-  for (i = 0; i <= n; i++) {
-    mpq_clear (H0[i]);
-    mpq_clear (H1[i]);
-  }
   free (H0);
   free (H1);
   mpq_clear (t);
