@@ -47,7 +47,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       MPFR_SET_NAN (res);
       /* as specified in the documentation, "[...] a NaN result
          (Not-a-Number) always corresponds to an exact return value." */
-      return 0;
+      MPFR_RET_NAN;
     }
 
   /* H_0(x) = 1. In this case, since the output is const and does not depend
@@ -57,7 +57,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       mpfr_set_ui (res, 1, rnd_mode);
       /* 1 is exactly representable in MPFR regardless of precision,
         so this will always return 0 */
-      return 0;
+      MPFR_RET (0);
     }
 
   /* H_n(0) when n is an odd number is always 0 */
@@ -66,7 +66,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       MPFR_SET_ZERO (res);
       /* 0 is exactly representable in MPFR regardless of precision,
           so this will always return 0 */
-      return 0;
+      MPFR_RET (0);
     }
 
   /* H_1(x) = 2x */
@@ -93,47 +93,72 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   for (;;)
     {
       i = 1;
-      
-      /* p1 = 2x, p2 = 1 */
-      inex = mpfr_mul_ui (p1, x, 2, MPFR_RNDN);
-      mpfr_set_ui (p2, 1, MPFR_RNDN);
 
-      b_i = LONG_MIN;                         /* 2^b_i is the absolute error on p2 */
-      a_i = MPFR_GET_EXP (p1) - realprec - 1; /* 2^a_i is the absolute error on p1 */
+      inex = mpfr_mul_ui (p1, x, 2, MPFR_RNDN); /* p1 = 2x, p2 = 1 */
+      mpfr_set_ui (p2, 1, MPFR_RNDN);           /* exact */
+
+      /* In the loop:
+           2^a_i is a bound on the absolute error on p1.
+           2^b_i is a bound on the absolute error on p2.
+         a_i and b_i come from the previous iteration, and initialized
+         below for the first iteration (i = 1). */
+
+      /* 2^b_i is the absolute error on p2 */
+      b_i = LONG_MIN;
+      /* 2^a_i is the absolute error on p1 */
+      a_i = MPFR_GET_EXP (p1) - realprec - 1;
 
       while (i < n)
         {
-          /* first_term = 2x */
+          /* first_term = 2x, with absolute error at step i
+             (denoted f_i in algorithms.tex)
+             bounded by f_i <= exp(first_term) - p - 1 */
           inex |= mpfr_mul_ui (first_term, x, 2, MPFR_RNDN);
           f_i = MPFR_GET_EXP (first_term) - realprec - 1;
 
-          /* second_term = p2 * 2i */
+          /* second_term = p2 * 2i, with absolute error at step i
+             bounded by
+             g_i <= max(exp(second_term)-p,
+                        error(p2) + MPFR_INT_CEIL_LOG2(2*i)+1) */
           inex |= mpfr_mul_ui (second_term, p2, 2 * i, MPFR_RNDN);
           g_i = MAX (MPFR_GET_EXP (second_term) - realprec,
                      b_i + MPFR_INT_CEIL_LOG2 (2*i) + 1);
 
-          /* first_term = first_term * p1 */
+          /* first_term = first_term * p1, with absolute error at step i
+             bounded by
+             h_i <= 2 + max(exp(first_term)-p-1, f_i+exp(p1),
+                            2+MPFR_GET_EXP(x)+a_i) */
           inex |= mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
           h_i = 2 + MAX3 (MPFR_GET_EXP (first_term) - realprec - 1,
                           f_i + MPFR_GET_EXP (p1), 2 + MPFR_GET_EXP (x) + a_i);
 
-          /* pn = first_term - second_term */
+          /* pn = first_term - second_term, with absolute error at step i
+             bounded by
+             q_i <= 2 + max(exp(pn)-p-1,
+                            error(first_term), error(second_term)) */
           inex |= mpfr_sub (pn, first_term, second_term, MPFR_RNDN);
           q_i = 2 + MAX3 (MPFR_GET_EXP (pn) - realprec - 1, h_i, g_i);
 
           /* p2 = p1, p1 = pn */
-          mpfr_swap (p2, p1);
-          mpfr_swap (p1, pn);
-          b_i = a_i;
-          a_i = q_i;
+          mpfr_swap (p2, p1); /* now p2 approximates H_{i}(x) */
+          mpfr_swap (p1, pn); /* now p1 approximates H_{i+1}(x) */
+          b_i = a_i;          /* 2^b_i is a bound on the absolute error on p2 */
+          a_i = q_i;          /* 2^a_i is a bound on the absolute error on p1 */
 
           i++;
         }
 
+      /* Now p1 approximates H_n(x), and 2^a_i is a bound on its absolute
+         error. Since ulp(p1) = 2^(EXP(p1)-realprec), we get the relative
+         error is bounded by 2^(a_i - (EXP(p1) - realprec - 1)). */
       lost_bits = a_i - (MPFR_GET_EXP (p1) - realprec);
 
-      if (inex == 0 || (lost_bits < realprec && 
-              MPFR_CAN_ROUND (p1, realprec - lost_bits, res_prec, rnd_mode)))
+      /* if inex=0, then all the computation was exact, thus p1 is exactly
+         H_n(x), otherwise we call MPFR_CAN_ROUND() to check if we can
+         deduce the correct rounding */
+      if (inex == 0 ||
+          (lost_bits < realprec && 
+            MPFR_CAN_ROUND (p1, realprec - lost_bits, res_prec, rnd_mode)))
         break;
 
       MPFR_ZIV_NEXT (loop, realprec);
