@@ -29,18 +29,14 @@ int
 mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 {
   int ternary_value = 0, inex;
-
-  /* the following variables are used (and consequently initialized) only
-     for n >= 2, where x is not equal to -1, 0 or 1 */
   long i;
   mpfr_t p1, p2, pn, first_term, second_term;
-  mpfr_prec_t res_prec, realprec, x_prec;
+  mpfr_prec_t res_prec, realprec, guard_bits;
   mpfr_exp_t lost_bits;
   mpfr_exp_t b_i, f_i, g_i, h_i, q_i, a_i;
   MPFR_GROUP_DECL (group);
   MPFR_ZIV_DECL (loop);
 
-  x_prec = MPFR_PREC (x);
   res_prec = MPFR_PREC (res);
 
   /* NaN are checke *before* any other check, according to C++ specs:
@@ -80,7 +76,14 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       return mpfr_mul_ui (res, x, 2, rnd_mode);
     }
 
-  realprec = x_prec > res_prec ? x_prec : res_prec + 10;
+  /* Analyzing all the test cases where the result is not exact (inex != 0),
+     we find that the average number of bits lost per iteration, i.e.,
+     lost_bits/(n-1), is about 3.27, but up to about 5.5 for n >= 20.
+     We thus add 4*n guard bits for n < 20, and 6*n for n >= 20.
+     For revision see eb17cda, where we have a total of 8722 such tests.
+     With guard_bits * n + 10, we get a probability of failure of 0.2% */
+  guard_bits = n < 20 ? 4 : 6;
+  realprec = res_prec + guard_bits * n + 10;
   realprec += MPFR_INT_CEIL_LOG2 (realprec);
 
   MPFR_GROUP_INIT_5 (group, realprec,
