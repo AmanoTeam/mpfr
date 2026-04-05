@@ -30,14 +30,20 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define RANDOM_TESTS_BATCH    20
 #define DYADIC_BOUND          10
 
+typedef struct {
+  unsigned n;
+  double x;
+  int sign;  /* +/-1 */
+} test_case_t;
+
 /* for n == 0:
-     - H_0(Inf)  -> 1.0
-     - H_0(-Inf) -> 1.0
-     - H_0(NaN)  -> 1.0
+     - P_0(Inf)  -> 1.0
+     - P_0(-Inf) -> 1.0
+     - P_0(NaN)  -> 1.0
    for n >= 1:
-     - H_n(Inf)  -> NaN
-     - H_n(-Inf) -> NaN
-     - H_n(NaN)  -> NaN */
+     - P_n(Inf)  -> NaN
+     - P_n(-Inf) -> NaN
+     - P_n(NaN)  -> NaN */
 static void
 test_singular_input (void)
 {
@@ -56,7 +62,7 @@ test_singular_input (void)
       ret = mpfr_hermite (res, n, x, MPFR_RNDN);
       if (ret != 0 || !mpfr_nan_p (res))
         {
-          printf ("For x = NAN, H_%u should be NAN\ngot: ", n);
+          printf ("For x = NAN, P_%u should be NAN\ngot: ", n);
           mpfr_dump (res);
           printf ("With return value: %d\n", ret);
           exit (1);
@@ -65,7 +71,7 @@ test_singular_input (void)
       ret = mpfr_hermite (res, n, x, MPFR_RNDN);
       if (ret != 0 || !mpfr_nan_p (res))
         {
-          printf ("For x = +Inf, H_%u should be NAN\ngot: ", n);
+          printf ("For x = +Inf, P_%u should be NAN\ngot: ", n);
           mpfr_dump (res);
           printf ("With return value: %d\n", ret);
           exit (1);
@@ -74,7 +80,7 @@ test_singular_input (void)
       ret = mpfr_hermite (res, n, x, MPFR_RNDN);
       if (ret != 0 || !mpfr_nan_p (res))
         {
-          printf ("For x = -Inf, H_%u should be NAN\ngot: ", n);
+          printf ("For x = -Inf, P_%u should be NAN\ngot: ", n);
           mpfr_dump (res);
           printf ("With return value: %d\n", ret);
           exit (1);
@@ -106,7 +112,7 @@ test_first_iteration (void)
   ret = mpfr_hermite (res, 0, x, MPFR_RNDN);
   if (ret != 0 || !mpfr_equal_p (res, one))
     {
-      printf ("The first Hermite polynomial H_0 should be exactly 1.\ngot: ");
+      printf ("The first Hermite polynomial P_0 should be exactly 1.\ngot: ");
       mpfr_dump (res);
       printf ("With return value: %d\n", ret);
       exit (1);
@@ -137,7 +143,7 @@ test_second_iteration (void)
   ret = mpfr_hermite (res, 1, x, MPFR_RNDN);
   if (ret != 0 || !mpfr_equal_p (res, expected))
     {
-      printf ("H_1 should be 2x\ngot: ");
+      printf ("P_1 should be 2x\ngot: ");
       mpfr_dump (res);
       printf ("With return value: %d\n", ret);
       exit (1);
@@ -158,7 +164,7 @@ test_double_precision (void)
   mpfr_init2 (res, IEEE754_DOUBLE_PREC);
   mpfr_init2 (expected, IEEE754_DOUBLE_PREC);
 
-  /* H_3(3.49376) = 2.9924358881463502e2 with MPFR_RNDN */
+  /* P_3(3.49376) = 2.9924358881463502e2 with MPFR_RNDN */
   mpfr_set_d (x, 3.49376, MPFR_RNDN);
   mpfr_set_str (expected, "299.24358881463500800000000000000", 10, MPFR_RNDN);
 
@@ -170,7 +176,7 @@ test_double_precision (void)
       exit (1);
     }
 
-  /* H_6(-6.25) = 3.1102803906250000e6 with MPFR_RNDN */
+  /* P_6(-6.25) = 3.1102803906250000e6 with MPFR_RNDN */
   mpfr_set_d (x, -6.25, MPFR_RNDN);
   mpfr_set_str (expected, "3.11028039062500000000000000000e6", 10, MPFR_RNDN);
 
@@ -182,7 +188,7 @@ test_double_precision (void)
       exit (1);
     }
 
-  /* H_2(0.0001) = -1.9999999600000000e0 with MPFR_RNDN */
+  /* P_2(0.0001) = -1.9999999600000000e0 with MPFR_RNDN */
   mpfr_set_d (x, 0.0001, MPFR_RNDN);
   mpfr_set_str (expected, "-1.999999960000000000000000000000", 10, MPFR_RNDN);
 
@@ -206,31 +212,31 @@ test_double_precision (void)
 static void
 test_exact (int n, int A, int B, mpfr_prec_t p)
 {
-  mpq_t *H0, *H1, t, u;
+  mpq_t *P0, *P1, t, u;
   int i, j, a, b, rnd;
   mpfr_t x, y, z;
 
-  H0 = (mpq_t*) malloc ((n + 1) * sizeof (mpq_t));
-  H1 = (mpq_t*) malloc ((n + 1) * sizeof (mpq_t));
+  P0 = (mpq_t*) malloc ((n + 1) * sizeof (mpq_t));
+  P1 = (mpq_t*) malloc ((n + 1) * sizeof (mpq_t));
   for (i = 0; i <= n; i++)
     {
-      mpq_init (H0[i]); /* set to 0 */
-      mpq_init (H1[i]); /* set to 0 */
+      mpq_init (P0[i]); /* set to 0 */
+      mpq_init (P1[i]); /* set to 0 */
     }
   mpq_init (t);
   mpq_init (u);
-  /* use the physicist's Hermite recurrence:
-     H_0(x) = 1, H_1(x) = 2x,
-     H_j(x) = 2x * H_{j-1}(x) - 2(j-1) * H_{j-2}(x)
+  /* use the physicist's Permite recurrence:
+     P_0(x) = 1, P_1(x) = 2x,
+     P_j(x) = 2x * P_{j-1}(x) - 2(j-1) * P_{j-2}(x)
      In coefficient form:
-     H_j[i] = 2 * H_{j-1}[i-1] - 2*(j-1) * H_{j-2}[i] */
-  mpq_set_ui (H0[0], 1, 1); /* H_0 = 1 */
-  mpq_set_ui (H1[1], 2, 1); /* H_1 = 2x */
+     P_j[i] = 2 * P_{j-1}[i-1] - 2*(j-1) * P_{j-2}[i] */
+  mpq_set_ui (P0[0], 1, 1); /* P_0 = 1 */
+  mpq_set_ui (P1[1], 2, 1); /* P_1 = 2x */
   for (j = 2; j <= n; j++)
     {
-      /* H[j] = 2x * H[j-1] - 2(j-1) * H[j-2]
-         thus H[j][i] = 2 * H[j-1][i-1] - 2*(j-1) * H[j-2][i].
-         Invariant: H[j-2] is stored in H0, and H[j-1] in H1. */
+      /* P[j] = 2x * P[j-1] - 2(j-1) * P[j-2]
+         thus P[j][i] = 2 * P[j-1][i-1] - 2*(j-1) * P[j-2][i].
+         Invariant: P[j-2] is stored in P0, and P[j-1] in P1. */
       for (i = 0; i <= j; i++)
         {
           if (i == 0)
@@ -238,18 +244,18 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
           else
             {
               mpq_set_ui (t, 2, 1);
-              mpq_mul (t, t, H1[i-1]);
+              mpq_mul (t, t, P1[i-1]);
             }
-          /* t = 2 * H[j-1][i-1] */
+          /* t = 2 * P[j-1][i-1] */
           mpq_set_ui (u, 2*(j-1), 1);
-          mpq_mul (u, u, H0[i]);
-          /* u = 2*(j-1) * H[j-2][i] */
-          mpq_sub (H0[i], t, u);
-          /* now H0[i] contains H[j][i] */
+          mpq_mul (u, u, P0[i]);
+          /* u = 2*(j-1) * P[j-2][i] */
+          mpq_sub (P0[i], t, u);
+          /* now P0[i] contains P[j][i] */
         }
-      /* swap H0 and H1 */
+      /* swap P0 and P1 */
       for (i = 0; i <= j; i++)
-        mpq_swap (H0[i], H1[i]);
+        mpq_swap (P0[i], P1[i]);
     }
 
   mpfr_init2 (x, 64);
@@ -259,16 +265,16 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
   for (a = -A; a <= A; a++)
     for (b = 0; b <= B; b++)
       {
-        /* compute t = Hn(a/2^b) */
+        /* compute t = Pn(a/2^b) */
         mpq_set_si (u, a, 1ul<<b);
-        mpq_set (t, H1[n]);
+        mpq_set (t, P1[n]);
         for (i = n-1; i >= 0; i--)
           {
             mpq_mul (t, t, u);
-            mpq_add (t, t, H1[i]);
+            mpq_add (t, t, P1[i]);
           }
 
-        /* now t = Hn(a/2^b) exactly */
+        /* now t = Pn(a/2^b) exactly */
 
         mpfr_set_si_2exp (x, a, -b, MPFR_RNDN);
         RND_LOOP (rnd)\
@@ -288,11 +294,11 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
 
   for (i = 0; i <= n; i++)
     {
-      mpq_clear (H0[i]);
-      mpq_clear (H1[i]);
+      mpq_clear (P0[i]);
+      mpq_clear (P1[i]);
     }
-  free (H0);
-  free (H1);
+  free (P0);
+  free (P1);
   mpq_clear (t);
   mpq_clear (u);
   mpfr_clear (x);
@@ -309,6 +315,134 @@ test_exact_dyadic (void)
   for (n = 1; n <= 10; n++)
     for (p = DYADIC_BOUND - 3; p <= DYADIC_BOUND; p++)
       test_exact (n, DYADIC_BOUND, DYADIC_BOUND, p);
+}
+
+/* Test overflow with reduced emax = 2.
+   Test with several (n, x) pairs and all rounding modes. */
+static void
+test_overflow (void)
+{
+  mpfr_t x, y, res;
+  int rnd, inex, ncases, i, is_towards_zero;
+  mpfr_exp_t old_emax;
+  test_case_t *curr_case;
+  test_case_t cases[] =
+    {
+      { 2,  2.0,  1 },  /* P_2(2) = 14,     MPFR_EXP = 4  */
+      { 3,  2.0,  1 },  /* P_3(2) = 40,     MPFR_EXP = 6  */
+      { 2, -1.5,  1 },  /* P_2(-1.5) = 7,   MPFR_EXP = 3  */
+      { 3, -1.5, -1 },  /* P_3(-1.5) = -9,  MPFR_EXP = 4  */
+      { 5, -3.0, -1 },  /* P_5(-3) = -3816, MPFR_EXP = 11 */
+      { 4, -2.0,  1 },  /* P_4(-2) = 76,    MPFR_EXP = 7  */
+    };
+
+  ncases = sizeof (cases) / sizeof (cases[0]);
+  old_emax = mpfr_get_emax ();
+
+  mpfr_init2 (x, 8);
+  mpfr_init2 (y, 8);
+  mpfr_init2 (res, 8);
+
+  set_emax (2);
+
+  /* y = 4 is the largest finite number: 0.11111111 * 2^emax */
+  mpfr_set_ui_2exp (y, 1, 2, MPFR_RNDN);
+  /* maxnum = 4 - ulp */
+  mpfr_nextbelow (y);
+
+  for (i = 0; i < ncases; i++)
+    {
+      curr_case = cases + i;
+
+      RND_LOOP (rnd)
+        {
+          mpfr_set_d (x, curr_case->x, MPFR_RNDN);
+          mpfr_clear_flags ();
+
+          inex = mpfr_hermite (res, curr_case->n, x, (mpfr_rnd_t) rnd);
+
+          if (!mpfr_overflow_p ())
+            {
+              printf ("Error in test_overflow (n = %u, x = %g, rnd = %s). "
+                      "The overflow flag is not set.\n",
+                      curr_case->n, curr_case->x,
+                      mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+              exit (1);
+            }
+
+          /* We skip faithful rounding */
+          if (rnd == MPFR_RNDF)
+            continue;
+
+          /* For rounding towards zero (RNDZ and RNDD for positive, or 
+             RNDZ and RNDU for negative), the result is maxnum.
+             Otherwise +\-Inf (depending on the sign of x) */
+          is_towards_zero = (rnd == MPFR_RNDZ);
+          if (curr_case->sign > 0)
+            is_towards_zero |= (rnd == MPFR_RNDD);
+          else
+            is_towards_zero |= (rnd == MPFR_RNDU);
+
+          if (is_towards_zero)
+            {
+              if (inex * curr_case->sign >= 0)
+                {
+                  printf ("Error in test_overflow (n = %u, x = %g, rnd = %s). "
+                          "inex has wrong sign: %d (expected_sign = %d).\n",
+                          curr_case->n, curr_case->x,
+                          mpfr_print_rnd_mode ((mpfr_rnd_t) rnd),
+                          inex, -curr_case->sign);
+                  exit (1);
+                }
+              /* Result should be maxnum with correct sign */
+              if (mpfr_inf_p (res))
+                {
+                  printf ("Error in test_overflow (n = %u, x = %g, rnd = %s). "
+                          "Got Inf, expected maxnum.\n",
+                          curr_case->n, curr_case->x,
+                          mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                  exit (1);
+                }
+            }
+          else
+            {
+              if (inex * curr_case->sign <= 0)
+                {
+                  printf ("Error in test_overflow (n = %u, x = %g, rnd = %s), "
+                          "inex has wrong sign: %d (expected_sign = %d).\n",
+                          curr_case->n, curr_case->x,
+                          mpfr_print_rnd_mode ((mpfr_rnd_t) rnd),
+                          inex, curr_case->sign);
+                  exit (1);
+                }
+              /* Result should be +/-Inf */
+              if (!mpfr_inf_p (res))
+                {
+                  printf ("Error in test_overflow (n = %u, x = %g, rnd = %s). Got ",
+                          curr_case->n, curr_case->x,
+                          mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                  mpfr_dump (res);
+                  printf ("Instead of %sInf.\n",
+                          (curr_case->sign > 0) ? "+" : "-");
+                  exit (1);
+                }
+
+              if (MPFR_SIGN (res) != curr_case->sign)
+                {
+                  printf ("Error in test_overflow (n = %u, x = %g, rnd = %s): "
+                          "Wrong sign on Inf: ", curr_case->n, curr_case->x,
+                          mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                  exit (1);
+                }
+            }
+        }
+    }
+
+  set_emax (old_emax);
+
+  mpfr_clear (x);
+  mpfr_clear (y);
+  mpfr_clear (res);
 }
 
 int
@@ -333,6 +467,8 @@ main (void)
                      IEEE754_DOUBLE_PREC);
 
   test_exact_dyadic ();
+
+  test_overflow ();
 
   tests_end_mpfr ();
   return 0;

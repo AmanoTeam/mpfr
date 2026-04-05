@@ -28,13 +28,14 @@ If not, see <https://www.gnu.org/licenses/>. */
 int
 mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 {
-  int ternary_value = 0, inex;
   long i;
+  int ternary_value = 0, inex;
   mpfr_t p1, p2, pn, first_term, second_term;
   mpfr_prec_t res_prec, realprec, guard_bits;
   mpfr_exp_t lost_bits;
   mpfr_exp_t b_i, f_i, g_i, h_i, q_i, a_i;
   MPFR_GROUP_DECL (group);
+  MPFR_SAVE_EXPO_DECL (expo);
   MPFR_ZIV_DECL (loop);
 
   res_prec = MPFR_PREC (res);
@@ -69,11 +70,14 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       MPFR_RET (0);
     }
 
+  MPFR_SAVE_EXPO_MARK (expo);
+
   /* H_1(x) = 2x */
   if (n == 1)
     {
       /* result is set to 2x. The ternary value of mpfr_set is returned */
-      return mpfr_mul_ui (res, x, 2, rnd_mode);
+      ternary_value = mpfr_mul_ui (res, x, 2, rnd_mode);
+      goto end;
     }
 
   /* Analyzing all the test cases where the result is not exact (inex != 0),
@@ -92,9 +96,22 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   MPFR_ZIV_INIT (loop, realprec);
   for (;;)
     {
+      MPFR_BLOCK_DECL (flags);
+
       i = 1;
 
-      inex = mpfr_mul_ui (p1, x, 2, MPFR_RNDN); /* p1 = 2x, p2 = 1 */
+      MPFR_BLOCK (flags, inex = mpfr_mul_ui (p1, x, 2, MPFR_RNDN));
+      if (MPFR_OVERFLOW (flags))
+        {
+          /* 2x overflows in extended exponent range;
+             H_n(x) overflows for all n >= 1. The sign of H_n(x) for
+             large |x| is that of its leading term (2x)^n. */
+          ternary_value = mpfr_overflow (res, rnd_mode,
+                                         (n & 1) ? MPFR_SIGN (x)
+                                                 : MPFR_SIGN_POS);
+          MPFR_SAVE_EXPO_UPDATE_FLAGS (expo, MPFR_FLAGS_OVERFLOW);
+          break;
+        }
       mpfr_set_ui (p2, 1, MPFR_RNDN);           /* exact */
 
       /* In the loop:
@@ -113,14 +130,20 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
           /* first_term = 2x, with absolute error at step i
              (denoted f_i in algorithms.tex)
              bounded by f_i <= exp(first_term) - p - 1 */
-          inex |= mpfr_mul_ui (first_term, x, 2, MPFR_RNDN);
+          MPFR_BLOCK (flags,
+                      inex |= mpfr_mul_ui (first_term, x, 2, MPFR_RNDN));
+          if (MPFR_OVERFLOW (flags))
+            break;
           f_i = MPFR_GET_EXP (first_term) - realprec - 1;
 
           /* second_term = p2 * 2i, with absolute error at step i
              bounded by
              g_i <= max(exp(second_term)-p,
                         error(p2) + MPFR_INT_CEIL_LOG2(2*i)+1) */
-          inex |= mpfr_mul_ui (second_term, p2, 2 * i, MPFR_RNDN);
+          MPFR_BLOCK (flags,
+                      inex |= mpfr_mul_ui (second_term, p2, 2 * i, MPFR_RNDN));
+          if (MPFR_OVERFLOW (flags))
+            break;
           g_i = MAX (MPFR_GET_EXP (second_term) - realprec,
                      b_i + MPFR_INT_CEIL_LOG2 (2*i) + 1);
 
@@ -128,15 +151,23 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
              bounded by
              h_i <= 2 + max(exp(first_term)-p-1, f_i+exp(p1),
                             2+MPFR_GET_EXP(x)+a_i) */
-          inex |= mpfr_mul (first_term, first_term, p1, MPFR_RNDN);
+          MPFR_BLOCK (flags,
+                      inex |= mpfr_mul (first_term, first_term, p1, MPFR_RNDN));
+          if (MPFR_OVERFLOW (flags))
+            break;
           h_i = 2 + MAX3 (MPFR_GET_EXP (first_term) - realprec - 1,
                           f_i + MPFR_GET_EXP (p1), 2 + MPFR_GET_EXP (x) + a_i);
 
           /* pn = first_term - second_term, with absolute error at step i
              bounded by
              q_i <= 2 + max(exp(pn)-p-1,
-                            error(first_term), error(second_term)) */
-          inex |= mpfr_sub (pn, first_term, second_term, MPFR_RNDN);
+                            error(first_term), error(second_term))
+             Note: mpfr_sub can overflow when first_term and second_term
+             have opposite signs */
+          MPFR_BLOCK (flags,
+                      inex |= mpfr_sub (pn, first_term, second_term, MPFR_RNDN));
+          if (MPFR_OVERFLOW (flags))
+            break;
           q_i = 2 + MAX3 (MPFR_GET_EXP (pn) - realprec - 1, h_i, g_i);
 
           /* p2 = p1, p1 = pn */
@@ -148,6 +179,18 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
           i++;
         }
 
+      /* If an overflow occurred in the recurrence (detected via flags),
+         since we are in extended exponent range, H_n(x) truly overflows.
+         The sign is that of the leading term (2x)^n. */
+      if (MPFR_OVERFLOW (flags))
+        {
+          ternary_value = mpfr_overflow (res, rnd_mode,
+                                         (n & 1) ? MPFR_SIGN (x)
+                                                 : MPFR_SIGN_POS);
+          MPFR_SAVE_EXPO_UPDATE_FLAGS (expo, MPFR_FLAGS_OVERFLOW);
+          break;
+        }
+
       /* Now p1 approximates H_n(x), and 2^a_i is a bound on its absolute
          error. Since ulp(p1) = 2^(EXP(p1)-realprec), we get the relative
          error is bounded by 2^(a_i - (EXP(p1) - realprec - 1)). */
@@ -157,18 +200,22 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
          H_n(x), otherwise we call MPFR_CAN_ROUND() to check if we can
          deduce the correct rounding */
       if (inex == 0 ||
-          (lost_bits < realprec && 
+          (lost_bits < realprec &&
             MPFR_CAN_ROUND (p1, realprec - lost_bits, res_prec, rnd_mode)))
-        break;
+        {
+          ternary_value = mpfr_set (res, p1, rnd_mode);
+          break;
+        }
 
       MPFR_ZIV_NEXT (loop, realprec);
       MPFR_GROUP_REPREC_5 (group, realprec,
                            p1, p2, pn, first_term, second_term);
     }
   MPFR_ZIV_FREE (loop);
-  ternary_value = mpfr_set (res, p1, rnd_mode);
 
   MPFR_GROUP_CLEAR (group);
 
-  return ternary_value;
+ end:
+  MPFR_SAVE_EXPO_FREE (expo);
+  return mpfr_check_range (res, ternary_value, rnd_mode);
 }

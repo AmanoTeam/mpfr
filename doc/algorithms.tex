@@ -107,6 +107,7 @@
 \newtheorem{theorem}{Theorem}
 \newtheorem{fact}{Fact}
 \newtheorem{assumption}{Hypothesis}
+\newtheorem{corollary}{Corollary}
 
 \begin{document}
 \maketitle
@@ -4816,11 +4817,25 @@ again with a larger working precision $p' > p$.
 \subsection{Hermite polynomials}
 
 Hermite polynomials $P_n(x)$, with $n \geq 0$, are a sequence of
-orthogonal polynomials defined in the domain $(-\infty,\infty)$. Unless
-otherwise stated, $P_n(x)$ refers to the physicist's convention; this differs
-from the probabilist's Hermite polynomials by a simple rescaling of the
-argument and normalization. These polynomials are computed by MPFR through
-the following recursion:
+orthogonal polynomials defined in the domain $(-\infty,\infty)$. These
+polynomials arise naturally in physics, especially in problems
+involving Gaussian weights—most famously in the quantum harmonic
+oscillator.
+
+In this document, $P_n(x)$ refers to the physicist's convention; this
+differs from the probabilist's convention, which is often denoted by
+$H_n(x)$ and is related to $P_n(x)$ by a scaling factor. The
+explicit physicist's Hermite polynomials are calculated by using the
+Rodrigues formula. Here's the first (physicist's) Hermite polynomials
+\begin{align*}
+  P_0(x) &= e^{x^2} \frac{d^0}{dx^0} e^{-x^2} = 1 \\
+  P_1(x) &= -e^{x^2} \frac{d}{dx} e^{-x^2} = -e^{x^2} \cdot -2x e^{-x^2} = 2x \\
+  P_n(x) &= (-1)^n e^{x^2} \frac{d^n}{dx^n} e^{-x^2}
+\end{align*}
+
+MPFR does not use the Rodrigues formula to compute Hermite
+polynomials, but instead relies on a three-term recursion, which is
+more efficient and numerically stable for this purpose.
 \begin{equation} \label{eq:hermite-recursion}
   \begin{cases}
       P_0(x) = 1, \\
@@ -4828,8 +4843,9 @@ the following recursion:
       P_{n+1}(x) = 2xP_{n}(x) - 2nP_{n-1}(x).
   \end{cases}
 \end{equation}
-The polynomial $P_n(x)$ is even for $n$ even, i.e.,
-$P_n(-x) = P_n(x)$, and odd for $n$ odd, i.e., $P_n(-x) = -P_n(x)$.
+The polynomial $P_n(x)$ is even for $n$ even, and odd for $n$ odd,
+i.e., $P_n(-x) = (-1)^n~P_n(x)$.
+
 Some values of $x$ and $n$ are treated as special cases in which the
 recurrence is not evaluated. These two cases are, where (b) follows
 from the fact that $P_n$ is odd for $n$ odd:
@@ -4972,6 +4988,66 @@ that:
 \[ |a_n - P_n(x)| \le 2^{e_{a,n}}. \]
 This error bound will be used in the rounding test, and if it fails, we will try
 again with a larger working precision $p' > p$.
+
+\paragraph{\textbf{Overflow handling.}}
+
+In this paragraph it's shown how overflow is handled in \texttt{mpfr\_hermite}.
+Each polynomial $P_n$ has $n$ distinct real roots, each of them lies in the
+interval $[-\sqrt{2n+1}, \sqrt{2n+1}]$, that is called the
+\emph{oscillatory region} of the polynomial $P_n(x)$.
+
+The values of $P_n(x)$ grow very rapidly as $|x|$ increases beyond $\sqrt{2n+1}$,
+and thus overflow can occur for large $n$ and sufficiently large $|x|$.
+The following monotonic growth theorem shows that, outside the oscillatory region,
+if an overflow occurs at some step of the recursion, it will occur at
+all subsequent steps.
+
+\noindent Consider the recurrence $P_{n+1}(x) = 2x P_n(x) - 2n P_{n-1}(x)$.
+
+\begin{lemma}
+For $x > 0$ with $x^2 > 2n$, and for all $1 \le i \le n$:
+\[
+  P_i(x) / P_{i-1}(x) > x.
+\]
+\end{lemma}
+
+In other words, at each step of the recurrence the value grows by at
+least a factor $x$. In particular $P_i(x) > x^i > 0$, and the sequence
+$|P_i(x)|$ is strictly increasing with $i$. This means that, outside
+the oscillatory region, i.e. $x^2 > 2i + 1$, if $P_i(x)$ overflows,
+the same does $P_{i+1}(x)$.
+
+\begin{proof}{(by induction on $i$)}
+For the base case $i = 1$: $P_1(x)/P_0(x) = 2x > x$ since $x > 0$.
+For the inductive step, assume $P_i(x)/P_{i-1}(x) > x$ for some
+$i \ge 1$ with $x^2 > 2i$.
+From the recurrence:
+\[
+  \frac{P_{i+1}(x)}{P_i(x)} = 2x - 2i \, \frac{P_{i-1}(x)}{P_i(x)}.
+\]
+
+By the induction hypothesis, $P_i(x)/P_{i-1}(x) > x > 0$, hence
+$0 < P_{i-1}(x)/P_i(x) < 1/x$. Therefore:
+\[
+  \frac{P_{i+1}(x)}{P_i(x)} > 2x - \frac{2i}{x}.
+\]
+This is greater than $x$ if and only if $x > 2i/x$, i.e., $x^2 > 2i$,
+which holds by hypotesis. This completes the induction.
+\end{proof}
+
+\begin{corollary}
+If $x > 0$ with $x^2 > 2n$, and if $P_i(x)$ overflows for some
+$1 \le i \le n$, then $P_m(x)$ overflows for all $m$ with
+$i \le m \le n$.
+\end{corollary}
+
+In the implementation, computations are performed in extended exponent
+range (after \texttt{MPFR\_SAVE\_EXPO\_MARK}). An overflow in this range
+means the value exceeds \texttt{MPFR\_EMAX\_MAX}.
+
+Inside the \emph{oscillatory region} the polynomial changes sign and
+its values can decrease in magnitude from one step to the next, so the
+monotonic growth argument does not hold within this interval.
 
 \subsection{Summary}
 
