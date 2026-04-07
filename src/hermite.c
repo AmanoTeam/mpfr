@@ -65,8 +65,17 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   if (MPFR_IS_ZERO (x) && (n & 1))
     {
       MPFR_SET_ZERO (res);
-      /* 0 is exactly representable in MPFR regardless of precision,
-          so this will always return 0 */
+
+      /* Rationale: the coefficient of x in H_n(x) for odd n = 2m+1 is
+         (-1)^m * 2 * n! / m!, which is positive for n mod 4 == 1 (m even)
+         and negative for n mod 4 == 3 (m odd).
+         Thus mpfr_hermite evaluates H_n(0) = +0 for n mod 4 == 1, and
+         H_n(0) = -0 for n mod 4 == 3. */
+      if ((n & 3) == 3)
+        MPFR_SET_NEG (res);
+      else
+        MPFR_SET_POS (res);
+
       MPFR_RET (0);
     }
 

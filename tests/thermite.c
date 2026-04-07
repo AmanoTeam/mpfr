@@ -92,6 +92,44 @@ test_singular_input (void)
   mpfr_free_cache ();
 }
 
+static void
+test_zero_odd (void)
+{
+  int i;
+  mpfr_t x, res;
+
+  mpfr_init2 (x,IEEE754_DOUBLE_PREC);
+  mpfr_init2 (res,IEEE754_DOUBLE_PREC);
+  mpfr_set_ui (x, 0, MPFR_RNDN);
+
+  for (i = 1; i < 100; i += 2)
+    {
+      mpfr_hermite (res, i, x, MPFR_RNDN);
+      if (!MPFR_IS_ZERO (res))
+        {
+          printf ("P_%d(0) should be 0; got ", i);
+          mpfr_out_str (stdout, 10, 0, res, MPFR_RNDD);
+          printf ("\n");
+          exit (1);
+        }
+
+      if ((i % 4) == 1 && MPFR_IS_NEG (res))
+        {
+          printf ("P_%d(0) should be +0; got -0\n", i);
+          exit (1);
+        }
+
+      if ((i % 4) == 3 && MPFR_IS_POS (res))
+        {
+          printf ("P_%d(0) should be -0; got +0\n", i);
+          exit (1);
+        }
+    }
+
+  mpfr_clear (x);
+  mpfr_clear (res);
+}
+
 /* hermite(0,x) -> 1.0 */
 static void
 test_first_iteration (void)
@@ -453,6 +491,8 @@ main (void)
   /* for singular input (+/-Inf or NaN), mpfr_hermit should always set res
      to NaN and return 0 */
   test_singular_input ();
+
+  test_zero_odd ();
 
   /* the first two iterations are tested separately because they are the base
      cases of the recursion algorithm used to calculate mpfr_hermite */
