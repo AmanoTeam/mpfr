@@ -25,23 +25,103 @@ If not, see <https://www.gnu.org/licenses/>. */
 /* max (x, y, z) */
 #define MAX3(x,y,z) (MAX (x, MAX (y, z)))
 
+/* extra bits used as a threshold by the small-|x| asymptotic branch */
+#define MPFR_LEGENDRE_SMALL_X_GUARD 64
+
+static int
+asymptotic_small_x (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode,
+                    int *inex_round, mpfr_exp_t err)
+{
+  mpfr_t v;
+  long m, j;
+  unsigned inex;
+  mpfr_prec_t res_prec, realprec;
+
+  MPFR_GROUP_DECL (small_x);
+  MPFR_ZIV_DECL (loop);
+
+  res_prec = MPFR_PREC (res);
+
+  /* a-priori rounding error bound. See algorithms.tex for details.
+     After n operations the error is at most n*2*ulp(v) <= 2^(ell+1)*ulp(v),
+     where ell = ceil(log2(n)); 15 extra bits has been added for safety */
+  realprec = res_prec + MPFR_INT_CEIL_LOG2 (n) + 15;
+
+  MPFR_GROUP_INIT_1 (small_x, realprec, v);
+  MPFR_ZIV_INIT (loop, realprec);
+
+  for (;;)
+    {
+      /* v = 1 is exact */
+      inex = mpfr_set_ui (v, 1, MPFR_RNDN);
+
+      if ((n & 1) == 0)
+        {
+          /* Even n = 2m, m = n/2: c0 = P_n(0),
+             c0(0) = 1, c0(j) = c0(j-1) * (-(2j-1)) / (2j).
+             See algorithms.tex for details */
+          m = n / 2;
+          for (j = 1; j <= m; j++)
+            {
+              inex |= mpfr_mul_si (v, v, -(2 * j - 1), MPFR_RNDN);
+              inex |= mpfr_div_ui (v, v, 2 * j, MPFR_RNDN);
+            }
+        }
+      else
+        {
+          /* Odd n = 2m+1, m = (n-1)/2: c1 = P'_n(0),
+             c1(0) = 1, c1(j) = c1(j-1) * (-(2j+1)) / (2j),
+             then lead = c1*x. See algorithms.tex for details */
+          m = (n - 1) / 2;
+          for (j = 1; j <= m; j++)
+            {
+              inex |= mpfr_mul_si (v, v, -(2 * j + 1), MPFR_RNDN);
+              inex |= mpfr_div_ui (v, v, 2 * j, MPFR_RNDN);
+            }
+          inex |= mpfr_mul (v, v, x, MPFR_RNDN);
+        }
+
+      /* if inex=0, then all the computation was exact, thus v is exactly V,
+         otherwise we call MPFR_CAN_ROUND() to check if we can deduce
+         the correct rounding */
+      if (!inex || MPFR_CAN_ROUND (v, realprec - err, res_prec, rnd_mode))
+        break;
+
+      MPFR_ZIV_NEXT (loop, realprec);
+      MPFR_GROUP_REPREC_1 (small_x, realprec, v);
+    }
+
+  MPFR_ZIV_FREE (loop);
+
+  *inex_round = mpfr_round_near_x (res, v, (mpfr_uexp_t) (err - 2),
+                                   0, rnd_mode);
+
+  MPFR_GROUP_CLEAR (small_x);
+
+  return inex;
+}
+
 int
 mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 {
   int ternary_value = 0;
-  unsigned is_within_domain = 1;
+  unsigned is_within_domain = 1, inex;
+  mpfr_prec_t res_prec, realprec;
+
+  /* these variables are used (and consequently initialized) only in the
+     "Asymptotic expansion for small |x|" branch */
+  mpfr_exp_t ex, l2n, rho, err;
+    int inex_round;
 
   /* the following variables are used (and consequently initialized) only
      for n >= 2, where x is not equal to -1, 0 or 1 */
   long i;
   mpfr_t p1, p2, pn, first_term, second_term;
-  mpfr_prec_t res_prec, realprec;
   mpfr_exp_t lost_bits;
   mpfr_exp_t b_i, log2_i_m1, g_i, h_i, q_i, a_i, a_n;
-  unsigned int inex;
   int x_is_zero;
 
-  MPFR_GROUP_DECL (group);
+  MPFR_GROUP_DECL (main);
   MPFR_ZIV_DECL (loop);
 
   MPFR_LOG_FUNC
@@ -63,8 +143,7 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 
   /* 1 and -1 are the (respectively) upper and lower bound of the Legendre
      polynomial's canonical domain. We can evaluate Pn (for any n) without
-     using Bonnet's recursion. Both 1 and -1 are exactly representable,
-     so we this will always return 0 */
+     using Bonnet's recursion */
   if (mpfr_equal_p (x, __gmpfr_one))
     return mpfr_set_si (res, 1, rnd_mode);
   if (mpfr_equal_p (x, __gmpfr_mone))
@@ -101,6 +180,46 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
     }
 
   res_prec = MPFR_PREC (res);
+
+  /* Asymptotic expansion for small |x| and n >= 2.
+     For the proof of the following bound, see algorithms.tex.
+     Let t = n^2*x^2; the tail after the leading term is bounded by the
+     following geometric series:
+        |tail| <= |lead| * t / (1-t),
+     where |lead| is c0 (for n even), or c1*x (for n odd) */
+  if (!x_is_zero && n >= 2)
+    {
+      /* ex = MPFR_GET_EXP(x), such that 2^(ex-1) <= |x| < 2^ex;
+         l2n = ceil(log2(n)), so n <= 2^l2n;
+         thus, t = n^2*x^2 < (2^l2n)^2 * (2^ex)^2 = 2^{2*l2n+2*ex}.
+         We define rho = 2*l2n+2*ex, therefore t < 2^{rho}.
+         Note: we assume that rho is not going to overflow */
+      ex = MPFR_GET_EXP (x);
+      l2n = (mpfr_exp_t) MPFR_INT_CEIL_LOG2 (n);
+      rho = 2 * l2n + 2 * ex;
+
+      /* The bound err = -rho - 1 requires rho <= -2. In practice, require
+         64 extra bits so the first rounding test usually succeeds */
+      if (rho <= -2)
+        {
+          /* See algorithms.tex for the calculation of this error bound */
+          err = -rho - 1;
+
+          if (err >= (mpfr_exp_t) res_prec + MPFR_LEGENDRE_SMALL_X_GUARD)
+            {
+              inex = asymptotic_small_x (res, n, x, rnd_mode,
+                                         &inex_round, err);
+
+              /* if asymptotic_small_x sets inex_round to 0, then it cannot
+                 round. In that case, our asymptotic expansion failed, so we
+                 fall back to the usual Ziv loop. Otherwise, we return the
+                 inex flag */
+              if (inex_round)
+                return inex;
+            }
+        }
+    }
+
   /* Analyzing all the test cases where the result is not exact (inex != 0),
      we find that the average number of bits lost per iteration, i.e.,
      lost_bits/(n-1), is about 3.82. We thus add 4*n guard bits.
@@ -110,7 +229,7 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   realprec = res_prec + 4 * n + 20;
   realprec += MPFR_INT_CEIL_LOG2 (realprec);
 
-  MPFR_GROUP_INIT_5 (group, realprec,
+  MPFR_GROUP_INIT_5 (main, realprec,
                      p1, p2, pn, first_term, second_term);
 
   MPFR_ZIV_INIT (loop, realprec);
@@ -226,14 +345,16 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
           (lost_bits < realprec &&
            MPFR_CAN_ROUND (p1, realprec - lost_bits, res_prec, rnd_mode)))
         break;
+
       MPFR_ZIV_NEXT (loop, realprec);
-      MPFR_GROUP_REPREC_5 (group, realprec,
+      MPFR_GROUP_REPREC_5 (main, realprec,
                            p1, p2, pn, first_term, second_term);
     }
   MPFR_ZIV_FREE (loop);
+
   ternary_value = mpfr_set (res, p1, rnd_mode);
 
-  MPFR_GROUP_CLEAR (group);
+  MPFR_GROUP_CLEAR (main);
 
   return ternary_value;
 }

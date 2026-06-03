@@ -9,7 +9,6 @@
 \usepackage{comment}
 \usepackage[english, lined, linesnumbered]{algorithm2e}
 \usepackage{graphicx}
-\usepackage{color}
 \usepackage{hyperref}
 
 \pagestyle{plain}
@@ -4813,6 +4812,198 @@ again with a larger working precision $p' > p$.
   Finally if $i=2^k+1$, then $\lfloor \log_2(i) \rfloor = k$ and
   $\lceil \log_2(i-1) \rceil = k$, thus	the statement holds.
 \end{proof}
+
+\subsubsection{Handling small inputs}
+
+When $|x|$ is very small, $P_n(x)$ can be well approximated by the leading
+term of its Taylor expansion around $x=0$, avoiding the full Bonnet recursion.
+If $n$ is odd, $P_n$ is an odd function and we write
+$P_n(x) = c_1 x + c_3 x^3 + \dots$;
+if $n$ is even, $P_n$ is an even function and we write
+$P_n(x) = c_0 + c_2 x^2 + \dots$.
+
+To bound the ratios of the first terms -- $|c_3/c_1|$ for odd polynomials and
+$|c_2/c_0|$ for the even ones --, we use a very classical method to derive a
+recurrence on the coefficients $c_k$ from the Legendre differential equation
+$(1-x^2)y'' - 2x y' + n(n+1) y = 0$. Here's $y = P_n$ and its derivatives
+$y'$ and $y''$ are:
+\[
+  y   = \sum_{k=0}^{\infty} c_k x^k,             \qquad
+  y'  = \sum_{k=1}^{\infty} k c_k x^{k-1},       \qquad
+  y'' = \sum_{k=2}^{\infty} k (k-1) c_k x^{k-2}.
+\]
+
+Now, we substitute the power series into the ODE computing each term separately.
+The first term $(1 - x^2)y'' = y'' - x^2 y''$ then becomes
+\[
+  \sum_{k=2}^{\infty} k(k-1)c_k x^{k-2} - 
+  \sum_{k=2}^{\infty} k(k-1)c_k x^k.
+\]
+The second term: $-2x y'$,
+\[
+  -2x y' = -2 \sum_{k=1}^{\infty} k c_k x^k.
+\]
+And, finally, the third term: $n(n+1)y$,
+\[
+  n(n+1)y = n(n+1)\sum_{k=0}^{\infty} c_k x^k.
+\]
+
+We rewrite all the sums so that they are expressed with the same index range.
+As an example, the term $y''$ is rewritten
+$\sum_{k=0}^{\infty} (k+2)(k+1)c_{k+2} x^k$. Therefore
+the equation becomes:
+\begin{align*}
+  &\sum_{k=0}^{\infty} (k+2)(k+1)c_{k+2} x^k
+  - \sum_{k=0}^{\infty} k(k-1)c_k x^k
+  - 2 \sum_{k=0}^{\infty} k c_k x^k
+  + n(n+1)\sum_{k=0}^{\infty} c_k x^k = 0, \\
+  &\sum_{k=0}^{\infty}
+  \left[
+    (k+2)(k+1)c_{k+2}
+    - k(k-1)c_k
+    - 2k c_k
+    + n(n+1)c_k
+  \right] x^k = 0.
+\end{align*}
+
+Since the series is identically zero, each coefficient must be zero, so we
+get the recurrence
+\begin{equation} \label{eq:legendre-ode-recurrence}
+  (k+2)(k+1)c_{k+2}
+  - k(k-1)c_k
+  - 2k c_k
+  + n(n+1)c_k = 0.
+\end{equation}
+
+In order to get the first two coefficients for odd degrees, we set $k = 1$
+in Equation (\ref{eq:legendre-ode-recurrence}), and we get
+$(3)(2)c_3 = \big(1 \cdot 2 - n(n+1)\big)c_1$. Hence,
+\[
+  \left|\frac{c_3}{c_1}\right| = \frac{n(n+1) - 2}{6}
+                               \le \frac{n(n+1)}{6}
+                               \le \frac{n^2}{3}~\mathrm{for}~n \ge 1.
+\]
+
+Now we do the same for the first two coefficients for even degrees,
+setting $k = 0$ in Equation (\ref{eq:legendre-ode-recurrence}), and we
+get $(2)(1)c_2 = - n(n+1)c_0$. Hence,
+\[
+  \left|\frac{c_2}{c_0}\right| = \frac{n(n+1)}{2}
+                               \le n^2~\mathrm{for}~n \ge 0.
+\]
+
+For generic terms, Equation (\ref{eq:legendre-ode-recurrence}) gives
+\[
+  \frac{c_{i+2}}{c_i} = \frac{i(i+1)-n(n+1)}{(i+2)(i+1)}
+  = \frac{(i-n)(i+n+1)}{(i+2)(i+1)}.
+\]
+Thus
+\[
+  \left|\frac{c_{i+2}}{c_i}\right|
+  = \left|\frac{i-n}{i+2}\right|\,\frac{i+n+1}{i+1}
+  \leq \frac{i+n+1}{i+1}
+  = 1 + \frac{n}{i+1}
+  \leq n+1 \leq n^2
+\]
+for $i \geq 0$ and $n \geq 2$.
+
+When $|x|$ is small, we write $P_n(x)$ as ``leading term + tail'', with terms
+of the same parity as $n$ only:
+\[
+  P_n(x) = c_s x^s + c_{s+2}x^{s+2} + c_{s+4}x^{s+4} + \cdots,
+\]
+where $s=0$ for even $n$ and $s=1$ for odd $n$.
+From the bound above we have $|c_{i+2}/c_i| \leq n^2$, so each successive tail
+term is at most a factor $n^2 x^2$ of the previous one. Let
+\[
+  t := n^2 x^2.
+\]
+Then the tail is bounded by a geometric series:
+\[
+  \left|\sum_{k\geq 1} c_{s+2k}x^{s+2k}\right|
+  \leq |c_s x^s|\sum_{k\geq 1} t^k
+  = |c_s x^s|\frac{t}{1-t}
+\]
+for $t<1$.
+
+\paragraph{\textbf{Implementation.}} The leading term is evaluated differently
+depending on the parity of $n$:
+\begin{itemize}
+\item If $n=2m$ is even, the leading term is $c_{0,m} = P_n(0)$, computed by
+  \[
+    c_{0,0}=1, \qquad c_{0,j}=c_{0,j-1}\,\frac{-(2j-1)}{2j},
+    \quad 1 \leq j \leq m,
+  \]
+  thus
+  \[
+    c_{0,m} = \prod_{j=1}^{m} \frac{-(2j-1)}{2j}.
+  \]
+
+\item If $n=2m+1$ is odd, the leading term is $c_1x$ with $c_{1,m}=P_n'(0)$,
+  computed by
+  \[
+    c_{1,0}=1, \qquad c_{1,j}=c_{1,j-1}\,\frac{-(2j+1)}{2j},
+    \quad 1 \leq j \leq m,
+  \]
+  thus
+  \[
+    c_{1,m} = \prod_{j=1}^{m} \frac{-(2j+1)}{2j}.
+  \]
+\end{itemize}
+We remark that $c_{1,m} = (2m+1) c_{0,m}$.
+
+\paragraph{\textbf{Bounding $t$ in the implementation.}}
+In the code, $t = n^2 x^2$ is bounded as follows.
+Let $e_x = \texttt{MPFR\_GET\_EXP}(x)$, which satisfies $2^{e_x-1} \le |x| < 2^{e_x}$,
+and let $\ell = \lceil \log_2 n \rceil$, so that $n \le 2^\ell$.
+Then
+\[
+  t = n^2 x^2 < \left(2^\ell\right)^2 \cdot \left(2^{e_x}\right)^2
+              = 2^{2\ell + 2e_x} = 2^\rho,
+\]
+where $\rho = 2e_x + 2\ell$.
+
+The condition $\rho \le -2$ guarantees
+$t < 2^\rho \le 2^{-2} = \tfrac{1}{4}$.
+The relative error from keeping only the leading term equals $t/(1-t)$.
+Since $t < \tfrac{1}{4} < \tfrac{1}{2}$, we have $1 - t > \tfrac{1}{2}$,
+and therefore
+\[
+  \frac{t}{1-t} < \frac{t}{1/2} = 2t < 2 \cdot 2^\rho = 2^{\rho+1}.
+\]
+Truncating the expansion after the first nonzero term yields at least
+$\mathtt{err} = -\rho - 1$ correct bits relative to that term.
+
+In the implementation, if $p = \texttt{MPFR\_PREC}(\mathrm{res})$, we try this
+shortcut only when
+\[
+  -\rho - 1 \ge p + 64.
+\]
+Since $p \ge 1$, this stronger condition implies $\rho \le -2$, so the
+preceding analysis applies. The extra $64$ guard bits are an heuristic:
+a threshold that ensures the first rounding test is likely to succeed
+in most cases.
+
+\paragraph{\textbf{Error analysis of $c_{0,m}$ and $c_{1,m}$}}
+
+Since neither algorithm involves any addition or subtraction, there is no
+cancellation, and we can bound the total rounding error \textit{a-priori}.
+In the code, all the intermediate roundings are to nearest, with working
+precision $q$. Each \texttt{mpfr\_mul\_si} and \texttt{mpfr\_div\_ui} call
+rounds the exact arithmetic result, introducing a relative error of at most
+$u = 2^{-q}$ per operation. Denote by $V_k$ the exact real value of the
+$k$-th iterate and by $v_k$ its computed floating-point approximation, with
+$V_1 = v_1 = 1$ exact. After $k$ such rounding operations the accumulated
+relative error satisfies
+\[
+  \frac{|v_k - V_k|}{|V_k|}
+  \le \frac{ku}{1-ku}
+  \le 2ku = k \cdot 2^{1-q},
+\]
+where the first inequality follows from Lemma~\ref{lemma_graillat} with all
+$\delta_i = u$ (writing $v_k/V_k = \prod_{i=1}^k(1+\delta_i)$), and the last
+holds whenever $ku \le \tfrac{1}{2}$, i.e. $p \ge 1 + \lceil\log_2 k\rceil$,
+which is satisfied by our choice of working precision.
 
 \subsection{Hermite polynomials}
 
