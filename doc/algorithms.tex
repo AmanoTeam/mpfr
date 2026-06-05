@@ -4810,10 +4810,11 @@ again with a larger working precision $p' > p$.
   If $i=2^k \ge 4$, then $\lfloor \log_2(i) \rfloor = k$ and
   $\lceil \log_2(i-1) \rceil = k$, thus the statement holds.
   Finally if $i=2^k+1$, then $\lfloor \log_2(i) \rfloor = k$ and
-  $\lceil \log_2(i-1) \rceil = k$, thus	the statement holds.
+  $\lceil \log_2(i-1) \rceil = k$, thus the statement holds.
 \end{proof}
 
 \subsubsection{Handling small inputs}
+\label{subsec:legendre-small-inputs}
 
 When $|x|$ is very small, $P_n(x)$ can be well approximated by the leading
 term of its Taylor expansion around $x=0$, avoiding the full Bonnet recursion.
@@ -5007,26 +5008,19 @@ which is satisfied by our choice of working precision.
 
 \subsection{Hermite polynomials}
 
-Hermite polynomials $P_n(x)$, with $n \geq 0$, are a sequence of
-orthogonal polynomials defined in the domain $(-\infty,\infty)$. These
-polynomials arise naturally in physics, especially in problems
-involving Gaussian weights—most famously in the quantum harmonic
-oscillator.
+Hermite polynomials $P_n(x)$, with $n \geq 0$, are a sequence of orthogonal
+polynomials defined in the domain $(-\infty,\infty)$. These have a special
+interest in various branches of the field of physics, e.g. in defining the
+eigenstates of the quantum harmonic oscillator.
 
-In this document, $P_n(x)$ refers to the physicist's convention; this
-differs from the probabilist's convention, which is often denoted by
-$H_n(x)$ and is related to $P_n(x)$ by a scaling factor. The
-explicit physicist's Hermite polynomials are calculated by using the
-Rodrigues formula. Here's the first (physicist's) Hermite polynomials
-\begin{align*}
-  P_0(x) &= e^{x^2} \frac{d^0}{dx^0} e^{-x^2} = 1 \\
-  P_1(x) &= -e^{x^2} \frac{d}{dx} e^{-x^2} = -e^{x^2} \cdot -2x e^{-x^2} = 2x \\
-  P_n(x) &= (-1)^n e^{x^2} \frac{d^n}{dx^n} e^{-x^2}
-\end{align*}
+In this document, $P_n(x)$ refers to the physicist's convention -- the
+ones implemented by \texttt{mpfr\_hermite}; this differs from the
+probabilist's convention, which is often denoted by $H_n(x)$ and is
+related to $P_n(x)$ by a scaling factor.
 
-MPFR does not use the Rodrigues formula to compute Hermite
-polynomials, but instead relies on a three-term recursion, which is
-more efficient and numerically stable for this purpose.
+MPFR does not use the Rodrigues formula to compute Hermite polynomials
+explicitly, but instead relies on a three-term recursion, which is more
+efficient and numerically stable for this purpose.
 \begin{equation} \label{eq:hermite-recursion}
   \begin{cases}
       P_0(x) = 1, \\
@@ -5184,14 +5178,15 @@ again with a larger working precision $p' > p$.
 
 In this paragraph it's shown how overflow is handled in \texttt{mpfr\_hermite}.
 Each polynomial $P_n$ has $n$ distinct real roots, each of them lies in the
-interval $[-\sqrt{2n+1}, \sqrt{2n+1}]$, that is called the
+closed interval $[-\sqrt{2n+1}, \sqrt{2n+1}]$, that is called the
 \emph{oscillatory region} of the polynomial $P_n(x)$.
 
 The values of $P_n(x)$ grow very rapidly as $|x|$ increases beyond $\sqrt{2n+1}$,
 and thus overflow can occur for large $n$ and sufficiently large $|x|$.
 The following monotonic growth theorem shows that, outside the oscillatory region,
 if an overflow occurs at some step of the recursion, it will occur at
-all subsequent steps.
+all subsequent steps, i.e. if $P_n(x)$ overflows, the same happens to every
+$P_i(x)$ with $i > n$.
 
 \noindent Consider the recurrence $P_{n+1}(x) = 2x P_n(x) - 2n P_{n-1}(x)$.
 
@@ -5236,9 +5231,57 @@ In the implementation, computations are performed in extended exponent
 range (after \texttt{MPFR\_SAVE\_EXPO\_MARK}). An overflow in this range
 means the value exceeds \texttt{MPFR\_EMAX\_MAX}.
 
-Inside the \emph{oscillatory region} the polynomial changes sign and
-its values can decrease in magnitude from one step to the next, so the
-monotonic growth argument does not hold within this interval.
+If $|x| \leq \sqrt{2n+1}$ the polynomial changes sign and its values can
+decrease in magnitude from one step to the next, so the monotonic growth
+argument does not hold within this interval.
+
+\subsubsection{Handling small inputs}
+
+As for Legendre polynomials, when $|x|$ is very small, $P_n(x)$ can be well
+approximated by the leading term of its Taylor expansion around $x=0$. Thus,
+we are going to use the same methodology used for Legendre polynomials in Section
+\ref{subsec:legendre-small-inputs} to bound the ratios of the first terms
+($|c_3/c_1|$ for odd polynomials and $|c_2/c_0|$ for the even ones). Starting
+from the Hermite differential equation $y'' - 2x y' + 2ny = 0$ we obtain the
+following recurrence
+\begin{equation} \label{eq:hermite-ode-recurrence}
+  (k+2)(k+1)c_{k+2}
+  + 2 (n - k) c_k = 0.
+\end{equation}
+
+For odd degrees, we set $k = 1$, and we get $(3)(2)c_3 = -2(n-1)c_1$. Hence,
+\[
+  \left|\frac{c_3}{c_1}\right| = \frac{n-1}{3} \le \frac{n}{3}.
+\]
+
+Now, for even degrees we set $k = 0$ and we get $(2)(1)c_2 = -2n\,c_0$. Hence,
+\[
+  \left|\frac{c_2}{c_0}\right| = n.
+\]
+
+For generic terms, Equation (\ref{eq:hermite-ode-recurrence}) gives
+\[
+  \frac{c_{k+2}}{c_k} = \frac{-2(n-k)}{(k+2)(k+1)},
+\]
+so for $0 \le k < n$:
+\[
+  \left|\frac{c_{k+2}}{c_k}\right|
+  =
+  \frac{2(n-k)}{(k+2)(k+1)}
+  \le \frac{2n}{2} = n.
+\]
+For $k \ge n$, $c_{k+2} = 0$. Therefore, $|c_{k+2}/c_k| \le n$ for all $k \ge 0$.
+Let
+\[
+  t := nx^2,
+\]
+then the tail is bounded by a geometric series:
+\[
+  \left|\sum_{j \ge 1} c_{s+2j}x^{s+2j}\right|
+  \le |c_s x^s|\,\sum_{j \ge 1} t^j
+  = |c_s x^s|\,\frac{t}{1-t}
+\]
+for $t < 1$.
 
 \subsection{Summary}
 
