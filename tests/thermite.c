@@ -26,9 +26,11 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define X_HIGHER_BOUND 128.0
 #include "torthopoly.c"
 
+#define ARBITRARILY_LOW_PREC  10
 #define RANDOM_TESTS_N_DEGREE 10
 #define RANDOM_TESTS_BATCH    20
 #define DYADIC_BOUND          10
+#define GENERIC_UI_RAND_MOD   10
 
 typedef struct {
   unsigned n;
@@ -483,12 +485,31 @@ test_overflow (void)
   mpfr_clear (res);
 }
 
+/* Wrapper for tgeneric_ui.c, which calls TEST_FUNCTION(y, x, u, rnd),
+   but mpfr_hermite has the integer argument before x.
+   We also need to bound n because:
+   - n must be non-negative (mpfr_hermite asserts n >= 0);
+   - very large n would be too slow to compute for test purposes. */
+static int
+mpfr_hermite_generic_ui (mpfr_ptr y, mpfr_srcptr x, long n, mpfr_rnd_t rnd)
+{
+  n = (long) ((unsigned long) n % GENERIC_UI_RAND_MOD);
+  return mpfr_hermite (y, n, x, rnd);
+}
+
+#define TEST_FUNCTION mpfr_hermite_generic_ui
+#define TEST_FUNCTION_NAME "mpfr_hermite"
+#define INTEGER_TYPE long
+#define INT_RAND_FUNCTION() \
+        (long) (randlimb () % GENERIC_UI_RAND_MOD)
+#include "tgeneric_ui.c"
+
 int
 main (void)
 {
   tests_start_mpfr ();
 
-  /* for singular input (+/-Inf or NaN), mpfr_hermit should always set res
+  /* for singular input (+/-Inf or NaN), mpfr_hermite should always set res
      to NaN and return 0 */
   test_singular_input ();
 
@@ -509,6 +530,8 @@ main (void)
   test_exact_dyadic ();
 
   test_overflow ();
+
+  test_generic_ui (ARBITRARILY_LOW_PREC, IEEE754_DOUBLE_PREC, 6);
 
   tests_end_mpfr ();
   return 0;
