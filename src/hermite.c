@@ -25,6 +25,75 @@ If not, see <https://www.gnu.org/licenses/>. */
 /* max (x, y, z) */
 #define MAX3(x,y,z) (MAX (x, MAX (y, z)))
 
+/* extra bits used as a threshold by the small-|x| asymptotic branch */
+#define MPFR_HERMITE_SMALL_X_GUARD 64
+
+static int
+asymptotic_small_x (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode,
+                    int *inex_round, mpfr_exp_t err)
+{
+  mpfr_t v;
+  long m, j;
+  unsigned inex;
+  mpfr_prec_t res_prec, realprec;
+
+  MPFR_GROUP_DECL (small_x);
+  MPFR_ZIV_DECL (loop);
+
+  res_prec = MPFR_PREC (res);
+
+  /* a-priori rounding error bound. See algorithms.tex for details.
+     After k operations the error is at most k*2*ulp(v), with k <= n;
+     15 extra bits has been added for safety. */
+  realprec = res_prec + MPFR_INT_CEIL_LOG2 (n) + 15;
+
+  MPFR_GROUP_INIT_1 (small_x, realprec, v);
+  MPFR_ZIV_INIT (loop, realprec);
+
+  for (;;)
+    {
+      if ((n & 1) == 0)
+        {
+          /* Even n = 2m, m = n/2: c0 = H_n(0),
+             c0(0) = 1, c0(j) = c0(j-1) * (-2(2j-1)).
+             See algorithms.tex for details. */
+          inex = mpfr_set_ui (v, 1, MPFR_RNDN); /* exact */
+          m = n / 2;
+          for (j = 1; j <= m; j++)
+            inex |= mpfr_mul_si (v, v, -2 * (2 * j - 1), MPFR_RNDN);
+        }
+      else
+        {
+          /* Odd n = 2m+1, m = (n-1)/2: c1 = H'_n(0),
+             c1(0) = 2, c1(j) = c1(j-1) * (-2(2j+1)),
+             then lead = c1*x. See algorithms.tex for details. */
+          inex = mpfr_set_ui (v, 2, MPFR_RNDN); /* exact */
+          m = (n - 1) / 2;
+          for (j = 1; j <= m; j++)
+            inex |= mpfr_mul_si (v, v, -2 * (2 * j + 1), MPFR_RNDN);
+          inex |= mpfr_mul (v, v, x, MPFR_RNDN);
+        }
+
+      /* if inex=0, then all the computation was exact, thus v is exactly V,
+         otherwise we call MPFR_CAN_ROUND() to check if we can deduce
+         the correct rounding */
+      if (!inex || MPFR_CAN_ROUND (v, realprec - err, res_prec, rnd_mode))
+        break;
+
+      MPFR_ZIV_NEXT (loop, realprec);
+      MPFR_GROUP_REPREC_1 (small_x, realprec, v);
+    }
+
+  MPFR_ZIV_FREE (loop);
+
+  *inex_round = mpfr_round_near_x (res, v, (mpfr_uexp_t) (err - 2),
+                                   0, rnd_mode);
+
+  MPFR_GROUP_CLEAR (small_x);
+
+  return inex;
+}
+
 int
 mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 {
@@ -34,9 +103,21 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   mpfr_prec_t res_prec, realprec, guard_bits;
   mpfr_exp_t lost_bits;
   mpfr_exp_t b_i, f_i, g_i, h_i, q_i, a_i;
+
+  /* these variables are used (and consequently initialized) only in the
+     "Asymptotic expansion for small |x|" branch */
+  mpfr_exp_t ex, l2n, rho, err;
+  int inex_round;
+
   MPFR_GROUP_DECL (group);
   MPFR_SAVE_EXPO_DECL (expo);
   MPFR_ZIV_DECL (loop);
+
+  MPFR_LOG_FUNC
+    (("x[%Pd]=%.*Rg rnd=%d", MPFR_PREC (x), mpfr_log_prec, x, rnd_mode),
+     ("hermite[%Pd]=%.*Rg", MPFR_PREC (res), mpfr_log_prec, res));
+
+  MPFR_ASSERTN(n >= 0); /* check n is non-negative */
 
   res_prec = MPFR_PREC (res);
 
@@ -79,15 +160,53 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       MPFR_RET (0);
     }
 
-  MPFR_SAVE_EXPO_MARK (expo);
-
   /* H_1(x) = 2x */
   if (n == 1)
     {
       /* result is set to 2x. The ternary value of mpfr_set is returned */
-      ternary_value = mpfr_mul_ui (res, x, 2, rnd_mode);
-      goto end;
+      return mpfr_mul_ui (res, x, 2, rnd_mode);
     }
+
+  /* asymptotic expansion for small |x| and n >= 2.
+     For the proof of the following bound, see algorithms.tex.
+     Let t = n*x^2; the tail after the leading term is bounded by the
+     following geometric series:
+        |tail| <= |lead| * t / (1-t),
+     where |lead| is c0 (for n even), or c1*x (for n odd). */
+  if (!MPFR_IS_ZERO (x) && n >= 2)
+    {
+      /* ex = MPFR_GET_EXP(x), such that 2^(ex-1) <= |x| < 2^ex;
+         l2n = ceil(log2(n)), so n <= 2^l2n;
+         thus, t = n*x^2 < 2^l2n * (2^ex)^2 = 2^{l2n+2*ex}.
+         We define rho = l2n+2*ex, therefore t < 2^{rho}.
+         Note: we assume that rho is not going to overflow. */
+      ex = MPFR_GET_EXP (x);
+      l2n = (mpfr_exp_t) MPFR_INT_CEIL_LOG2 (n);
+      rho = l2n + 2 * ex;
+
+      /* the bound err = -rho - 1 requires rho <= -2. In practice, require
+         64 extra bits so the first rounding test usually succeeds. */
+      if (rho <= -2)
+        {
+          /* see algorithms.tex for the calculation of this error bound. */
+          err = -rho - 1;
+
+          if (err >= (mpfr_exp_t) res_prec + MPFR_HERMITE_SMALL_X_GUARD)
+            {
+              inex = asymptotic_small_x (res, n, x, rnd_mode,
+                                         &inex_round, err);
+
+              /* if asymptotic_small_x sets inex_round to 0, then it cannot
+                 round. In that case, our asymptotic expansion failed, so we
+                 fall back to the usual Ziv loop. Otherwise, we return the
+                 inex flag. */
+              if (inex_round)
+                return inex;
+            }
+        }
+    }
+
+  MPFR_SAVE_EXPO_MARK (expo);
 
   /* Analyzing all the test cases where the result is not exact (inex != 0),
      we find that the average number of bits lost per iteration, i.e.,
@@ -223,8 +342,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   MPFR_ZIV_FREE (loop);
 
   MPFR_GROUP_CLEAR (group);
-
- end:
   MPFR_SAVE_EXPO_FREE (expo);
+
   return mpfr_check_range (res, ternary_value, rnd_mode);
 }
