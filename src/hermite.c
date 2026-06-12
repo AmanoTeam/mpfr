@@ -307,9 +307,11 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
           i++;
         }
 
-      /* If an overflow occurred in the recurrence (detected via flags),
-         since we are in extended exponent range, H_n(x) truly overflows.
-         The sign is that of the leading term (2x)^n. */
+      /* if an overflow occurred in the recurrence (detected via flags).
+         FIXME: currently, MPFR stops the iteration as soon as it encounters an
+         overflow. A more refined strategy could be devised to handle intermediate
+         overflows within the oscillatory region (see algorithms.tex).
+         The sign is that of the leading term (2x)^n */
       if (MPFR_OVERFLOW (flags))
         {
           ternary_value = mpfr_overflow (res, rnd_mode,

@@ -5234,7 +5234,9 @@ means the value exceeds \texttt{MPFR\_EMAX\_MAX}.
 
 If $|x| \leq \sqrt{2n+1}$ the polynomial changes sign and its values can
 decrease in magnitude from one step to the next, so the monotonic growth
-argument does not hold within this interval.
+argument does not hold within this interval. At the moment, MPFR treats every
+intermediate overflow in the same way, without considering whether the
+computation is performed in the oscillatory region or not.
 
 \subsubsection{Handling small inputs}
 
