@@ -4986,6 +4986,7 @@ a threshold that ensures the first rounding test is likely to succeed
 in most cases.
 
 \paragraph{\textbf{Error analysis of $c_{0,m}$ and $c_{1,m}$}}
+\label{par:legendre-error-analysis}
 
 Since neither algorithm involves any addition or subtraction, there is no
 cancellation, and we can bound the total rounding error \textit{a-priori}.
@@ -5010,8 +5011,8 @@ which is satisfied by our choice of working precision.
 
 Hermite polynomials $P_n(x)$, with $n \geq 0$, are a sequence of orthogonal
 polynomials defined in the domain $(-\infty,\infty)$. These have a special
-interest in various branches of the field of physics, e.g. in defining the
-eigenstates of the quantum harmonic oscillator.
+interest in various branches of physics, e.g. in defining the eigenstates
+of the quantum harmonic oscillator.
 
 In this document, $P_n(x)$ refers to the physicist's convention -- the
 ones implemented by \texttt{mpfr\_hermite}; this differs from the
@@ -5023,7 +5024,7 @@ explicitly, but instead relies on a three-term recursion, which is more
 efficient and numerically stable for this purpose.
 \begin{equation} \label{eq:hermite-recursion}
   \begin{cases}
-      P_0(x) = 1, \\
+      P_0(x) = 1,  \\
       P_1(x) = 2x, \\
       P_{n+1}(x) = 2xP_{n}(x) - 2nP_{n-1}(x).
   \end{cases}
@@ -5282,6 +5283,83 @@ then the tail is bounded by a geometric series:
   = |c_s x^s|\,\frac{t}{1-t}
 \]
 for $t < 1$.
+
+\paragraph{\textbf{Implementation.}} The leading term is evaluated differently
+depending on the parity of $n$:
+\begin{itemize}
+\item If $n=2m$ is even, the leading term is $c_{0,m} = P_n(0)$, computed by
+  \[
+    c_{0,0}=1, \qquad c_{0,j}=c_{0,j-1}\,\big(-2(2j-1)\big),
+    \quad 1 \leq j \leq m,
+  \]
+  thus
+  \[
+    c_{0,m} = \prod_{j=1}^{m} \big(-2(2j-1)\big).
+  \]
+
+\item If $n=2m+1$ is odd, the leading term is $c_1x$ with
+  $c_{1,m}=P_n'(0)$, computed by
+  \[
+    c_{1,0}=2, \qquad c_{1,j}=c_{1,j-1}\,\big(-2(2j+1)\big),
+    \quad 1 \leq j \leq m,
+  \]
+  thus
+  \[
+    c_{1,m} = 2\prod_{j=1}^{m} \big(-2(2j+1)\big).
+  \]
+\end{itemize}
+We remark that $c_{1,m} = 2(2m+1)c_{0,m}$.
+
+\paragraph{\textbf{Bounding $t$ in the implementation.}}
+In the code, $t = nx^2$ is bounded as follows.
+Let $e_x = \texttt{MPFR\_GET\_EXP}(x)$, which satisfies
+$2^{e_x-1} \le |x| < 2^{e_x}$, and let
+$\ell = \lceil \log_2 n \rceil$, so that $n \le 2^\ell$.
+Then
+\[
+  t = nx^2 < 2^\ell \cdot \left(2^{e_x}\right)^2
+          = 2^{\ell + 2e_x} = 2^\rho,
+\]
+where $\rho = 2e_x + \ell$.
+
+The condition $\rho \le -2$ guarantees
+$t < 2^\rho \le 2^{-2} = \tfrac{1}{4}$.
+The relative error from keeping only the leading term equals $t/(1-t)$.
+Since $t < \tfrac{1}{4} < \tfrac{1}{2}$, we have $1 - t > \tfrac{1}{2}$,
+and therefore
+\[
+  \frac{t}{1-t} < \frac{t}{1/2} = 2t < 2 \cdot 2^\rho = 2^{\rho+1}.
+\]
+Truncating the expansion after the first nonzero term yields at least
+$\mathtt{err} = -\rho - 1$ correct bits relative to that term.
+
+In the implementation, if $p = \texttt{MPFR\_PREC}(\mathrm{res})$, we try this
+shortcut only when
+\[
+  -\rho - 1 \ge p + 64.
+\]
+Since $p \ge 1$, this stronger condition implies $\rho \le -2$, so the
+preceding analysis applies. The extra $64$ guard bits are an heuristic:
+a threshold that ensures the first rounding test is likely to succeed
+in most cases.
+
+\paragraph{\textbf{Error analysis of $c_{0,m}$ and $c_{1,m}$}}
+As for the Legendre case (Sections \ref{par:legendre-error-analysis}), we set
+a working precision $q$, and each \texttt{mpfr\_mul\_si} introduces a relative
+error of at most $u = 2^{-q}$ per operation. We denote by $V_k$ the exact real
+value of the $k$-th iterate and by $v_k$ its computed floating-point approximation,
+with $V_0 = v_0 = 1$ exact in the even case, and $V_0 = v_0 = 2$ exact in the odd
+case. After $k$ such rounding
+operations the accumulated relative error satisfies
+\[
+  \frac{|v_k - V_k|}{|V_k|}
+  \le \frac{ku}{1-ku}
+  \le 2ku = k \cdot 2^{1-q},
+\]
+where the first inequality follows from Lemma~\ref{lemma_graillat} with all
+$\delta_i = u$ (writing $v_k/V_k = \prod_{i=1}^k(1+\delta_i)$), and the last
+holds whenever $ku \le \tfrac{1}{2}$, i.e. $q \ge 1 + \lceil\log_2 k\rceil$,
+which is satisfied by our choice of working precision.
 
 \subsection{Summary}
 
