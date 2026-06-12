@@ -54,7 +54,7 @@ asymptotic_small_x (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode,
     {
       if ((n & 1) == 0)
         {
-          /* Even n = 2m, m = n/2: c0 = H_n(0),
+          /* even n = 2m, m = n/2: c0 = P_n(0),
              c0(0) = 1, c0(j) = c0(j-1) * (-2(2j-1)).
              See algorithms.tex for details. */
           inex = mpfr_set_ui (v, 1, MPFR_RNDN); /* exact */
@@ -64,7 +64,7 @@ asymptotic_small_x (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode,
         }
       else
         {
-          /* Odd n = 2m+1, m = (n-1)/2: c1 = H'_n(0),
+          /* odd n = 2m+1, m = (n-1)/2: c1 = H'_n(0),
              c1(0) = 2, c1(j) = c1(j-1) * (-2(2j+1)),
              then lead = c1*x. See algorithms.tex for details. */
           inex = mpfr_set_ui (v, 2, MPFR_RNDN); /* exact */
@@ -132,7 +132,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       MPFR_RET_NAN;
     }
 
-  /* H_0(x) = 1. In this case, since the output is const and does not depend
+  /* P_0(x) = 1. In this case, since the output is const and does not depend
      on the value of x, no further analysis on the value of x is performed */
   if (n == 0)
     {
@@ -142,16 +142,16 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       MPFR_RET (0);
     }
 
-  /* H_n(0) when n is an odd number is always 0 */
+  /* P_n(0) when n is an odd number is always 0 */
   if (MPFR_IS_ZERO (x) && (n & 1))
     {
       MPFR_SET_ZERO (res);
 
-      /* Rationale: the coefficient of x in H_n(x) for odd n = 2m+1 is
+      /* Rationale: the coefficient of x in P_n(x) for odd n = 2m+1 is
          (-1)^m * 2 * n! / m!, which is positive for n mod 4 == 1 (m even)
          and negative for n mod 4 == 3 (m odd).
-         Thus mpfr_hermite evaluates H_n(0) = +0 for n mod 4 == 1, and
-         H_n(0) = -0 for n mod 4 == 3. */
+         Thus mpfr_hermite evaluates P_n(0) = +0 for n mod 4 == 1, and
+         P_n(0) = -0 for n mod 4 == 3. */
       if ((n & 3) == 3)
         MPFR_SET_NEG (res);
       else
@@ -160,7 +160,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       MPFR_RET (0);
     }
 
-  /* H_1(x) = 2x */
+  /* P_1(x) = 2x */
   if (n == 1)
     {
       /* result is set to 2x. The ternary value of mpfr_set is returned */
@@ -208,7 +208,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 
   MPFR_SAVE_EXPO_MARK (expo);
 
-  /* Analyzing all the test cases where the result is not exact (inex != 0),
+  /* analyzing all the test cases where the result is not exact (inex != 0),
      we find that the average number of bits lost per iteration, i.e.,
      lost_bits/(n-1), is about 3.27, but up to about 5.5 for n >= 20.
      We thus add 4*n guard bits for n < 20, and 6*n for n >= 20.
@@ -232,7 +232,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       if (MPFR_OVERFLOW (flags))
         {
           /* 2x overflows in extended exponent range;
-             H_n(x) overflows for all n >= 1. The sign of H_n(x) for
+             P_n(x) overflows for all n >= 1. The sign of P_n(x) for
              large |x| is that of its leading term (2x)^n. */
           ternary_value = mpfr_overflow (res, rnd_mode,
                                          (n & 1) ? MPFR_SIGN (x)
@@ -299,8 +299,8 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
           q_i = 2 + MAX3 (MPFR_GET_EXP (pn) - realprec - 1, h_i, g_i);
 
           /* p2 = p1, p1 = pn */
-          mpfr_swap (p2, p1); /* now p2 approximates H_{i}(x) */
-          mpfr_swap (p1, pn); /* now p1 approximates H_{i+1}(x) */
+          mpfr_swap (p2, p1); /* now p2 approximates P_{i}(x) */
+          mpfr_swap (p1, pn); /* now p1 approximates P_{i+1}(x) */
           b_i = a_i;          /* 2^b_i is a bound on the absolute error on p2 */
           a_i = q_i;          /* 2^a_i is a bound on the absolute error on p1 */
 
@@ -321,13 +321,13 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
           break;
         }
 
-      /* Now p1 approximates H_n(x), and 2^a_i is a bound on its absolute
+      /* now p1 approximates P_n(x), and 2^a_i is a bound on its absolute
          error. Since ulp(p1) = 2^(EXP(p1)-realprec), we get the relative
          error is bounded by 2^(a_i - (EXP(p1) - realprec - 1)). */
       lost_bits = a_i - (MPFR_GET_EXP (p1) - realprec);
 
       /* if inex=0, then all the computation was exact, thus p1 is exactly
-         H_n(x), otherwise we call MPFR_CAN_ROUND() to check if we can
+         P_n(x), otherwise we call MPFR_CAN_ROUND() to check if we can
          deduce the correct rounding */
       if (inex == 0 ||
           (lost_bits < realprec &&
