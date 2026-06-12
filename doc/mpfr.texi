@@ -2243,12 +2243,15 @@ then @var{res} is set to @samp{NaN} and 0 is returned.
 Note: it contains an assertion that ensures @var{n} >= 0.
 @end deftypefun
 
-@deftypefun int mpfr_hermite (mpfr_t @var{res}, unsigned @var{n}, const mpfr_t @var{x}, mpfr_rnd_t @var{rnd})
+@deftypefun int mpfr_hermite (mpfr_t @var{res}, long int @var{n}, const mpfr_t @var{x}, mpfr_rnd_t @var{rnd})
 @var{res} is set with the value of the (physicist's) Hermite polynomial
-P_@var{n}(@var{x}), rounded in the direction of @var{rnd}, where
-@var{n} stands for the degree of the polynomial. If @var{n} > 8192, then
-@var{res} is set to NaN and 0 is returned. If @var{x} is either NaN or +/-Inf,
-then NaN is returned.
+P_@var{n}(@var{x}), rounded in the direction of @var{rnd}, where @var{n}
+stands for the degree of the polynomial. If @var{x} is either @samp{NaN} or
+@samp{+/-Inf}, then @var{res} is set to @samp{NaN} and 0 is returned. If
+@var{x} is large and causes overflow, @var{res} is set to @samp{+/-Inf} with
+the sign of the leading term (2@var{x})^@var{n}.
+
+Note: it contains an assertion that ensures @var{n} >= 0.
 @end deftypefun
 
 For the power functions (with an integer exponent or not), see @ref{mpfr_pow}
@@ -4631,6 +4634,8 @@ Thus code that needs to work with both MPFR@tie{}2.x and MPFR@tie{}3.x should
 use @code{mpfr_get_z_exp}.
 
 @item @code{mpfr_grandom} in MPFR@tie{}3.1.
+
+@item @code{mpfr_hermite} in MPFR@tie{}4.3.
 
 @item @code{mpfr_j0}, @code{mpfr_j1} and @code{mpfr_jn} in MPFR@tie{}2.3.
 
