@@ -884,6 +884,8 @@ __MPFR_DECLSPEC int mpfr_total_order_p (mpfr_srcptr, mpfr_srcptr);
 
 __MPFR_DECLSPEC int mpfr_hermite (mpfr_ptr, long, mpfr_srcptr, mpfr_rnd_t);
 __MPFR_DECLSPEC int mpfr_legendre (mpfr_ptr, long, mpfr_srcptr, mpfr_rnd_t);
+  __MPFR_DECLSPEC int mpfr_lambertw0 (mpfr_ptr, mpfr_srcptr, mpfr_rnd_t);
+  __MPFR_DECLSPEC int mpfr_lambertw1 (mpfr_ptr, mpfr_srcptr, mpfr_rnd_t);
 
 __MPFR_DECLSPEC int mpfr_fpif_export_mem (unsigned char *, size_t, mpfr_srcptr);
 __MPFR_DECLSPEC int mpfr_fpif_import_mem (mpfr_ptr, unsigned char *, size_t);
