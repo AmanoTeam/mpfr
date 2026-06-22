@@ -524,8 +524,9 @@ main (void)
      precision */
   test_double_precision ();
 
-  random_poly_suite (RANDOM_TESTS_N_DEGREE, RANDOM_TESTS_BATCH,
-                     IEEE754_DOUBLE_PREC);
+  /* perform RANDOM_TESTS_BATCH tests for each of the 10 degree chosen between
+     the ones allowed  C++ standard [0, 128] */
+  random_poly_suite (RANDOM_TESTS_BATCH, IEEE754_DOUBLE_PREC);
 
   test_exact_dyadic ();
 

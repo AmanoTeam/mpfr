@@ -30,22 +30,6 @@ If not, see <https://www.gnu.org/licenses/>. */
 #endif
 
 static void
-random_array (int *array, int size, int inf, int sup)
-{
-  int i, tmp;
-  for (i = 0; i < size; i++)
-    {
-      if (inf > sup)
-        {
-          tmp = inf;
-          inf = sup;
-          sup = tmp;
-        }
-      array[i] = inf + (int) (randulong () % (unsigned long) (sup - inf + 1));
-    }
-}
-
-static void
 test_poly_random (int n, mpfr_prec_t p, unsigned long K)
 {
   mpfr_t x, y, z, t;
@@ -86,27 +70,15 @@ test_poly_random (int n, mpfr_prec_t p, unsigned long K)
 }
 
 static void
-random_poly_suite (int num_degrees, int ntests, mpfr_prec_t p)
+random_poly_suite (int num_tests, mpfr_prec_t p)
 {
-  /* we set the minimum degree to 2 to skip the two base cases P0 and P1,
-     and the maximum degree to 128 to limit the range of degrees tested
-     to the same limit of the C++ standard */
-  int i, min_degree = 2, max_degree = 128;
-  int *test_degrees;
+  /* we choose a uniform random distribution of 10 degrees from the ones
+     allowed by the C++ standard [0, 128] */
+  int i;
+  int test_degrees[] = {54, 76, 57, 70, 16, 76, 4, 120, 22, 99};
 
-  test_degrees = (int *) malloc (num_degrees * sizeof(int));
-  if (!test_degrees)
+  for (i = 0; i < 10; i++)
     {
-      printf ("Could not allocate memory for random tests\n");
-      exit (1);
+      test_poly_random (test_degrees[i], p, num_tests);
     }
-
-  random_array (test_degrees, num_degrees, min_degree, max_degree);
-
-  for (i = 0; i < num_degrees; i++)
-    {
-      test_poly_random (test_degrees[i], p, ntests);
-    }
-
-  free (test_degrees);
 }

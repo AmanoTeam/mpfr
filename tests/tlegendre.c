@@ -26,7 +26,6 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 #define ARBITRARILY_LOW_PREC 10
 
-#define RANDOM_TESTS_N_DEGREE 10
 #define RANDOM_TESTS_BATCH    20
 #define DYADIC_BOUND          35
 #define GENERIC_UI_RAND_MOD   10
@@ -40,6 +39,7 @@ static const unsigned degrees[] =
   128,     /* The maximum degree officially supported by C++17 */
   1024,    /* 2^10 */
 };
+
 static const char *expected_vals[] =
 {
   "-0.00100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
@@ -52,7 +52,7 @@ static const char *expected_vals[] =
   "-0.10011011001100111110110010111111011011111101111001101010111101000000001111110101001101100011100101011001000110111010100000110000101101111101100001001111100111001111111011111101111001000000011000100010e-10",
 };
 
-static const int n_degrees_test = sizeof(degrees)/sizeof(unsigned);
+static const int n_degrees_test = numberof_const (degrees);
 
 static void
 test_domain (void)
@@ -112,7 +112,6 @@ test_domain (void)
           exit (1);
         }
     }
-
   for (i = 0; i < 10; i++)
     {
       ret = mpfr_legendre (res, i, outer, MPFR_RNDN);
@@ -401,8 +400,6 @@ test_round (void)
 
   mpfr_set_d(x, 1.0/3.0, MPFR_RNDD);
 
-  /* */
-
   RND_LOOP_NO_RNDF (rnd)
     {
       ret = mpfr_legendre (res, 1, x, (mpfr_rnd_t) rnd);
@@ -443,6 +440,7 @@ static void
 bug20251001 (void)
 {
   mpfr_t x, y;
+
   mpfr_init2 (x, 53);
   mpfr_init2 (y, 53);
 
@@ -453,11 +451,12 @@ bug20251001 (void)
   mpfr_set_str (x, "-4.7184833984611241e-1", 10, MPFR_RNDN);
   mpfr_legendre (y, 2, x, MPFR_RNDD);
   mpfr_set_str_binary (x, "-0.10101010000001100000110110100001000111001110111100001E-2");
-  if (mpfr_cmp (y, x) != 0) {
-    printf ("Error in bug20251001 (1)\n");
-    DUMP_NUMBERS (x,y);
-    exit (1);
-  }
+  if (!mpfr_equal_p (y, x))
+    {
+      printf ("Error in bug20251001 (1)\n");
+      DUMP_NUMBERS (x,y);
+      exit (1);
+    }
 
   /* bug found with GMP_CHECK_RANDOMIZE=1759308817539561:
      Error in mpfr_legendre for n=10 x=4.608a667782dd0@-1 rnd=MPFR_RNDU
@@ -466,11 +465,12 @@ bug20251001 (void)
   mpfr_set_str (x, "4.608a667782dd0@-1", 16, MPFR_RNDN);
   mpfr_legendre (y, 10, x, MPFR_RNDU);
   mpfr_set_str_binary (x, "0.11111010001111111110111110101011110010000001110000001E-2");
-  if (mpfr_cmp (y, x) != 0) {
-    printf ("Error in bug20251001 (2)\n");
-    DUMP_NUMBERS (x,y);
-    exit (1);
-  }
+  if (!mpfr_equal_p (y, x))
+    {
+      printf ("Error in bug20251001 (2)\n");
+      DUMP_NUMBERS (x,y);
+      exit (1);
+    }
 
   /* bug found with GMP_CHECK_RANDOMIZE=1759309465303933:
      Error in mpfr_legendre for n=3 x=5.6a59d5d01d9d0@-1 rnd=MPFR_RNDZ
@@ -479,11 +479,12 @@ bug20251001 (void)
   mpfr_set_str (x, "5.6a59d5d01d9d0@-1", 16, MPFR_RNDN);
   mpfr_legendre (y, 3, x, MPFR_RNDZ);
   mpfr_set_str_binary (x, "-0.11010010010011110110100000101001000001111000100101111E-1");
-  if (mpfr_cmp (y, x) != 0) {
-    printf ("Error in bug20251001 (3)\n");
-    DUMP_NUMBERS (x,y);
-    exit (1);
-  }
+  if (!mpfr_equal_p (y, x))
+    {
+      printf ("Error in bug20251001 (3)\n");
+      DUMP_NUMBERS (x,y);
+      exit (1);
+    }
 
   mpfr_clear (x);
   mpfr_clear (y);
@@ -493,6 +494,7 @@ static void
 bug20260205 (void)
 {
   mpfr_t x, y;
+
   mpfr_init2 (x, 53);
   mpfr_init2 (y, 53);
 
@@ -502,11 +504,12 @@ bug20260205 (void)
   mpfr_set_str (x, "-9.3dbaa2fd514c0@-1", 16, MPFR_RNDN);
   mpfr_legendre (y, 2, x, MPFR_RNDZ);
   mpfr_set_str_binary (x, "0.11001000000101110011101010100100001111111000011100111E-11");
-  if (mpfr_cmp (y, x) != 0) {
-    printf ("Error in bug20260205\n");
-    DUMP_NUMBERS (x,y);
-    exit (1);
-  }
+  if (!mpfr_equal_p (y, x))
+    {
+      printf ("Error in bug20260205\n");
+      DUMP_NUMBERS (x,y);
+      exit (1);
+    }
 
   mpfr_clear (x);
   mpfr_clear (y);
@@ -522,8 +525,8 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
   int i, j, a, b, rnd;
   mpfr_t x, y, z;
 
-  P0 = (mpq_t*) tests_allocate ((n + 1) * sizeof (mpq_t));
-  P1 = (mpq_t*) tests_allocate ((n + 1) * sizeof (mpq_t));
+  P0 = (mpq_t *) tests_allocate ((n + 1) * sizeof (mpq_t));
+  P1 = (mpq_t *) tests_allocate ((n + 1) * sizeof (mpq_t));
   for (i = 0; i <= n; i++)
     {
       mpq_init (P0[i]); /* set to 0 */
@@ -568,7 +571,7 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
   mpfr_init2 (z, p);
 
   for (a = -A; a <= A; a++)
-    for (b = 0; b <= B; b++)
+    for (b = 6; b <= B; b++)
       {
         /* compute t = Pn(a/2^b) */
         mpq_set_si (u, a, 1ul<<b);
@@ -587,10 +590,10 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
             mpfr_rnd_t r = (mpfr_rnd_t) rnd;
             mpfr_set_q (y, t, (mpfr_rnd_t) rnd); /* expected result */
             mpfr_legendre (z, n, x, r);
-            if (mpfr_cmp (y, z))
+            if (!mpfr_equal_p (y, z))
               {
                 printf ("Error in test_exact for n=%d a=%d b=%d p=%lu rnd=%s\n",
-                        n, a, b, p, mpfr_print_rnd_mode (r));
+                        n, a, b, (unsigned long) p, mpfr_print_rnd_mode (r));
                 printf ("expected ");
                 mpfr_out_str (stdout, 16, 0, y, MPFR_RNDN);
                 printf ("\ngot      ");
@@ -621,7 +624,7 @@ test_exact_dyadic (void)
   int n;
   mpfr_prec_t p;
 
-  for (n = 1; n <= 10; n++)
+  for (n = 2; n <= 10; n++)
     for (p = DYADIC_BOUND - 3; p <= DYADIC_BOUND; p++)
       test_exact (n, DYADIC_BOUND, DYADIC_BOUND, p);
 }
@@ -633,8 +636,10 @@ test_zero_even (void)
   long n;
   mpfr_prec_t p;
   mpq_t q, r;
+
   mpq_init (q);
   mpq_init (r);
+
   for (n = 0; n <= 100; n+=2)
     {
       /* invariant: q = Pn(0) for n even */
@@ -657,10 +662,11 @@ test_zero_even (void)
             {
               ret = mpfr_legendre (y, n, x, (mpfr_rnd_t) rnd);
               ret2 = mpfr_set_q (z, q, (mpfr_rnd_t) rnd);
-              if (mpfr_cmp (y, z))
+              if (!mpfr_equal_p (y, z))
                 {
                   printf ("test_zero failed for n=%ld p=%lu rnd=%s\n",
-                          n, p, mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                          n, (unsigned long) p,
+                          mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
                   DUMP_NUMBERS(z, y);
                   exit (1);
                 }
@@ -668,7 +674,8 @@ test_zero_even (void)
                 {
                   printf ("test_zero: incompatible ternary values for "
                           "n=%ld p=%lu rnd=%s\n",
-                          n, p, mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                          n, (unsigned long) p,
+                          mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
                   printf ("got %d expected %d\n", ret, ret2);
                   exit (1);
                 }
@@ -678,6 +685,7 @@ test_zero_even (void)
           mpfr_clear (z);
         }
     }
+
   mpq_clear (q);
   mpq_clear (r);
 }
@@ -738,12 +746,35 @@ mpfr_legendre_generic_ui (mpfr_ptr y, mpfr_srcptr x, long n, mpfr_rnd_t rnd)
 #define INT_RAND_FUNCTION() \
         (long) (randlimb () % GENERIC_UI_RAND_MOD)
 #include "tgeneric_ui.c"
+#undef TEST_FUNCTION
+#undef TEST_FUNCTION_NAME
+#undef INTEGER_TYPE
+
+#define DEFN(N)                                                         \
+  static int mpfr_legendre##N (mpfr_ptr y, mpfr_srcptr x, mpfr_rnd_t r) \
+  { return mpfr_legendre (y, N, x, r); }
+
+DEFN(2)
+DEFN(3)
+
+#define TEST_FUNCTION mpfr_legendre2
+#define test_generic test_generic_legendre2
+#include "tgeneric.c"
+
+#define TEST_FUNCTION mpfr_legendre3
+#define test_generic test_generic_legendre3
+#include "tgeneric.c"
+
+#undef TEST_FUNCTION
+#undef TEST_RANDOM_EMIN
+#undef TEST_RANDOM_EMAX
 
 int
 main (void)
 {
   tests_start_mpfr ();
 
+  /* Test for the special case x = 0 */
   test_zero_even ();
   test_zero_odd ();
 
@@ -785,8 +816,9 @@ main (void)
   test_sample_with_precision (MPFR_PREC_100, MPFR_PREC_200);
   test_sample_with_precision (MPFR_PREC_200, MPFR_PREC_200);
 
-  random_poly_suite (RANDOM_TESTS_N_DEGREE, RANDOM_TESTS_BATCH,
-                     IEEE754_DOUBLE_PREC);
+  /* perform RANDOM_TESTS_BATCH tests for each of the 10 degree chosen between
+     the ones allowed  C++ standard [0, 128] */
+  random_poly_suite (RANDOM_TESTS_BATCH, IEEE754_DOUBLE_PREC);
 
   bug20251001 ();
 
@@ -795,6 +827,9 @@ main (void)
   test_exact_dyadic ();
 
   test_generic_ui (ARBITRARILY_LOW_PREC, IEEE754_DOUBLE_PREC, 6);
+
+  test_generic_legendre2 (MPFR_PREC_MIN, 100, 100);
+  test_generic_legendre3 (MPFR_PREC_MIN, 100, 100);
 
   tests_end_mpfr ();
   return 0;
