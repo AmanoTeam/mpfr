@@ -27,7 +27,6 @@ If not, see <https://www.gnu.org/licenses/>. */
 #include "torthopoly.c"
 
 #define ARBITRARILY_LOW_PREC  10
-#define RANDOM_TESTS_N_DEGREE 10
 #define RANDOM_TESTS_BATCH    20
 #define DYADIC_BOUND          10
 #define GENERIC_UI_RAND_MOD   10
@@ -209,7 +208,7 @@ test_double_precision (void)
   mpfr_set_str (expected, "299.24358881463500800000000000000", 10, MPFR_RNDN);
 
   mpfr_hermite (res, 3, x, MPFR_RNDN);
-  if (mpfr_cmp (res, expected))
+  if (!mpfr_equal_p (res, expected))
     {
       printf ("test_double_precision failed;\n");
       DUMP_NUMBERS (expected, res);
@@ -221,7 +220,7 @@ test_double_precision (void)
   mpfr_set_str (expected, "3.11028039062500000000000000000e6", 10, MPFR_RNDN);
 
   mpfr_hermite (res, 6, x, MPFR_RNDN);
-  if (mpfr_cmp (res, expected))
+  if (!mpfr_equal_p (res, expected))
     {
       printf ("test_double_precision failed;\n");
       DUMP_NUMBERS (expected, res);
@@ -233,7 +232,7 @@ test_double_precision (void)
   mpfr_set_str (expected, "-1.999999960000000000000000000000", 10, MPFR_RNDN);
 
   mpfr_hermite (res, 2, x, MPFR_RNDN);
-  if (mpfr_cmp (res, expected))
+  if (!mpfr_equal_p (res, expected))
     {
       printf ("test_double_precision failed;\n");
       DUMP_NUMBERS (expected, res);
@@ -322,7 +321,7 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
             mpfr_rnd_t r = (mpfr_rnd_t) rnd;
             mpfr_set_q (y, t, (mpfr_rnd_t) rnd); /* expected result */
             mpfr_hermite (z, n, x, r);
-            if (mpfr_cmp (y, z))
+            if (!mpfr_equal_p (y, z))
               {
                 printf ("Error in test_exact for n=%d a=%d b=%d p=%lu rnd=%s\n",
                         n, a, b, p, mpfr_print_rnd_mode (r));
@@ -337,6 +336,7 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
       mpq_clear (P0[i]);
       mpq_clear (P1[i]);
     }
+
   free (P0);
   free (P1);
   mpq_clear (t);
@@ -503,6 +503,28 @@ mpfr_hermite_generic_ui (mpfr_ptr y, mpfr_srcptr x, long n, mpfr_rnd_t rnd)
 #define INT_RAND_FUNCTION() \
         (long) (randlimb () % GENERIC_UI_RAND_MOD)
 #include "tgeneric_ui.c"
+#undef TEST_FUNCTION
+#undef TEST_FUNCTION_NAME
+#undef INTEGER_TYPE
+
+#define DEFN(N)                                                        \
+  static int mpfr_hermite##N (mpfr_ptr y, mpfr_srcptr x, mpfr_rnd_t r) \
+  { return mpfr_hermite (y, N, x, r); }
+
+DEFN(2)
+DEFN(3)
+
+#define TEST_FUNCTION mpfr_hermite2
+#define test_generic test_generic_hermite2
+#include "tgeneric.c"
+
+#define TEST_FUNCTION mpfr_hermite3
+#define test_generic test_generic_hermite3
+#include "tgeneric.c"
+
+#undef TEST_FUNCTION
+#undef TEST_RANDOM_EMIN
+#undef TEST_RANDOM_EMAX
 
 int
 main (void)
@@ -530,9 +552,13 @@ main (void)
 
   test_exact_dyadic ();
 
+  /* test some specific cases of overflow in a reduced exponent range */
   test_overflow ();
 
   test_generic_ui (ARBITRARILY_LOW_PREC, IEEE754_DOUBLE_PREC, 6);
+
+  test_generic_hermite2 (MPFR_PREC_MIN, 100, 100);
+  test_generic_hermite3 (MPFR_PREC_MIN, 100, 100);
 
   tests_end_mpfr ();
   return 0;
@@ -541,5 +567,4 @@ main (void)
 #undef MPFR_ORTHOGONAL_POLY_FN
 #undef X_LOWER_BOUND
 #undef X_HIGHER_BOUND
-#undef RANDOM_TESTS_N_DEGREE
 #undef RANDOM_TESTS_BATCH

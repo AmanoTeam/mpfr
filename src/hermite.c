@@ -30,11 +30,12 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 static int
 asymptotic_small_x (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode,
-                    int *inex_round, mpfr_exp_t err)
+                    mpfr_exp_t err)
 {
   mpfr_t v;
   long m, j;
   unsigned inex;
+  int inex_round;
   mpfr_prec_t res_prec, realprec;
 
   MPFR_GROUP_DECL (small_x);
@@ -77,7 +78,7 @@ asymptotic_small_x (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode,
       /* if inex=0, then all the computation was exact, thus v is exactly V,
          otherwise we call MPFR_CAN_ROUND() to check if we can deduce
          the correct rounding */
-      if (!inex || MPFR_CAN_ROUND (v, realprec - err, res_prec, rnd_mode))
+      if (inex == 0 || MPFR_CAN_ROUND (v, realprec - err, res_prec, rnd_mode))
         break;
 
       MPFR_ZIV_NEXT (loop, realprec);
@@ -86,12 +87,18 @@ asymptotic_small_x (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode,
 
   MPFR_ZIV_FREE (loop);
 
-  *inex_round = mpfr_round_near_x (res, v, (mpfr_uexp_t) (err - 2),
-                                   0, rnd_mode);
+  inex_round = mpfr_round_near_x (res, v, (mpfr_uexp_t) (err - 2),
+                                  0, rnd_mode);
 
   MPFR_GROUP_CLEAR (small_x);
 
-  return inex;
+  return inex_round;
+}
+
+static int
+overflow_sign (mpfr_srcptr x, long n)
+{
+  return (n & 1) ? MPFR_SIGN (x) : MPFR_SIGN_POS;
 }
 
 int
@@ -179,29 +186,46 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
          l2n = ceil(log2(n)), so n <= 2^l2n;
          thus, t = n*x^2 < 2^l2n * (2^ex)^2 = 2^{l2n+2*ex}.
          We define rho = l2n+2*ex, therefore t < 2^{rho}.
-         Note: we assume that rho is not going to overflow. */
+         The asymptotic expansion only applies for small |x|, i.e. ex < 0.
+         We require ex < 0 before computing rho: since the expansion needs
+         rho <= -2 (and in fact rho very negative), any x with ex >= 0 gives
+         rho >= l2n >= 1 and would be rejected anyway. Requiring ex < 0 also
+         ensures that 2*ex (hence rho and err) does not overflow, since
+         2*MPFR_EMIN_MIN is representable in an mpfr_exp_t whereas 2*ex for
+         a large positive ex (e.g. ex close to MPFR_EMAX_MAX) would not. */
       ex = MPFR_GET_EXP (x);
-      l2n = (mpfr_exp_t) MPFR_INT_CEIL_LOG2 (n);
-      rho = l2n + 2 * ex;
-
-      /* the bound err = -rho - 1 requires rho <= -2. In practice, require
-         64 extra bits so the first rounding test usually succeeds. */
-      if (rho <= -2)
+      if (ex < 0)
         {
-          /* see algorithms.tex for the calculation of this error bound. */
-          err = -rho - 1;
+          l2n = (mpfr_exp_t) MPFR_INT_CEIL_LOG2 (n);
+          rho = l2n + 2 * ex;
 
-          if (err >= (mpfr_exp_t) res_prec + MPFR_HERMITE_SMALL_X_GUARD)
+          /* the bound err = -rho - 1 requires rho <= -2. In practice, require
+             64 extra bits so the first rounding test usually succeeds */
+          if (rho <= -2)
             {
-              inex = asymptotic_small_x (res, n, x, rnd_mode,
-                                         &inex_round, err);
+              /* see algorithms.tex for the calculation of this error bound */
+              err = -rho - 1;
 
-              /* if asymptotic_small_x sets inex_round to 0, then it cannot
-                 round. In that case, our asymptotic expansion failed, so we
-                 fall back to the usual Ziv loop. Otherwise, we return the
-                 inex flag. */
-              if (inex_round)
-                return inex;
+              if (err >= (mpfr_exp_t) res_prec + MPFR_HERMITE_SMALL_X_GUARD)
+                {
+                  /* compute in the extended exponent range so that the final
+                     overflow/underflow with respect to the caller's range is
+                     handled uniformly by mpfr_check_range */
+                  MPFR_SAVE_EXPO_MARK (expo);
+                  inex_round = asymptotic_small_x (res, n, x, rnd_mode, err);
+
+                  /* if asymptotic_small_x returns 0, then it cannot round.
+                     In that case, our asymptotic expansion failed, so we
+                     fall back to the usual Ziv loop. Otherwise, we return the
+                     correctly rounded result */
+                  if (inex_round)
+                    {
+                      MPFR_SAVE_EXPO_FREE (expo);
+                      return mpfr_check_range (res, inex_round, rnd_mode);
+                    }
+
+                  MPFR_SAVE_EXPO_FREE (expo);
+                }
             }
         }
     }
@@ -231,12 +255,10 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       MPFR_BLOCK (flags, inex = mpfr_mul_ui (p1, x, 2, MPFR_RNDN));
       if (MPFR_OVERFLOW (flags))
         {
-          /* 2x overflows in extended exponent range;
-             P_n(x) overflows for all n >= 1. The sign of P_n(x) for
-             large |x| is that of its leading term (2x)^n. */
+          /* the sign of P_n(x) for large |x| is that of its leading term
+             (2x)^n */
           ternary_value = mpfr_overflow (res, rnd_mode,
-                                         (n & 1) ? MPFR_SIGN (x)
-                                                 : MPFR_SIGN_POS);
+                                         overflow_sign (x, n));
           MPFR_SAVE_EXPO_UPDATE_FLAGS (expo, MPFR_FLAGS_OVERFLOW);
           break;
         }
@@ -315,8 +337,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       if (MPFR_OVERFLOW (flags))
         {
           ternary_value = mpfr_overflow (res, rnd_mode,
-                                         (n & 1) ? MPFR_SIGN (x)
-                                                 : MPFR_SIGN_POS);
+                                         overflow_sign (x, n));
           MPFR_SAVE_EXPO_UPDATE_FLAGS (expo, MPFR_FLAGS_OVERFLOW);
           break;
         }
