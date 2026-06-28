@@ -317,6 +317,9 @@ To make a release (for the MPFR team):
      (which transforms "-X >= 0" to "X <= 0", changing the behavior
      on LONG_MIN); as an example, see tstrtofr.c, bug20230606().
 
+     On x86_64, with GCC, test with -mlong-double-128 (this allows one
+     to test binary128-specific code in get_ld.c).
+
      On 64-bit PowerPC, test against GMP built with the different ABI's:
      32, mode32 and mode64 (in particular mode32, where long's have
      32 bits and limbs have 64 bits [long long]).
@@ -477,6 +480,48 @@ $ autoreconf
 And for libtool 2.4.3 to 2.4.6, the following is needed:
 $ patch m4/libtool.m4 libtool-tcc-rpath.patch
 $ autoreconf
+
+===========================================================================
+
+Particular configure values used by MPFR:
+
++ CC and CFLAGS:        As usual, but if they are both empty, the configure
+                        script will try to get the values suggested by gmp.h
+                        (this is useful because GMP may be installed with a
+                        non-default ABI). See the INSTALL file for details.
+
++ MPFR_EXTRA_CFLAGS:    Extra options added to $CFLAGS at the end of the
+                        configure script, i.e. used only for the MPFR
+                        build and tests. They will not affect configure
+                        tests, except when CFLAGS is temporarily modified
+                        with the addition of $MPFR_EXTRA_CFLAGS.
+
+Compiler options should normally put in CFLAGS, as the goal of configure
+is to test under conditions similar to the actual build, in particular
+for the test of supported features. This is the case of -Werror, if
+used, because it may have an influence on which features are supported:
+the implementation of some features may cause warnings, which are turned
+into errors. All options about optional features should be put in CFLAGS.
+
+However, some particular options, which are just intended to detect bugs
+or poorly written code in MPFR, may need to be put in MPFR_EXTRA_CFLAGS
+when they are used together with -Werror, because they may yield failures
+on completely valid C code (for this reason, various configure tests may
+use such code, even though the compiler could complain). Such options fall
+into two classes:
+  * Code analysis, e.g. GCC's -fanalyzer. Even though running the code
+    could yield undefined behavior, various configure tests do not care
+    about the execution; for instance, an infinite loop should not yield
+    compile-time errors in configure (such a loop is used by the tests
+    from Autoconf to check the support of _Noreturn).
+  * Coding style (which could be regarded as bugs when using a recent
+    C standard), e.g. GCC's -Wold-style-declaration, which may yield a
+    clash between some standard Autoconf tests and GCC:
+      https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108700
+
+The -Wall option may enable options related to code analysis and coding
+style, but it should normally be put in CFLAGS. The configure tests from
+Autoconf have improved to avoid failures with options enabled by -Wall.
 
 ===========================================================================
 
@@ -772,12 +817,13 @@ with code like MPFR_EXP_MIN/n).
    =====================================================================
 
 Don't use the following identifiers since they are keywords for some
-compilers:
+compilers or have special use:
   - "bool", "true" and "false": keywords in ISO C23.
   - "near" and "far": keywords in some old DOS compiler.
   - "pm", which is used by the C compiler 'sharp' to design variables
     that should be stored in the flash memory.
   - "new", which is reserved in C++.
+  - "main", as this might clash with the usual main() function.
 
 Note: This list is not exhaustive; these are just the simplest keywords,
 which are likely to be used by mistake.
@@ -1300,6 +1346,8 @@ MPFR manual (mpfr.texi):
     This is just the name of this character (as originally defined
     for base 10) and does not imply a number written in decimal.
     Note: POSIX uses the term "radix character".
+  * Keep the style/wording consistent. For instance, for the types,
+    use "long int", not "long".
   * Use "@minus{}" for the minus character, not the ASCII "-".
   * Warning! Texinfo is not like TeX. Whitespace is preserved in the
     info file. So, do not use additional space for .texi indentation.
@@ -1506,6 +1554,26 @@ To work with ternary values, mpfr-impl.h provides the following macros:
 
 ===========================================================================
 
+To return from a function that computes a MPFR number (thus returning
+a ternary value):
+
+* If the result is NaN, use MPFR_RET_NAN.
+
+* If the result is exact, use MPFR_RET (0) preferably.
+
+* Any non-zero real value may be out of range, thus inexact.
+  So, for instance, do not use
+    mpfr_set_ui (res, 1, rnd_mode);
+    MPFR_RET (0);
+  but
+    return mpfr_set_ui (res, 1, rnd_mode);
+
+* In the generic case, usually return with code like
+    return mpfr_check_range (rop, inexact, rnd);
+  (see example above).
+
+===========================================================================
+
 Because of a bug in the Mac OS X 10.5 linker, avoid tentative definitions
 (C99, 6.9.2). Depending on the context, use either a simple declaration
 (with the "extern" storage-class specifier) or an external definition.
@@ -1695,6 +1763,24 @@ main (int argc, char *argv[])
   return 0;
 }
 
+About the generic tests, when there is an additional integer argument,
+the test_generic_ui test could be used. For instance, trootn_si.c has:
+
+#define TEST_FUNCTION mpfr_rootn_si
+#define INTEGER_TYPE long
+#define INT_RAND_FUNCTION() \
+  (randlimb () % 16 == 0 ? randlong () : (long) (randlimb () % 31) - 15)
+#include "tgeneric_ui.c"
+
+and in main():
+
+  test_generic_ui (MPFR_PREC_MIN, 200, 30);
+
+Since the test_generic_ui test is rather basic compared to test_generic
+(this might be improved in the future), it is recommended to also add
+test_generic tests on several fixed values of the integer argument.
+See tcompound_si.c as an example.
+
    ---------------------------------------------------------------------
 
 Here is how the test suite works since the full Automake 1.13 support
@@ -1749,8 +1835,13 @@ result will depend on the floating-point arithmetic of the system;
 this has shown many problems in the past and problems may still occur
 with new systems. Use `mpfr_set_si` or `mpfr_set_str` instead.
 
-To check the result of some function, use mpfr_equal_p rather than
-mpfr_cmp, as mpfr_cmp will return 0 (equality) if the result is NaN.
+To check the result of some function, do not use mpfr_cmp as it will
+return 0 (equality) if the result is NaN. For an equality test, use
+mpfr_equal_p (most often with the negation operator: !mpfr_equal_p).
+For an inequality test, use one of the other similar predicates
+(mpfr_greater_p, etc.), also in the negated form if a result NaN needs
+to trigger an error. Use the mpfr_cmp0 macro (defined in mpfr-test.h)
+to get a ternary value with an assertion failure on NaN.
 
 Do not use functions that need optional features (except in a context
 where such features are required). For instance, the mpfr_printf-like

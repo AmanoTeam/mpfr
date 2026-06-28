@@ -892,6 +892,16 @@ dnl Check the size of unsigned int and unsigned long
 AC_CHECK_SIZEOF([unsigned int])
 AC_CHECK_SIZEOF([unsigned long])
 
+dnl Extra CFLAGS, such as compiler options that should not be used
+dnl in configure tests (in particular those we do not control).
+dnl Such compiler options should not have an effect on the support
+dnl of compiler features. For instance, -Werror should not be used
+dnl here, because it may disable features if the implementation of
+dnl such features introduces warnings.
+if test -n "$MPFR_EXTRA_CFLAGS"; then
+  CFLAGS="$CFLAGS $MPFR_EXTRA_CFLAGS"
+fi
+
 dnl Output
 AC_CONFIG_FILES([Makefile mpfr.pc doc/Makefile src/Makefile tests/Makefile tune/Makefile src/mparam.h:src/mparam_h.in tools/bench/Makefile])
 AC_OUTPUT
