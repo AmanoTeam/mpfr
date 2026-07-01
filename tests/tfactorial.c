@@ -189,6 +189,64 @@ overflowed_fac0 (void)
   mpfr_clear (y);
 }
 
+static void
+overflow_32_bit (void)
+{
+  mpfr_t y;
+  unsigned long n = 47548569;
+  mpfr_exp_t old_emax;
+
+  old_emax = mpfr_get_emax ();
+
+  mpfr_set_emax (mpfr_get_emax_max ());
+
+  mpfr_init2 (y, 200);
+
+  mpfr_fac_ui (y, n, MPFR_RNDN);
+
+  /* this is the maximum exponent on 32-bit machines */
+  if (mpfr_get_emax_max () <= 1073741823)
+    {
+      /* on 32-bit machines it should overflow, and the value should
+         be set to +Inf */
+      if (!(mpfr_inf_p (y) && MPFR_IS_POS (y)) ||
+          !mpfr_overflow_p ())
+        {
+          printf ("An overflow was expected (rnd = %s); got\n",
+                  mpfr_print_rnd_mode (MPFR_RNDN));
+          printf ("instead of +Inf\n");
+          exit (1);
+        }
+    }
+  else
+    {
+      mpfr_t expected;
+
+      mpfr_init2 (expected, 200);
+      mpfr_set_str_binary (expected,
+                           "0.101111000010101011011101011011111110001110000"
+                           "11001000110111011111011110011011110010011100010"
+                           "01101010100000000011000100111111100000010110001"
+                           "10110100111100110101010001001011100110000000101"
+                           "01000111110100E1144028263");
+
+      /* on 64-bit machines it shouldn't overflow */
+      if (!mpfr_equal_p (expected, y))
+        {
+          printf ("Wrong result for %lu!\nexpected", n);
+          mpfr_dump (expected);
+          printf ("got:\n");
+          mpfr_dump (y);
+          exit (1);
+        }
+
+      mpfr_clear (expected);
+    }
+  set_emax (old_emax);
+
+  mpfr_clear (y);
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -287,6 +345,8 @@ main (int argc, char *argv[])
   mpfr_clear (t);
 
   overflowed_fac0 ();
+
+  overflow_32_bit ();
 
   tests_end_mpfr ();
   return 0;

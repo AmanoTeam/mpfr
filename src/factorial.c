@@ -62,15 +62,35 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
   MPFR_ZIV_INIT (loop, Nt);
   for (;;)
     {
+      MPFR_BLOCK_DECL (flags);
       /* compute factorial */
       inexact = mpfr_set_ui (t, 1, rnd);
-      for (i = 2 ; i <= x ; i++)
+
+      MPFR_BLOCK (flags,
+                  for (i = 2 ; i <= x ; i++)
+                    {
+                      int round = mpfr_mul_ui (t, t, i, rnd);
+                      /* assume the first inexact product gives the sign
+                         of difference: is that always correct? */
+                      if (inexact == 0)
+                        inexact = round;
+
+                      /* an overflow of an intermediate product is a real
+                         overflow: it occurs in the maximal exponent range
+                         (set by MPFR_SAVE_EXPO_MARK) and does not depend on
+                         the working precision Nt, so we can stop as soon as
+                         we detect one */
+                      if (MPFR_UNLIKELY (MPFR_BLOCK_EXCEP))
+                        break;
+                    });
+
+      /* since x! > 0, the overflow always yields +Inf */
+      if (MPFR_UNLIKELY (MPFR_OVERFLOW (flags)))
         {
-          int round = mpfr_mul_ui (t, t, i, rnd);
-          /* assume the first inexact product gives the sign
-             of difference: is that always correct? */
-          if (inexact == 0)
-            inexact = round;
+          MPFR_ZIV_FREE (loop);
+          mpfr_clear (t);
+          MPFR_SAVE_EXPO_FREE (expo);
+          return mpfr_overflow (y, rnd_mode, 1);
         }
 
       err = Nt - 1 - MPFR_INT_CEIL_LOG2 (Nt);
