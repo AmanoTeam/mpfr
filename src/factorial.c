@@ -29,13 +29,48 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 /* FIXME: efficient problems with large arguments; see comments in gamma.c. */
 
+/* this function compute the magnitude (exponent) of the result as
+     log2(n!) = lgamma(n)/ln(2).
+   The main purpose of this function is detect overflows without
+   computing the factorial. For more "fine-grained" overflows,
+   i.e. the ones that are in proximity of EXP_MAX, we handle those in
+   the Ziv main loop */
+static mpfr_prec_t
+magnitude (unsigned int n)
+{
+  mpfr_prec_t ret;
+  mpfr_t y, fn, lgamma, ln2, res;
+
+  mpfr_init2 (y, 64);
+  mpfr_init2 (fn, 64);
+  mpfr_init2 (lgamma, 64);
+  mpfr_init2 (ln2, 64);
+  mpfr_init2 (res, 64);
+
+  mpfr_set_ui (fn, n, MPFR_RNDN);
+  mpfr_lngamma (lgamma, fn, MPFR_RNDN);
+  mpfr_log (ln2, __gmpfr_two, MPFR_RNDN);
+  mpfr_div (y, lgamma, ln2, MPFR_RNDN);
+  mpfr_ceil (res, y);
+
+  ret = mpfr_get_ui (res, MPFR_RNDN);
+
+  mpfr_clear (y);
+  mpfr_clear (fn);
+  mpfr_clear (lgamma);
+  mpfr_clear (ln2);
+  mpfr_clear (res);
+
+  return (mpfr_prec_t) ret;
+}
+
 int
 mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
 {
-  mpfr_t t;       /* Variable of Intermediary Calculation*/
+  mpfr_t t;       /* Variable of Intermediary Calculation */
   unsigned long i;
   int inexact;
-
+  mpfr_exp_t emax;
   mpfr_prec_t Ny;   /* Precision of output variable */
   mpfr_prec_t Nt;   /* Precision of Intermediary Calculation variable */
   mpfr_prec_t err;  /* Precision of error */
@@ -44,11 +79,19 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
   MPFR_SAVE_EXPO_DECL (expo);
   MPFR_ZIV_DECL (loop);
 
+  emax = mpfr_get_emax ();
+
   /***** test x = 0  and x == 1******/
   if (MPFR_UNLIKELY (x <= 1))
     return mpfr_set_ui (y, 1, rnd_mode); /* 0! = 1 and 1! = 1 */
 
   MPFR_SAVE_EXPO_MARK (expo);
+
+  if (magnitude (x) > emax)
+    {
+      MPFR_SAVE_EXPO_FREE (expo);
+      return mpfr_overflow (y, rnd_mode, 1);
+    }
 
   /* Initialisation of the Precision */
   Ny = MPFR_PREC (y);
