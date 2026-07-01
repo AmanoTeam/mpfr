@@ -528,6 +528,19 @@ dnl common problem with darwin.
     MPFR_LD_SEARCH_PATHS_FIRST ;;
 esac
 
+dnl The tests use the libtool -no-install option to prevent the generation
+dnl of wrapper scripts (see tests/Makefile.am). But on some platforms, such
+dnl as Darwin, libtool does not support -no-install and emits a warning
+dnl while falling back to -no-fast-install. So, use -no-fast-install
+dnl directly on these platforms to avoid the warning.
+case $host in
+  *-apple-darwin*)
+    MPFR_NOINSTALL_LDFLAG="-no-fast-install" ;;
+  *)
+    MPFR_NOINSTALL_LDFLAG="-no-install" ;;
+esac
+AC_SUBST(MPFR_NOINSTALL_LDFLAG)
+
 AC_C_CONST
 AC_C_VOLATILE
 dnl Determine the endianness of integer. But since MPFR doesn't use

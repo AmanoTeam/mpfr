@@ -148,6 +148,11 @@ TESTS_ENVIRONMENT = env DISPLAY='' MPFR_QUIET=1 $(VALGRIND)
 #   https://lists.gnu.org/archive/html/bug-gnulib/2011-09/msg00081.html
 # in particular.
 #
+# Note: On some platforms such as Darwin, libtool does not support the
+# -no-install option and would emit a warning while falling back to
+# -no-fast-install. To avoid this warning, the flag is selected at
+# configure time via @MPFR_NOINSTALL_LDFLAG@ (see configure.ac).
+#
 # The -L$(top_builddir)/src/.libs option is necessary for some platforms,
 # such as HP-UX, when --with-gmp or --with-gmp-lib is used and an old MPFR
 # library is already installed in the corresponding lib directory: its
@@ -163,7 +168,7 @@ TESTS_ENVIRONMENT = env DISPLAY='' MPFR_QUIET=1 $(VALGRIND)
 #   https://debbugs.gnu.org/cgi/bugreport.cgi?bug=9728
 #   https://debbugs.gnu.org/cgi/bugreport.cgi?bug=18662
 #
-AM_LDFLAGS = -no-install -L$(top_builddir)/src/.libs
+AM_LDFLAGS = @MPFR_NOINSTALL_LDFLAG@ -L$(top_builddir)/src/.libs
 
 # Test for "make" conformance. "GNU make" needs the .POSIX special target.
 failuretest1:
