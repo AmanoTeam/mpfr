@@ -113,8 +113,13 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
                   for (i = 2 ; i <= x ; i++)
                     {
                       int round = mpfr_mul_ui (t, t, i, rnd);
-                      /* assume the first inexact product gives the sign
-                         of difference: is that always correct? */
+                      /* The first inexact product gives the sign of
+                         difference since we round toward zero. This would
+                         not be the case with rounding to nearest: take for
+                         example factorial(7) = 5040 evaluated with a precision
+                         of 4 bits. After i=5 we get t=120 (exact), after i=6
+                         we get t=704 (smaller than 720), and after i=7 we get
+                         t=5120 (larger than 5040). */
                       if (inexact == 0)
                         inexact = round;
 
