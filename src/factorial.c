@@ -242,7 +242,13 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
 
   MPFR_SAVE_EXPO_MARK (expo);
 
-  if (magnitude (x) > emax)
+  /* Once x is at or beyond the grouping table limit, every remaining
+     integer requires its own mpfr_mul_ui call, since there's no
+     possible grouping. We check for overflow using
+       log2(n!) = floor(lgamma(n+1)/log(2)) <= lgamma(n+1)/log(2).
+     If log2(n!) cannot fit in emax, it's going to be an overflow */
+  if (x >= ((unsigned long) 1 << (numberof_const (mpfr_fac_group) - 1))
+      && magnitude (x) > emax)
     {
       MPFR_SAVE_EXPO_FREE (expo);
       return mpfr_overflow (y, rnd_mode, 1);
