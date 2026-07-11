@@ -90,40 +90,24 @@ static const unsigned char mpfr_fac_group[] = {
 static mpfr_exp_t
 magnitude (unsigned long n)
 {
-  int inex;
   mpfr_exp_t ret;
-  mpfr_prec_t realprec;
   mpfr_t lb, fn, ln2;
-  MPFR_ZIV_DECL (loop);
-  MPFR_GROUP_DECL (group);
 
-  realprec = 64;
+  mpfr_init2 (lb, 64);
+  mpfr_init2 (fn, 64);
+  mpfr_init2 (ln2, 64);
 
-  MPFR_GROUP_INIT_3 (group, realprec, lb, fn, ln2);
+  mpfr_set_ui (fn, n + 1, MPFR_RNDN);     /* fn = n+1, exact for n < 2^64 */
+  mpfr_lngamma (lb, fn, MPFR_RNDD);       /* lb = lgamma(n+1) rounded down */
+  mpfr_log (ln2, __gmpfr_two, MPFR_RNDU); /* ln2 = log(2) rounded up */
+  mpfr_div (lb, lb, ln2, MPFR_RNDD);      /* lb = log2(n!) rounded down */
+  mpfr_floor (lb, lb);
 
-  MPFR_ZIV_INIT (loop, realprec);
-  for (;;)
-    {
-      /* fn = n+1, exact for n < 2^64 */
-      inex = mpfr_set_ui (fn, n + 1, MPFR_RNDN);
-      /* lb = lgamma(n+1) rounded down */
-      inex |= mpfr_lngamma (lb, fn, MPFR_RNDD);
-      /* ln2 = log(2) rounded up */
-      inex |= mpfr_log (ln2, __gmpfr_two, MPFR_RNDU);
-      /* lb = log2(n!) rounded down */
-      inex |= mpfr_div (lb, lb, ln2, MPFR_RNDD);
-      inex |= mpfr_floor (lb, lb);
-
-      if (inex == 0)
-        break;
-      MPFR_ZIV_NEXT (loop, realprec);
-      MPFR_GROUP_REPREC_3 (group, realprec, lb, fn, ln2);
-    }
-
-  MPFR_ZIV_FREE (loop);
   ret = mpfr_get_si (lb, MPFR_RNDN);
 
-  MPFR_GROUP_CLEAR (group);
+  mpfr_clear (lb);
+  mpfr_clear (fn);
+  mpfr_clear (ln2);
 
   return ret;
 }
