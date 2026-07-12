@@ -255,45 +255,64 @@ mpfr_jn (mpfr_ptr res, long n, mpfr_srcptr z, mpfr_rnd_t r)
       /* FIXME: The error analysis is incorrect in case of range error. */
       MPFR_ASSERTN (! mpfr_erangeflag_p ()); /* since MPFR_CLEAR_ERANGEFLAG */
       mpfr_div_2ui (y, y, 2, MPFR_RNDN);   /* z^2/4 */
+
+      /* |n|! can only overflow towards +Inf. In that case t/|n|! = 0
+          and, since (k+|n|)! >= |n|! for all k >= 0, every term of
+          the series is 0 as well. In this case, J_n(z) underflows */
       mpfr_fac_ui (s, absn, MPFR_RNDN);    /* |n|! */
-      mpfr_div (t, t, s, MPFR_RNDN);
-      if (absn > 0)
-        mpfr_div_2ui (t, t, absn, MPFR_RNDN);
-      mpfr_set (s, t, MPFR_RNDN);
-      /* note: we assume here that the maximal error bound is proportional to
-         2^exps, which is true also in the case where s=0 */
-      exps = MPFR_IS_ZERO (s) ? MPFR_EMIN_MIN : MPFR_GET_EXP (s);
-      expT = exps;
-      for (k = 1; ; k++)
+      if (! MPFR_IS_INF (s))
         {
-          MPFR_LOG_MSG (("loop on k, k = %lu\n", k));
-          mpfr_mul (t, t, y, MPFR_RNDN);
-          mpfr_neg (t, t, MPFR_RNDN);
-          /* Mathematically: absn <= LONG_MAX + 1 <= (ULONG_MAX + 1) / 2,
-             and in practice, k is not very large, so that one should have
-             k + absn <= ULONG_MAX. */
-          MPFR_ASSERTN (absn <= ULONG_MAX - k);
-          if (k + absn <= ULONG_MAX / k)
-            mpfr_div_ui (t, t, k * (k + absn), MPFR_RNDN);
-          else
-            {
-              mpfr_div_ui (t, t, k, MPFR_RNDN);
-              mpfr_div_ui (t, t, k + absn, MPFR_RNDN);
-            }
-          /* see above note */
-          exps = MPFR_IS_ZERO (s) ? MPFR_EMIN_MIN : MPFR_GET_EXP (t);
-          if (exps > expT)
-            expT = exps;
-          mpfr_add (s, s, t, MPFR_RNDN);
+          mpfr_div (t, t, s, MPFR_RNDN);       /* t/|n|! */
+          if (absn > 0)
+            mpfr_div_2ui (t, t, absn, MPFR_RNDN);
+          mpfr_set (s, t, MPFR_RNDN);
+          /* note: we assume here that the maximal error bound is
+             proportional to 2^exps, which is true also in the case s=0 */
           exps = MPFR_IS_ZERO (s) ? MPFR_EMIN_MIN : MPFR_GET_EXP (s);
-          if (exps > expT)
-            expT = exps;
-          /* Above it has been checked that k + absn <= ULONG_MAX. */
-          if (MPFR_GET_EXP (t) + (mpfr_exp_t) prec <= exps &&
-              zz / (2 * k) < k + absn)
-            break;
+          expT = exps;
+          for (k = 1; ; k++)
+            {
+              MPFR_LOG_MSG (("loop on k, k = %lu\n", k));
+              mpfr_mul (t, t, y, MPFR_RNDN);
+              mpfr_neg (t, t, MPFR_RNDN);
+              /* Mathematically: absn <= LONG_MAX + 1 <= (ULONG_MAX + 1) / 2,
+                 and in practice, k is not very large, so that one should
+                 have k + absn <= ULONG_MAX. */
+              MPFR_ASSERTN (absn <= ULONG_MAX - k);
+              if (k + absn <= ULONG_MAX / k)
+                mpfr_div_ui (t, t, k * (k + absn), MPFR_RNDN);
+              else
+                {
+                  mpfr_div_ui (t, t, k, MPFR_RNDN);
+                  mpfr_div_ui (t, t, k + absn, MPFR_RNDN);
+                }
+              /* see above note */
+              exps = MPFR_IS_ZERO (s) ? MPFR_EMIN_MIN : MPFR_GET_EXP (t);
+              if (exps > expT)
+                expT = exps;
+              mpfr_add (s, s, t, MPFR_RNDN);
+              exps = MPFR_IS_ZERO (s) ? MPFR_EMIN_MIN : MPFR_GET_EXP (s);
+              if (exps > expT)
+                expT = exps;
+              /* Above it has been checked that k + absn <= ULONG_MAX. */
+              if (MPFR_GET_EXP (t) + (mpfr_exp_t) prec <= exps &&
+                  zz / (2 * k) < k + absn)
+                break;
+            }
         }
       });
+      /* |n|! overflowed, so J_n(z) underflows (see above). The sign
+          is that of J_n(z), as in the underflow case handled before
+          the loop */
+      if (MPFR_IS_INF (s))
+        {
+          MPFR_ZIV_FREE (loop);
+          MPFR_GROUP_CLEAR (g);
+          MPFR_SAVE_EXPO_FREE (expo);
+          return mpfr_underflow (res, (r == MPFR_RNDN) ? MPFR_RNDZ : r,
+                         (n % 2) ? ((n > 0) ? MPFR_SIGN(z) : -MPFR_SIGN(z))
+                                 : MPFR_SIGN_POS);
+        }
       /* the error is bounded by (4k^2+21/2k+7) ulp(s)*2^(expT-exps)
          <= (k+2)^2 ulp(s)*2^(2+expT-exps) */
       diffexp = expT - exps;
