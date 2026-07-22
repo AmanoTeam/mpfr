@@ -115,7 +115,7 @@ magnitude (unsigned long n)
 /* MPFR_FAC_OVERFLOW_N: smallest n such that the Stirling lower bound
      log2(n!) >= (n*log(n) - n + 1) / log(2)
    exceeds MPFR_EMAX_MAX, the maximum allowed exponent. For n greater
-   or equalat this threshold, n! always overflows.
+   or equal to this threshold, n! always overflows.
    The values are:
    - 64-bit unsigned long: MPFR_EMAX_MAX = 2^62-1; true threshold ~ 8.42e16;
      we use 9e16 = 90000000000000000 for safety;
