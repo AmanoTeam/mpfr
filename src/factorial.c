@@ -181,7 +181,12 @@ factorial (mpfr_t t, unsigned long int x, mpfr_rnd_t rnd)
       round = mpfr_mul_ui (t, t, p, rnd);
 
       /* assume the first inexact product gives the sign
-         of difference: is that always correct? */
+         of difference: is that always correct?
+         FIXME: no. With a precision of 4 bits, if we approximate 7!
+         with rounding to nearest, we get successively 1, 2, 6, 24,
+         120, then 120*6 is rounded to 704, and 704*7 is rounded to 5120.
+         The first inexact product is 120*6 which is smaller than 720,
+         but the final result 5120 is larger than 7!=5040. */
       if (inexact == 0)
         inexact = round;
 
