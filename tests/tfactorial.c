@@ -198,7 +198,7 @@ overflow_32_bit (void)
 
   old_emax = mpfr_get_emax ();
 
-  mpfr_set_emax (mpfr_get_emax_max ());
+  set_emax (mpfr_get_emax_max ());
 
   mpfr_init2 (y, 200);
 
