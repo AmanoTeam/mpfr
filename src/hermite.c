@@ -30,11 +30,12 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 static int
 asymptotic_small_x (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode,
-                    int *inex_round, mpfr_exp_t err)
+                    mpfr_exp_t err)
 {
   mpfr_t v;
   long m, j;
   unsigned inex;
+  int inex_round;
   mpfr_prec_t res_prec, realprec;
 
   MPFR_GROUP_DECL (small_x);
@@ -77,7 +78,7 @@ asymptotic_small_x (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode,
       /* if inex=0, then all the computation was exact, thus v is exactly V,
          otherwise we call MPFR_CAN_ROUND() to check if we can deduce
          the correct rounding */
-      if (!inex || MPFR_CAN_ROUND (v, realprec - err, res_prec, rnd_mode))
+      if (inex == 0 || MPFR_CAN_ROUND (v, realprec - err, res_prec, rnd_mode))
         break;
 
       MPFR_ZIV_NEXT (loop, realprec);
@@ -86,19 +87,25 @@ asymptotic_small_x (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode,
 
   MPFR_ZIV_FREE (loop);
 
-  *inex_round = mpfr_round_near_x (res, v, (mpfr_uexp_t) (err - 2),
-                                   0, rnd_mode);
+  inex_round = mpfr_round_near_x (res, v, (mpfr_uexp_t) (err - 2),
+                                  0, rnd_mode);
 
   MPFR_GROUP_CLEAR (small_x);
 
-  return inex;
+  return inex_round;
+}
+
+static int
+overflow_sign (mpfr_srcptr x, long n)
+{
+  return (n & 1) ? MPFR_SIGN (x) : MPFR_SIGN_POS;
 }
 
 int
 mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 {
   long i;
-  int ternary_value = 0, inex;
+  int x_is_zero, ternary_value = 0, inex;
   mpfr_t p1, p2, pn, first_term, second_term;
   mpfr_prec_t res_prec, realprec, guard_bits;
   mpfr_exp_t lost_bits;
@@ -120,6 +127,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   MPFR_ASSERTN(n >= 0); /* check n is non-negative */
 
   res_prec = MPFR_PREC (res);
+  x_is_zero = MPFR_IS_ZERO (x);
 
   /* NaN are checke *before* any other check, according to C++ specs:
      "If the argument is NaN, NaN is returned [...]".
@@ -143,7 +151,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
     }
 
   /* P_n(0) when n is an odd number is always 0 */
-  if (MPFR_IS_ZERO (x) && (n & 1))
+  if (x_is_zero && (n & 1))
     {
       MPFR_SET_ZERO (res);
 
@@ -173,35 +181,52 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
      following geometric series:
         |tail| <= |lead| * t / (1-t),
      where |lead| is c0 (for n even), or c1*x (for n odd). */
-  if (!MPFR_IS_ZERO (x) && n >= 2)
+  if (!x_is_zero && n >= 2)
     {
       /* ex = MPFR_GET_EXP(x), such that 2^(ex-1) <= |x| < 2^ex;
          l2n = ceil(log2(n)), so n <= 2^l2n;
          thus, t = n*x^2 < 2^l2n * (2^ex)^2 = 2^{l2n+2*ex}.
          We define rho = l2n+2*ex, therefore t < 2^{rho}.
-         Note: we assume that rho is not going to overflow. */
+         The asymptotic expansion only applies for small |x|, i.e. ex < 0.
+         We require ex < 0 before computing rho: since the expansion needs
+         rho <= -2 (and in fact rho very negative), any x with ex >= 0 gives
+         rho >= l2n >= 1 and would be rejected anyway. Requiring ex < 0 also
+         ensures that 2*ex (hence rho and err) does not overflow, since
+         2*MPFR_EMIN_MIN is representable in an mpfr_exp_t whereas 2*ex for
+         a large positive ex (e.g. ex close to MPFR_EMAX_MAX) would not. */
       ex = MPFR_GET_EXP (x);
-      l2n = (mpfr_exp_t) MPFR_INT_CEIL_LOG2 (n);
-      rho = l2n + 2 * ex;
-
-      /* the bound err = -rho - 1 requires rho <= -2. In practice, require
-         64 extra bits so the first rounding test usually succeeds. */
-      if (rho <= -2)
+      if (ex < 0)
         {
-          /* see algorithms.tex for the calculation of this error bound. */
-          err = -rho - 1;
+          l2n = (mpfr_exp_t) MPFR_INT_CEIL_LOG2 (n);
+          rho = l2n + 2 * ex;
 
-          if (err >= (mpfr_exp_t) res_prec + MPFR_HERMITE_SMALL_X_GUARD)
+          /* the bound err = -rho - 1 requires rho <= -2. In practice, require
+             64 extra bits so the first rounding test usually succeeds */
+          if (rho <= -2)
             {
-              inex = asymptotic_small_x (res, n, x, rnd_mode,
-                                         &inex_round, err);
+              /* see algorithms.tex for the calculation of this error bound */
+              err = -rho - 1;
 
-              /* if asymptotic_small_x sets inex_round to 0, then it cannot
-                 round. In that case, our asymptotic expansion failed, so we
-                 fall back to the usual Ziv loop. Otherwise, we return the
-                 inex flag. */
-              if (inex_round)
-                return inex;
+              if (err >= (mpfr_exp_t) res_prec + MPFR_HERMITE_SMALL_X_GUARD)
+                {
+                  /* compute in the extended exponent range so that the final
+                     overflow/underflow with respect to the caller's range is
+                     handled uniformly by mpfr_check_range */
+                  MPFR_SAVE_EXPO_MARK (expo);
+                  inex_round = asymptotic_small_x (res, n, x, rnd_mode, err);
+
+                  /* if asymptotic_small_x returns 0, then it cannot round.
+                     In that case, our asymptotic expansion failed, so we
+                     fall back to the usual Ziv loop. Otherwise, we return the
+                     correctly rounded result */
+                  if (inex_round)
+                    {
+                      MPFR_SAVE_EXPO_FREE (expo);
+                      return mpfr_check_range (res, inex_round, rnd_mode);
+                    }
+
+                  MPFR_SAVE_EXPO_FREE (expo);
+                }
             }
         }
     }
@@ -231,12 +256,10 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       MPFR_BLOCK (flags, inex = mpfr_mul_ui (p1, x, 2, MPFR_RNDN));
       if (MPFR_OVERFLOW (flags))
         {
-          /* 2x overflows in extended exponent range;
-             P_n(x) overflows for all n >= 1. The sign of P_n(x) for
-             large |x| is that of its leading term (2x)^n. */
+          /* the sign of P_n(x) for large |x| is that of its leading term
+             (2x)^n */
           ternary_value = mpfr_overflow (res, rnd_mode,
-                                         (n & 1) ? MPFR_SIGN (x)
-                                                 : MPFR_SIGN_POS);
+                                         overflow_sign (x, n));
           MPFR_SAVE_EXPO_UPDATE_FLAGS (expo, MPFR_FLAGS_OVERFLOW);
           break;
         }
@@ -248,21 +271,54 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
          a_i and b_i come from the previous iteration, and initialized
          below for the first iteration (i = 1). */
 
-      /* 2^b_i is the absolute error on p2 */
-      b_i = LONG_MIN;
-      /* 2^a_i is the absolute error on p1 */
-      a_i = MPFR_GET_EXP (p1) - realprec - 1;
+      /* 2^b_i is the absolute error on p2. We use MPFR_EXP_MIN as the "minus
+         infinity" exponent standing for an exact (zero) value */
+      b_i = MPFR_EXP_MIN;
+      /* 2^a_i is the absolute error on p1; when x = 0, p1 = 2x = 0 is exact */
+      a_i = x_is_zero ? MPFR_EXP_MIN : MPFR_GET_EXP (p1) - realprec - 1;
 
       while (i < n)
         {
-          /* first_term = 2x, with absolute error at step i
-             (denoted f_i in algorithms.tex)
-             bounded by f_i <= exp(first_term) - p - 1 */
-          MPFR_BLOCK (flags,
-                      inex |= mpfr_mul_ui (first_term, x, 2, MPFR_RNDN));
-          if (MPFR_OVERFLOW (flags))
-            break;
-          f_i = MPFR_GET_EXP (first_term) - realprec - 1;
+          if (x_is_zero)
+            {
+              /* x = 0: the leading term 2x*p1 is exactly 0. When i is even,
+                 p2 = 0 too, so second_term = 0 and pn = 0 (all exact); when i
+                 is odd, pn = -second_term = -2i*p2. In both cases we do not
+                 call MPFR_GET_EXP on zero, so we use  MPFR_EXP_MIN instead */
+              if ((i & 1) == 0)
+                {
+                  MPFR_ASSERTD (MPFR_IS_ZERO (p2));
+                  MPFR_SET_ZERO (pn); /* exact */
+                  q_i = MPFR_EXP_MIN;
+                  goto end_of_loop;
+                }
+              MPFR_SET_ZERO (first_term); /* first_term = 2x*p1 = 0, exact */
+              h_i = MPFR_EXP_MIN;
+            }
+          else
+            {
+              /* first_term = 2x, with absolute error at step i
+                 (denoted f_i in algorithms.tex)
+                 bounded by f_i <= exp(first_term) - p - 1 */
+              MPFR_BLOCK (flags,
+                          inex |= mpfr_mul_ui (first_term, x, 2, MPFR_RNDN));
+              if (MPFR_OVERFLOW (flags))
+                break;
+              f_i = MPFR_GET_EXP (first_term) - realprec - 1;
+
+              /* first_term = first_term * p1, with absolute error at step i
+                 bounded by
+                 h_i <= 2 + max(exp(first_term)-p-1, f_i+exp(p1),
+                                2+MPFR_GET_EXP(x)+a_i) */
+              MPFR_BLOCK (flags,
+                          inex |= mpfr_mul (first_term, first_term, p1,
+                                            MPFR_RNDN));
+              if (MPFR_OVERFLOW (flags))
+                break;
+              h_i = 2 + MAX3 (MPFR_GET_EXP (first_term) - realprec - 1,
+                              f_i + MPFR_GET_EXP (p1),
+                              2 + MPFR_GET_EXP (x) + a_i);
+            }
 
           /* second_term = p2 * 2i, with absolute error at step i
              bounded by
@@ -274,17 +330,6 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
             break;
           g_i = MAX (MPFR_GET_EXP (second_term) - realprec,
                      b_i + MPFR_INT_CEIL_LOG2 (2*i) + 1);
-
-          /* first_term = first_term * p1, with absolute error at step i
-             bounded by
-             h_i <= 2 + max(exp(first_term)-p-1, f_i+exp(p1),
-                            2+MPFR_GET_EXP(x)+a_i) */
-          MPFR_BLOCK (flags,
-                      inex |= mpfr_mul (first_term, first_term, p1, MPFR_RNDN));
-          if (MPFR_OVERFLOW (flags))
-            break;
-          h_i = 2 + MAX3 (MPFR_GET_EXP (first_term) - realprec - 1,
-                          f_i + MPFR_GET_EXP (p1), 2 + MPFR_GET_EXP (x) + a_i);
 
           /* pn = first_term - second_term, with absolute error at step i
              bounded by
@@ -298,6 +343,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
             break;
           q_i = 2 + MAX3 (MPFR_GET_EXP (pn) - realprec - 1, h_i, g_i);
 
+        end_of_loop:
           /* p2 = p1, p1 = pn */
           mpfr_swap (p2, p1); /* now p2 approximates P_{i}(x) */
           mpfr_swap (p1, pn); /* now p1 approximates P_{i+1}(x) */
@@ -315,8 +361,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       if (MPFR_OVERFLOW (flags))
         {
           ternary_value = mpfr_overflow (res, rnd_mode,
-                                         (n & 1) ? MPFR_SIGN (x)
-                                                 : MPFR_SIGN_POS);
+                                         overflow_sign (x, n));
           MPFR_SAVE_EXPO_UPDATE_FLAGS (expo, MPFR_FLAGS_OVERFLOW);
           break;
         }
