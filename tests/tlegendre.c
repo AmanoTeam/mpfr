@@ -515,6 +515,9 @@ bug20260205 (void)
   mpfr_clear (y);
 }
 
+/* mini-gmp does not provide mpq_t */
+#ifndef MPFR_USE_MINI_GMP
+
 /* Exhaustive test of degree-n Legendre polynomial with all fractions
    a/2^b with |a| <= A and |b| <= B, for precision p.
    Assume n >= 1. */
@@ -586,7 +589,7 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
         /* now t = Pn(a/2^b) exactly */
 
         mpfr_set_si_2exp (x, a, -b, MPFR_RNDN);
-        RND_LOOP (rnd)
+        RND_LOOP_NO_RNDF (rnd)
           {
             mpfr_rnd_t r = (mpfr_rnd_t) rnd;
             mpfr_set_q (y, t, (mpfr_rnd_t) rnd); /* expected result */
@@ -691,6 +694,8 @@ test_zero_even (void)
   mpq_clear (r);
 }
 
+#endif
+
 static void
 test_zero_odd (void)
 {
@@ -776,7 +781,9 @@ main (void)
   tests_start_mpfr ();
 
   /* Test for the special case x = 0 */
+#ifndef MPFR_USE_MINI_GMP
   test_zero_even ();
+#endif
   test_zero_odd ();
 
   /* The canonical domain of Legendre polynomials is [-1,1]. mpfr_legendre
@@ -825,7 +832,9 @@ main (void)
 
   bug20260205 ();
 
+#ifndef MPFR_USE_MINI_GMP
   test_exact_dyadic ();
+#endif
 
   test_generic_ui (ARBITRARILY_LOW_PREC, IEEE754_DOUBLE_PREC, 6);
 
