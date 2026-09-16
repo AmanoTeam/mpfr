@@ -48,7 +48,7 @@ w0_test_domain (void)
 }
 
 static void
-w1_test_domain (void)
+wm1_test_domain (void)
 {
   int ternary;
   mpfr_t inve, res;
@@ -95,7 +95,7 @@ w0_special_cases (void)
 }
 
 static void
-w1_special_cases (void)
+wm1_special_cases (void)
 {
   int ternary;
   mpfr_t zero, res;
@@ -105,7 +105,7 @@ w1_special_cases (void)
 
   /* W_{-1}(+0) = -Inf */
   mpfr_set_zero (zero, 1);
-  ternary = mpfr_lambertw1 (res, zero, MPFR_RNDN);
+  ternary = mpfr_lambertwm1 (res, zero, MPFR_RNDN);
   if (ternary != 0 || !MPFR_IS_INF (res) || !MPFR_IS_NEG (res))
     {
       printf ("error: W_{-1}(+0) = -Inf, got W_{-1}(+0) = ");
@@ -116,7 +116,7 @@ w1_special_cases (void)
 
   /* W_{-1}(-0) = -Inf */
   mpfr_set_zero (zero, -1);
-  ternary = mpfr_lambertw1 (res, zero, MPFR_RNDN);
+  ternary = mpfr_lambertwm1 (res, zero, MPFR_RNDN);
   if (ternary != 0 || !MPFR_IS_INF (res) || !MPFR_IS_NEG (res))
     {
       printf ("error: W_{-1}(-0) = -Inf, got W_{-1}(-0) = ");
@@ -134,17 +134,15 @@ main (void)
 {
   tests_start_mpfr ();
 
-  /* W_0 */
-
+  /* branch W_0 */
   /* the domain of W_0 is [-1/e, +Inf) */
   w0_test_domain ();
   w0_special_cases ();
 
-  /* W_{-1} */
-
-  /* the domain of W_0 is [-1/e, 0) */
-  w1_test_domain ();
-  w1_special_cases ();
+  /* branch W_{-1} */
+  /* the domain of W_{-1} is [-1/e, 0) */
+  wm1_test_domain ();
+  wm1_special_cases ();
 
   tests_end_mpfr ();
   return 0;
