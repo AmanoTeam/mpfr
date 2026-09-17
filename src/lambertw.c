@@ -88,7 +88,7 @@ static const double w0_range_bounds[W0_N_POLY+1] = {
 
 /* Horner method for polynomial evaluation */
 static int
-poly_horner (mpfr_t res, const mpfr_t *c, size_t ncoeff, const mpfr_t x,
+poly_horner (mpfr_t res, mpfr_t *c, size_t ncoeff, const mpfr_t x,
              mpfr_rnd_t rnd)
 {
   int t;
@@ -109,8 +109,8 @@ poly_horner (mpfr_t res, const mpfr_t *c, size_t ncoeff, const mpfr_t x,
 }
 
 static int
-eval_poly (mpfr_ptr res, const double *coeffs, size_t n_coeffs,
-           mpfr_srcptr x, mpfr_rnd_t rnd_mode)
+eval_poly (mpfr_ptr res, const double *coeffs, size_t n_coeffs, mpfr_srcptr x,
+           mpfr_rnd_t rnd_mode)
 {
   int ternary;
   size_t i;
@@ -126,9 +126,8 @@ eval_poly (mpfr_ptr res, const double *coeffs, size_t n_coeffs,
   ternary = poly_horner (res, c, n_coeffs, x, rnd_mode);
 
   for (i = 0; i < n_coeffs; i++)
-    {
       mpfr_clear (c[i]);
-    }
+
   free (c);
 
   return ternary;
