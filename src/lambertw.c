@@ -26,9 +26,10 @@ If not, see <https://www.gnu.org/licenses/>. */
 #define W0_N_POLY      16
 #define W0_POLY_DEGREE  8
 
-/* in this table we store the coefficients of the 8-degree polynomials
-   used as the initial guess to compute W0. See algorithms.tex for more
-   information on how they are calculated */
+/* in this table we store the coefficients of the 8-degree polynomials used as
+   the initial guess to compute W0. The coefficients are stored in ascending
+   order (from the lowest to highest degree). See algorithms.tex for more
+   details */
 static const double w0_poly_coeffs_range[W0_N_POLY][W0_POLY_DEGREE+1] = {
   { -9.544845049527667e-5, 0.00018474505346700832, -0.0001283213366529374,
     0.0002934622830968015, -0.0009249200421781934, 0.002390169033275487,
@@ -88,7 +89,7 @@ static const double w0_range_bounds[W0_N_POLY+1] = {
 
 /* Horner method for polynomial evaluation */
 static int
-poly_horner (mpfr_t res, mpfr_t *c, size_t ncoeff, const mpfr_t x,
+poly_horner (mpfr_t res, mpfr_t *c, size_t ncoeff, mpfr_srcptr x,
              mpfr_rnd_t rnd)
 {
   int t;
@@ -137,54 +138,22 @@ eval_poly (mpfr_ptr res, const double *coeffs, size_t n_coeffs, mpfr_srcptr x,
   eval_poly (res, w0_poly_coeffs_range[k], W0_POLY_DEGREE + 1, x, rnd)
 
 /* the correctly rounded implementation of the constant 1/e, where e is
-   Euler'n number \approx 2.7182 */
+   Euler's number, i.e. exp(1) */
 static int
 mpfr_const_inve (mpfr_ptr res)
 {
-  int inex, ternary;
-  mpfr_t e, inve;
-  mpfr_exp_t err;
-  mpfr_prec_t realprec, res_prec;
+  int ternary;
+  mpfr_t inve;
+  mpfr_prec_t realprec;
 
-  MPFR_ZIV_DECL (loop);
-  MPFR_GROUP_DECL (group);
+  realprec = MPFR_PREC (res) + 1;
 
-  res_prec = MPFR_PREC (res);
-  realprec = res_prec + MPFR_INT_CEIL_LOG2 (res_prec);
+  mpfr_init2 (inve, realprec);
+  mpfr_exp (inve, __gmpfr_mone, MPFR_RNDZ);
 
-  MPFR_GROUP_INIT_2 (group, realprec, e, inve);
-  MPFR_ZIV_INIT (loop, realprec);
+  ternary = mpfr_set (res, inve, MPFR_RNDZ);
 
-  for (;;)
-    {
-      /* e = exp(1), with error <= 1/2 ulp(e) since mpfr_exp is correctly
-         rounded to nearest */
-      inex = mpfr_exp (e, __gmpfr_one, MPFR_RNDN);
-      /* inve = 1/e. By the generic error of the division (see algorithms.tex),
-         with an exact numerator and a denominator e known with error
-         <= 1/2 ulp(e), we get
-            error(inve) <= (1/2 + 2*1*2*(1/2)) ulp(inve) = 5/2 ulp(inve)
-                        <= 2^2 ulp(inve),
-         hence err = 2 */
-      inex |= mpfr_ui_div (inve, 1, e, MPFR_RNDN);
-      err = 2;
-
-      /* if inex = 0, the computation was exact, thus inve is exactly 1/e;
-         otherwise inve approximates 1/e with error <= 2^err ulp(inve), and we
-         use MPFR_CAN_ROUND to check whether inve can be rounded to res_prec */
-      if (inex == 0
-          || MPFR_CAN_ROUND (inve, realprec - err, res_prec, MPFR_RNDN))
-        break;
-
-      MPFR_ZIV_NEXT (loop, realprec);
-      MPFR_GROUP_REPREC_2 (group, realprec, e, inve);
-    }
-
-  MPFR_ZIV_FREE (loop);
-
-  ternary = mpfr_set (res, inve, MPFR_RNDN);
-
-  MPFR_GROUP_CLEAR (group);
+  mpfr_clear (inve);
 
   return ternary;
 }
@@ -338,7 +307,8 @@ mpfr_lambertw0 (mpfr_ptr res, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       MPFR_RET (0);
     }
 
-  /* we need -1/e correctly rounded to MPFR_PREC (x) */
+  /* we need to compute -1/e with precision MPFR_PREC (x) rounded
+     towards zero */
   mpfr_init2 (inve, MPFR_PREC (x));
   mpfr_const_inve (inve);
   MPFR_SET_NEG (inve);
@@ -366,8 +336,7 @@ mpfr_lambertw0 (mpfr_ptr res, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       mpfr_fms (f, w, ew, x, MPFR_RNDN);
 
       /* the initial guess is refined with Halley's iteration. In the code
-         below, an Halley step calculates f(w) = w*exp(w) - x. Its derivatives
-          are f'(w) = (w+1)*exp(w) and f''(w) = (w+2)*exp(w). For further
+         below, an Halley step calculates f(w) = w*exp(w) - x. For further
           details, see algorithms.tex */
       mpfr_add_ui (t, w, 2, MPFR_RNDN);
       mpfr_mul (t, t, f, MPFR_RNDN);
