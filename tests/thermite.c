@@ -284,6 +284,8 @@ test_double_precision (void)
   mpfr_free_cache ();
 }
 
+#ifndef MPFR_USE_MINI_GMP
+
 /* Exhaustive test of degree-n Hermite polynomial with all fractions
    a/2^b with |a| <= A and 0 <= b <= B, for precision p.
    Assume n >= 1. */
@@ -395,6 +397,8 @@ test_exact_dyadic (void)
     for (p = DYADIC_BOUND - 3; p <= DYADIC_BOUND; p++)
       test_exact (n, DYADIC_BOUND, DYADIC_BOUND, p);
 }
+
+#endif
 
 /* Test overflow with reduced emax = 2.
    Test with several (n, x) pairs and all rounding modes. */
@@ -599,7 +603,9 @@ main (void)
      the ones allowed  C++ standard [0, 128] */
   random_poly_suite (RANDOM_TESTS_BATCH, IEEE754_DOUBLE_PREC);
 
+#ifndef MPFR_USE_MINI_GMP
   test_exact_dyadic ();
+#endif
 
   /* test some specific cases of overflow in a reduced exponent range */
   test_overflow ();
