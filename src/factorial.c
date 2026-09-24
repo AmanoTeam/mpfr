@@ -245,6 +245,9 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
           return mpfr_overflow (y, rnd_mode, 1);
         }
 
+      /* FIXME: This error bound (since the initial implementation in 2001)
+         is incorrect.
+         Perhaps a typo: replace Nt by x in MPFR_INT_CEIL_LOG2()? */
       err = Nt - 1 - MPFR_INT_CEIL_LOG2 (Nt);
 
       if (MPFR_LIKELY (!inexact || MPFR_CAN_ROUND (t, err, Ny, rnd_mode)))
