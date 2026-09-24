@@ -136,12 +136,12 @@ factorial (mpfr_t t, unsigned long int x, mpfr_rnd_t rnd)
 
       b = MPFR_INT_CEIL_LOG2 (i + 1);
 
-      MPFR_ASSERTD (b >= 1 && b < (int) ULSIZE);
+      MPFR_ASSERTD (b >= 1 && b < ULSIZE);
 
       /* maximum number of b-bit integers whose product fits in an unsigned
          long; this is 1 once b > ULSIZE / 2, i.e. no grouping is possible
          and each integer is multiplied individually */
-      cnt = (unsigned long) ULSIZE / b;
+      cnt = ULSIZE / b;
 
       /* keep all grouped integers on b bits, i.e. do not
          cross the 2^b boundary, so that the product of cnt
