@@ -3128,8 +3128,7 @@ asymptotic expansion).
 \subsection{The factorial function}
 
 Factorial is computed by MPFR using the straightforward iterative algorithm.
-Since $n!$ is a positive integer, it is computed exactly, as a product of
-consecutive integers, and then rounded to the target precision; consecutive
+For the exact cases, all the intermediate computations are exact. Consecutive
 integers are grouped so that the product of each group still fits in an
 \texttt{unsigned long}, hence a single \texttt{mpfr\_mul\_ui} call is needed
 for each group.
