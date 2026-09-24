@@ -254,7 +254,7 @@ main (int argc, char *argv[])
   unsigned int err, k, zeros;
   unsigned long n;
   int r;
-  mpfr_t x, y, z, t;
+  mpfr_t y, z, t;
   int inexact;
   unsigned long prec, yprec;
 
@@ -264,7 +264,6 @@ main (int argc, char *argv[])
 
   test_int ();
 
-  mpfr_init (x);
   mpfr_init (y);
   mpfr_init (z);
   mpfr_init (t);
@@ -279,7 +278,6 @@ main (int argc, char *argv[])
 
   for (prec = MPFR_PREC_MIN; prec <= 100; prec++)
     {
-      mpfr_set_prec (x, prec);
       mpfr_set_prec (z, prec);
       mpfr_set_prec (t, prec);
       yprec = prec + 10;
@@ -323,10 +321,8 @@ main (int argc, char *argv[])
                   }
                 if (!mpfr_equal_p (t, z))
                   {
-                    printf ("results differ for x=");
-                    mpfr_out_str (stdout, 2, prec, x, MPFR_RNDN);
-                    printf (" prec=%lu rnd_mode=%s\n", prec,
-                            mpfr_print_rnd_mode (rnd));
+                    printf ("results differ for n=%lu prec=%lu rnd_mode=%s\n",
+                            n, prec, mpfr_print_rnd_mode (rnd));
                     printf ("   got               ");
                     mpfr_dump (z);
                     printf ("   expected          ");
@@ -339,7 +335,6 @@ main (int argc, char *argv[])
           }
     }
 
-  mpfr_clear (x);
   mpfr_clear (y);
   mpfr_clear (z);
   mpfr_clear (t);
