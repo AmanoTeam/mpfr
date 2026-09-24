@@ -87,23 +87,24 @@ test_int (void)
         {
           mpfr_set_prec (x, p);
           mpfr_set_prec (y, p);
-          RND_LOOP (r)
+          RND_LOOP_NO_RNDF (r)
             {
-              if ((mpfr_rnd_t) r == MPFR_RNDF)
-                continue;
-              inex1 = mpfr_fac_ui (x, n, (mpfr_rnd_t) r);
-              inex2 = mpfr_set_z (y, f, (mpfr_rnd_t) r);
-              if (mpfr_cmp (x, y))
+              mpfr_rnd_t rnd = (mpfr_rnd_t) r;
+
+              inex1 = mpfr_fac_ui (x, n, rnd);
+              inex2 = mpfr_set_z (y, f, rnd);
+              if (!mpfr_equal_p (x, y))
                 {
                   printf ("Error for n=%lu prec=%lu rnd=%s\n",
-                          n, (unsigned long) p, mpfr_print_rnd_mode ((mpfr_rnd_t) r));
+                          n, (unsigned long) p, mpfr_print_rnd_mode (rnd));
                   exit (1);
                 }
-              if ((inex1 < 0 && inex2 >= 0) || (inex1 == 0 && inex2 != 0)
-                  || (inex1 > 0 && inex2 <= 0))
+              if ((inex1 < 0  && inex2 >= 0) ||
+                  (inex1 == 0 && inex2 != 0) ||
+                  (inex1 > 0  && inex2 <= 0))
                 {
                   printf ("Wrong inexact flag for n=%lu prec=%lu rnd=%s\n",
-                          n, (unsigned long) p, mpfr_print_rnd_mode ((mpfr_rnd_t) r));
+                          n, (unsigned long) p, mpfr_print_rnd_mode (rnd));
                   printf ("Expected %d, got %d\n", inex2, inex1);
                   exit (1);
                 }
@@ -120,7 +121,7 @@ static void
 overflowed_fac0 (void)
 {
   mpfr_t x, y;
-  int inex, rnd, err = 0;
+  int inex, r, err = 0;
   mpfr_exp_t old_emax;
 
   old_emax = mpfr_get_emax ();
@@ -131,15 +132,17 @@ overflowed_fac0 (void)
   mpfr_set_ui (y, 1, MPFR_RNDN);
   mpfr_nextbelow (y);
   set_emax (0);  /* 1 is not representable. */
-  RND_LOOP (rnd)
+  RND_LOOP (r)
     {
+      mpfr_rnd_t rnd = (mpfr_rnd_t) r;
+
       mpfr_clear_flags ();
-      inex = mpfr_fac_ui (x, 0, (mpfr_rnd_t) rnd);
+      inex = mpfr_fac_ui (x, 0, rnd);
       if (! mpfr_overflow_p ())
         {
           printf ("Error in overflowed_fac0 (rnd = %s):\n"
                   "  The overflow flag is not set.\n",
-                  mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                  mpfr_print_rnd_mode (rnd));
           err = 1;
         }
       if (rnd == MPFR_RNDZ || rnd == MPFR_RNDD)
@@ -148,14 +151,13 @@ overflowed_fac0 (void)
             {
               printf ("Error in overflowed_fac0 (rnd = %s):\n"
                       "  The inexact value must be negative.\n",
-                      mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                      mpfr_print_rnd_mode (rnd));
               err = 1;
             }
           if (! mpfr_equal_p (x, y))
             {
               printf ("Error in overflowed_fac0 (rnd = %s):\n"
-                      "  Got        ",
-                      mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                      "  Got        ", mpfr_print_rnd_mode (rnd));
               mpfr_dump (x);
               printf ("  instead of 0.11111111E0.\n");
               err = 1;
@@ -167,14 +169,13 @@ overflowed_fac0 (void)
             {
               printf ("Error in overflowed_fac0 (rnd = %s):\n"
                       "  The inexact value must be positive.\n",
-                      mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                      mpfr_print_rnd_mode (rnd));
               err = 1;
             }
           if (! (mpfr_inf_p (x) && MPFR_IS_POS (x)))
             {
               printf ("Error in overflowed_fac0 (rnd = %s):\n"
-                      "  Got        ",
-                      mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                      "  Got        ", mpfr_print_rnd_mode (rnd));
               mpfr_dump (x);
               printf ("  instead of +Inf.\n");
               err = 1;
@@ -252,7 +253,7 @@ main (int argc, char *argv[])
 {
   unsigned int err, k, zeros;
   unsigned long n;
-  int rnd;
+  int r;
   mpfr_t x, y, z, t;
   int inexact;
   unsigned long prec, yprec;
@@ -285,27 +286,26 @@ main (int argc, char *argv[])
       mpfr_set_prec (y, yprec);
 
       for (n = 0; n < 50; n++)
-        RND_LOOP (rnd)
+        RND_LOOP_NO_RNDF (r)
           {
-            if ((mpfr_rnd_t) rnd == MPFR_RNDF)
-              continue;
-            inexact = mpfr_fac_ui (y, n, (mpfr_rnd_t) rnd);
-            err = (rnd == MPFR_RNDN) ? yprec + 1 : yprec;
-            if (mpfr_can_round (y, err, (mpfr_rnd_t) rnd, (mpfr_rnd_t) rnd, prec))
+            mpfr_rnd_t rnd = (mpfr_rnd_t) r;
+            inexact = mpfr_fac_ui (y, n, rnd);
+            err = rnd == MPFR_RNDN ? yprec + 1 : yprec;
+            if (mpfr_can_round (y, err, rnd, rnd, prec))
               {
-                mpfr_set (t, y, (mpfr_rnd_t) rnd);
-                inexact = mpfr_fac_ui (z, n, (mpfr_rnd_t) rnd);
+                mpfr_set (t, y, rnd);
+                inexact = mpfr_fac_ui (z, n, rnd);
                 /* fact(n) ends with floor(n/2)+floor(n/4)+... zeros */
-                for (k=n/2, zeros=0; k; k >>= 1)
+                for (k = n / 2, zeros = 0; k; k >>= 1)
                   zeros += k;
-                if (MPFR_EXP(y) <= (mpfr_exp_t) (prec + zeros))
+                if (MPFR_GET_EXP (y) <= (mpfr_exp_t) (prec + zeros))
                   /* result should be exact */
                   {
                     if (inexact)
                       {
                         printf ("Wrong inexact flag: expected exact\n");
                         printf ("n=%lu prec=%lu rnd=%s\n", n, prec,
-                                mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                                mpfr_print_rnd_mode (rnd));
                         mpfr_dump (z);
                         exit (1);
                       }
@@ -316,17 +316,17 @@ main (int argc, char *argv[])
                       {
                         printf ("Wrong inexact flag: expected inexact\n");
                         printf ("n=%lu prec=%lu rnd=%s\n", n, prec,
-                                mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                                mpfr_print_rnd_mode (rnd));
                         mpfr_dump (z);
                         exit (1);
                       }
                   }
-                if (mpfr_cmp (t, z))
+                if (!mpfr_equal_p (t, z))
                   {
                     printf ("results differ for x=");
                     mpfr_out_str (stdout, 2, prec, x, MPFR_RNDN);
                     printf (" prec=%lu rnd_mode=%s\n", prec,
-                            mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                            mpfr_print_rnd_mode (rnd));
                     printf ("   got               ");
                     mpfr_dump (z);
                     printf ("   expected          ");
