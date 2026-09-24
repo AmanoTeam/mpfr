@@ -236,6 +236,10 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
 
       MPFR_BLOCK (flags, inexact = factorial (t, x, rnd));
 
+      /* FIXME: What if rnd has been changed to MPFR_RNDU?
+         Is this necessarily a real overflow?
+         Note: MPFR_CAN_ROUND has succeeded in this case.
+         But is the change to MPFR_RNDU really necessary? */
       if (MPFR_UNLIKELY (MPFR_OVERFLOW (flags)))
         {
           MPFR_ZIV_FREE (loop);
