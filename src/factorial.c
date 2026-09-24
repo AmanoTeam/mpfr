@@ -190,7 +190,6 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
   mpfr_prec_t Ny;   /* Precision of output variable */
   mpfr_prec_t Nt;   /* Precision of Intermediary Calculation variable */
   mpfr_prec_t err;  /* Precision of error */
-  mpfr_rnd_t rnd;
   MPFR_SAVE_EXPO_DECL (expo);
   MPFR_ZIV_DECL (loop);
 
@@ -224,7 +223,6 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
 
   mpfr_init2 (t, Nt);
 
-  rnd = MPFR_RNDZ;
   MPFR_ZIV_INIT (loop, Nt);
   for (;;)
     {
@@ -232,14 +230,13 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
 
       /* t = 1 is exact whatever the precision, so that the ternary value
          of the whole product is the one returned by factorial() */
-      mpfr_set_ui (t, 1, rnd);
+      mpfr_set_ui (t, 1, MPFR_RNDZ);
 
-      MPFR_BLOCK (flags, inexact = factorial (t, x, rnd));
+      MPFR_BLOCK (flags, inexact = factorial (t, x, MPFR_RNDZ));
 
-      /* FIXME: What if rnd has been changed to MPFR_RNDU?
-         Is this necessarily a real overflow?
-         Note: MPFR_CAN_ROUND has succeeded in this case.
-         But is the change to MPFR_RNDU really necessary? */
+      /* Since we rounded toward zero (MPFR_RNDZ), an intermediate overflow
+         necessarily is a real overflow. And once the working precision is
+         large enough, an overflow will necessarily be detected. */
       if (MPFR_UNLIKELY (MPFR_OVERFLOW (flags)))
         {
           MPFR_ZIV_FREE (loop);
@@ -251,28 +248,14 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
       err = Nt - 1 - MPFR_INT_CEIL_LOG2 (Nt);
 
       if (MPFR_LIKELY (!inexact || MPFR_CAN_ROUND (t, err, Ny, rnd_mode)))
-        {
-          /* If inexact = 0, then t is exactly x!, so round is the
-             correct inexact flag.
-             Otherwise, t != x! since we rounded to zero or away. */
-          int round = mpfr_set (y, t, rnd_mode);
-          if (inexact == 0)
-            {
-              inexact = round;
-              break;
-            }
-          else if ((inexact < 0 && round <= 0) ||
-                   (inexact > 0 && round >= 0))
-            break;
-          else /* inexact and round have opposite signs: we cannot
-                  compute the inexact flag. Restart using the
-                  symmetric rounding. */
-            rnd = (rnd == MPFR_RNDZ) ? MPFR_RNDU : MPFR_RNDZ;
-        }
+        break;
+
       MPFR_ZIV_NEXT (loop, Nt);
       mpfr_set_prec (t, Nt);
     }
   MPFR_ZIV_FREE (loop);
+
+  inexact = mpfr_set (y, t, rnd_mode);
 
   mpfr_clear (t);
   MPFR_SAVE_EXPO_FREE (expo);
