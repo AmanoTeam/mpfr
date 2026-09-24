@@ -236,7 +236,6 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
 
       MPFR_BLOCK (flags, inexact = factorial (t, x, rnd));
 
-      /* since x! > 0, the overflow always yields +Inf */
       if (MPFR_UNLIKELY (MPFR_OVERFLOW (flags)))
         {
           MPFR_ZIV_FREE (loop);
