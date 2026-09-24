@@ -72,7 +72,7 @@ static const unsigned long mpfr_fac_group[] = {
 # define MPFR_FAC_OVERFLOW_N 0 /* no early overflows detection */
 #endif
 
-/* number of bits of an unsigned long */
+/* number of bits of an unsigned long, assuming no padding bits */
 #define ULSIZE (sizeof (unsigned long) * CHAR_BIT)
 
 /* threshold on n above which no grouping is possible: the number of b-bit
