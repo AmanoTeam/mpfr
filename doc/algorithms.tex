@@ -5174,7 +5174,7 @@ again with a larger working precision $p' > p$.
 
 \paragraph{\textbf{Overflow handling.}}
 
-In this paragraph it's shown how overflow is handled in \texttt{mpfr\_hermite}.
+This paragraph details how overflow is handled.
 Each polynomial $H_n$ has $n$ distinct real roots, each of them lies in the
 closed interval $[-\sqrt{2n+1}, \sqrt{2n+1}]$, that is called the
 \emph{oscillatory region} of the polynomial $H_n(x)$.
@@ -5183,7 +5183,7 @@ The values of $H_n(x)$ grow very rapidly as $|x|$ increases beyond $\sqrt{2n+1}$
 and thus overflow can occur for large $n$ and sufficiently large $|x|$.
 The following monotonic growth theorem shows that, outside the oscillatory region,
 if an overflow occurs at some step of the recursion, it will occur at
-all subsequent steps, i.e. if $H_n(x)$ overflows, the same happens to every
+all subsequent steps, i.e., if $H_n(x)$ overflows, the same happens to every
 $H_i(x)$ with $i > n$.
 
 \noindent Consider the recurrence $H_{n+1}(x) = 2x H_n(x) - 2n H_{n-1}(x)$.
@@ -5198,8 +5198,8 @@ For $x > 0$ with $x^2 > 2n$, and for all $1 \le i \le n$:
 In other words, at each step of the recurrence the value grows by at
 least a factor $x$. In particular $H_i(x) > x^i > 0$, and the sequence
 $|H_i(x)|$ is strictly increasing with $i$. This means that, outside
-the oscillatory region, i.e. $x^2 > 2i + 1$, if $H_i(x)$ overflows,
-the same does $H_{i+1}(x)$.
+the oscillatory region, i.e., $x^2 > 2i + 1$, if $H_i(x)$ overflows,
+so does $H_{i+1}(x)$.
 
 \begin{proof}{(by induction on $i$)}
 For the base case $i = 1$: $H_1(x)/H_0(x) = 2x > x$ since $x > 0$.
@@ -5216,7 +5216,7 @@ $0 < H_{i-1}(x)/H_i(x) < 1/x$. Therefore:
   \frac{H_{i+1}(x)}{H_i(x)} > 2x - \frac{2i}{x}.
 \]
 This is greater than $x$ if and only if $x > 2i/x$, i.e., $x^2 > 2i$,
-which holds by hypotesis. This completes the induction.
+which holds by hypothesis. This completes the induction.
 \end{proof}
 
 \begin{corollary}
@@ -5226,21 +5226,24 @@ $i \le m \le n$.
 \end{corollary}
 
 In the implementation, computations are performed in extended exponent
-range (after \texttt{MPFR\_SAVE\_EXPO\_MARK}). An overflow in this range
+range. An overflow in this range
 means the value exceeds \texttt{MPFR\_EMAX\_MAX}.
 
 If $|x| \leq \sqrt{2n+1}$ the polynomial changes sign and its values can
 decrease in magnitude from one step to the next, so the monotonic growth
 argument does not hold within this interval. At the moment, MPFR treats every
-intermediate overflow in the same way, without considering whether the
-computation is performed in the oscillatory region or not.
+intermediate overflow in the same way, considering the final value
+$H_n(x)$ overflows, both when $x$ is in the oscillatory region or not.
 
 \subsubsection{Handling small inputs}
 
 As for Legendre polynomials, when $|x|$ is very small, $H_n(x)$ can be well
 approximated by the leading term of its Taylor expansion around $x=0$. Thus,
 we are going to use the same methodology used for Legendre polynomials in Section
-\ref{subsec:legendre-small-inputs} to bound the ratios of the first terms
+\ref{subsec:legendre-small-inputs}.
+Let $c_k$ be the coefficient of degree $k$ of $H_n(x)$,
+or $c_{k,n}$ in case of ambiguity.
+We want to bound the ratios of the first terms
 ($|c_3/c_1|$ for odd polynomials and $|c_2/c_0|$ for the even ones). Starting
 from the Hermite differential equation $y'' - 2x y' + 2ny = 0$ we obtain the
 following recurrence
@@ -5249,12 +5252,12 @@ following recurrence
   + 2 (n - k) c_k = 0.
 \end{equation}
 
-For odd degrees, we set $k = 1$, and we get $(3)(2)c_3 = -2(n-1)c_1$. Hence,
+For odd degrees, we set $k = 1$, and we get $6c_3 = -2(n-1)c_1$. Hence,
 \[
   \left|\frac{c_3}{c_1}\right| = \frac{n-1}{3} \le \frac{n}{3}.
 \]
 
-Now, for even degrees we set $k = 0$ and we get $(2)(1)c_2 = -2n\,c_0$. Hence,
+Now, for even degrees we set $k = 0$ and we get $2c_2 = -2n\,c_0$. Hence,
 \[
   \left|\frac{c_2}{c_0}\right| = n.
 \]
@@ -5283,31 +5286,33 @@ then the tail is bounded by a geometric series:
 \]
 for $t < 1$.
 
-\paragraph{\textbf{Implementation.}} The leading term is evaluated differently
+\paragraph{\textbf{Implementation.}} The trailing term (i.e., that of smallest
+degree) is evaluated differently
 depending on the parity of $n$:
 \begin{itemize}
-\item If $n=2m$ is even, the leading term is $c_{0,m} = H_n(0)$, computed by
+\item If $n$ is even, the trailing term is $c_{0,n} = H_n(0)$, computed by
   \[
-    c_{0,0}=1, \qquad c_{0,j}=c_{0,j-1}\,\big(-2(2j-1)\big),
-    \quad 1 \leq j \leq m,
+    c_{0,0}=1, \qquad c_{0,j}=-2(j-1)c_{0,j-2},
+    \quad j = 2, 4, ..., n,
   \]
   thus
   \[
-    c_{0,m} = \prod_{j=1}^{m} \big(-2(2j-1)\big).
+    c_{0,n} = (-1)^{n/2} \frac{2 (n-1)!}{(n/2-1)!}.
   \]
 
-\item If $n=2m+1$ is odd, the leading term is $c_1x$ with
-  $c_{1,m}=H_n'(0)$, computed by
+\item If $n$ is odd, the trailing term is $c_{1,n} x$, computed by
   \[
-    c_{1,0}=2, \qquad c_{1,j}=c_{1,j-1}\,\big(-2(2j+1)\big),
-    \quad 1 \leq j \leq m,
+    c_{1,1}=2, \qquad c_{1,j}=-2jc_{1,j-2},
+    \quad j = 3, 5, ..., n,
   \]
   thus
   \[
-    c_{1,m} = 2\prod_{j=1}^{m} \big(-2(2j+1)\big).
+    c_{1,n} = (-1)^{(n-1)/2} \frac{2 n!}{((n-1)/2)!}.
   \]
 \end{itemize}
-We remark that $c_{1,m} = 2(2m+1)c_{0,m}$.
+We remark that for $n$ odd, the trailing coefficient of $H_n$
+is the same (up to sign) as the one of $H_{n+1}$.
+
 
 \paragraph{\textbf{Bounding $t$ in the implementation.}}
 In the code, $t = nx^2$ is bounded as follows.
@@ -5323,16 +5328,16 @@ where $\rho = 2e_x + \ell$.
 
 The condition $\rho \le -2$ guarantees
 $t < 2^\rho \le 2^{-2} = \tfrac{1}{4}$.
-The relative error from keeping only the leading term equals $t/(1-t)$.
+The relative error from keeping only the trailing term equals $t/(1-t)$.
 Since $t < \tfrac{1}{4} < \tfrac{1}{2}$, we have $1 - t > \tfrac{1}{2}$,
 and therefore
 \[
   \frac{t}{1-t} < \frac{t}{1/2} = 2t < 2 \cdot 2^\rho = 2^{\rho+1}.
 \]
 Truncating the expansion after the first nonzero term yields at least
-$\mathtt{err} = -\rho - 1$ correct bits relative to that term.
+$-\rho - 1$ correct bits relative to that term.
 
-In the implementation, if $p = \texttt{MPFR\_PREC}(\mathrm{res})$, we try this
+In the implementation, if $p$ is the precision of the result, we try this
 shortcut only when
 \[
   -\rho - 1 \ge p + 64.
@@ -5342,7 +5347,7 @@ preceding analysis applies. The extra $64$ guard bits are an heuristic:
 a threshold that ensures the first rounding test is likely to succeed
 in most cases.
 
-\paragraph{\textbf{Error analysis of $c_{0,m}$ and $c_{1,m}$}}
+\paragraph{\textbf{Error analysis of $c_{0,n}$ and $c_{1,n}$}}
 As for the Legendre case (Sections \ref{par:legendre-error-analysis}), we set
 a working precision $q$, and each \texttt{mpfr\_mul\_si} introduces a relative
 error of at most $u = 2^{-q}$ per operation. We denote by $V_k$ the exact real
@@ -5357,7 +5362,7 @@ operations the accumulated relative error satisfies
 \]
 where the first inequality follows from Lemma~\ref{lemma_graillat} with all
 $\delta_i = u$ (writing $v_k/V_k = \prod_{i=1}^k(1+\delta_i)$), and the last
-holds whenever $ku \le \tfrac{1}{2}$, i.e. $q \ge 1 + \lceil\log_2 k\rceil$,
+holds whenever $ku \le \tfrac{1}{2}$, i.e., $q \ge 1 + \lceil\log_2 k\rceil$,
 which is satisfied by our choice of working precision.
 
 \subsection{Summary}

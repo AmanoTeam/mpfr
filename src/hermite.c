@@ -1,7 +1,7 @@
 /* hermite -- Compute the nth degree (physicist's) Hermite polynomial.
 
 Copyright 2025-2026 Free Software Foundation, Inc.
-Contributed by Matteo Nicoli.
+Contributed by Matteo Nicoli, reviewed by Paul Zimmermann.
 
 This file is part of the GNU MPFR Library.
 
@@ -44,7 +44,7 @@ asymptotic_small_x (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode,
   res_prec = MPFR_PREC (res);
 
   /* a-priori rounding error bound. See algorithms.tex for details.
-     After k operations the error is at most k*2*ulp(v), with k <= n;
+     After k operations the error is at most 2*k*ulp(v), with k <= n;
      15 extra bits has been added for safety. */
   realprec = res_prec + MPFR_INT_CEIL_LOG2 (n) + 15;
 
@@ -185,7 +185,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       return mpfr_mul_ui (res, x, 2, rnd_mode);
     }
 
-  /* asymptotic expansion for small |x| and n >= 2.
+  /* Taylor expansion for small |x| and n >= 2.
      For the proof of the following bound, see algorithms.tex.
      Let t = n*x^2; the tail after the leading term is bounded by the
      following geometric series:
@@ -197,15 +197,15 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
          l2n = ceil(log2(n)), so n <= 2^l2n;
          thus, t = n*x^2 < 2^l2n * (2^ex)^2 = 2^{l2n+2*ex}.
          We define rho = l2n+2*ex, therefore t < 2^{rho}.
-         The asymptotic expansion only applies for small |x|, i.e. ex < 0.
-         We require ex < 0 before computing rho: since the expansion needs
-         rho <= -2 (and in fact rho very negative), any x with ex >= 0 gives
-         rho >= l2n >= 1 and would be rejected anyway. Requiring ex < 0 also
+         The Taylor expansion only applies for small |x|, i.e. ex < 0.
+         We require ex <= -2 before computing rho: since the expansion needs
+         rho <= -2 (and in fact rho very negative), any x with ex >= -1 gives
+         rho >= l2n-2 >= -1 and would be rejected anyway. Requiring ex <= -2 also
          ensures that 2*ex (hence rho and err) does not overflow, since
          2*MPFR_EMIN_MIN is representable in an mpfr_exp_t whereas 2*ex for
-         a large positive ex (e.g. ex close to MPFR_EMAX_MAX) would not. */
+         a large positive ex (e.g., ex close to MPFR_EMAX_MAX) would not. */
       ex = MPFR_GET_EXP (x);
-      if (ex < 0)
+      if (ex <= -2)
         {
           l2n = (mpfr_exp_t) MPFR_INT_CEIL_LOG2 (n);
           rho = l2n + 2 * ex;
@@ -297,7 +297,7 @@ mpfr_hermite (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 
           if (x_is_zero)
             {
-              /* x = 0: the leading term 2x*p1 is exactly 0. When i is even,
+              /* x = 0: the trailing term 2x*p1 is exactly 0. When i is even,
                  p2 = 0 too, so second_term = 0 and pn = 0 (all exact); when i
                  is odd, pn = -second_term = -2i*p2. In both cases we do not
                  call MPFR_GET_EXP on zero, so we use MPFR_EXP_MIN instead */
