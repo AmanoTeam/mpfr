@@ -53,12 +53,24 @@ static const unsigned long mpfr_fac_group[] = {
 
 /* MPFR_FAC_OVERFLOW_N is a threshold on n above which n! is guaranteed to
    overflow for any valid exponent range, so that mpfr_fac_ui can return an
-   overflow directly. See algorithms.tex for further details */
-#if ULONG_MAX >> 31 >> 31 != 0
+   overflow directly. See algorithms.tex for further details.
+   MPFR_EMAX_MAX is currently the integer part of MPFR_EXP_MAX / 2. Since
+     1073741825 >= 2^30 - 1
+     4611686018427387924 >= 2^62 - 1
+   the first condition below is satisfied with a 32-bit exponent and the
+   second condition below is satisfied with a 64-bit exponent.
+   But the code below remains valid even if the MPFR_EMAX_MAX definition
+   is changed (MPFR_EMAX_MAX is compared with values obtained thanks to a
+   weakened form of Stirling's bound formula, see algorithms.tex).
+*/
+#if MPFR_EMAX_MAX <= 1073741825
+# define MPFR_FAC_OVERFLOW_N 44787928UL
+#elif ULONG_MAX >> 31 >> 31 != 0 && MPFR_EMAX_MAX <= 4611686018427387924
 # define MPFR_FAC_OVERFLOW_N 84182992257887725UL
 #else
-# define MPFR_FAC_OVERFLOW_N 44787928UL
-#endif /* ULONG_MAX >> 31 >> 31 != 0 */
+/* Probably a 128-bit exponent or a non-standard configuration. */
+# define MPFR_FAC_OVERFLOW_N 0 /* no early overflows detection */
+#endif
 
 /* number of bits of an unsigned long */
 #define ULSIZE (sizeof (unsigned long) * CHAR_BIT)
@@ -191,7 +203,7 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
 
   /* for very large x, x! overflows for any valid emax (including the
      maximum MPFR_EMAX_MAX) */
-  if (MPFR_UNLIKELY (x >= MPFR_FAC_OVERFLOW_N))
+  if (MPFR_FAC_OVERFLOW_N > 0 && MPFR_UNLIKELY (x >= MPFR_FAC_OVERFLOW_N))
     return mpfr_overflow (y, rnd_mode, 1);
 
   MPFR_SAVE_EXPO_MARK (expo);
