@@ -245,10 +245,16 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
           return mpfr_overflow (y, rnd_mode, 1);
         }
 
-      /* FIXME: This error bound (since the initial implementation in 2001)
-         is incorrect.
-         Perhaps a typo: replace Nt by x in MPFR_INT_CEIL_LOG2()? */
-      err = Nt - 1 - MPFR_INT_CEIL_LOG2 (Nt);
+      /* We have an error bound expressed with a factor of the typical
+         form ku/(1-ku), where k is the number of inexact products and
+         u = 2^(1-p). And thanks to a "MPFR_INT_CEIL_LOG2 (x)" term in
+         the initial working precision (and even more), p > 2+log2(k),
+         so that ku < 1/2. So the factor is less than 2ku, and the number
+         of lost bits is less than log2(2k) < 1 + MPFR_INT_CEIL_LOG2 (x).
+         Note: One could do better, but this should not be noticeable in
+         practice, because it is expected that even with this bound, the
+         MPFR_CAN_ROUND will succeed in general. */
+      err = Nt - 1 - MPFR_INT_CEIL_LOG2 (x);
 
       if (MPFR_LIKELY (!inexact || MPFR_CAN_ROUND (t, err, Ny, rnd_mode)))
         break;
