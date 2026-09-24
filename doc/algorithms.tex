@@ -5363,27 +5363,23 @@ $\delta_i = u$ (writing $v_k/V_k = \prod_{i=1}^k(1+\delta_i)$), and the last
 holds whenever $ku \le \tfrac{1}{2}$, i.e. $q \ge 1 + \lceil\log_2 k\rceil$,
 which is satisfied by our choice of working precision.
 
-%
-% TODO: improve description of lambert w
-%
-
 \subsection{The LambertW function}
 
-The LambertW function $W(x)$ is defined as the inverse of the mapping
-$W(x) = xe^x$. $W(x)$ is a complex multivalued function that has two
-real branches: the principal one $W_0$, defined for $x \ge -1/e$, and
-$W_{-1}$, defined for $-1/e \le x < 0$ (see
-Figure~\ref{fig:lambertw}). The two branches meet at the point $x =
--1/e$, where $W_0(-1/e) = W_{-1}(-1/e) = -1$, and for $x < -1/e$ the
-function is not defined over the reals.
+The LambertW function $W(z)$ is defined as the inverse of $W(z) = ze^z$, where
+$z$ is a complex number. Since $W(z)$ is a complex multivalued function, we only
+consider its two real branches here: $W_0$ (often called the \textit{principal}
+branch), and $w_{-1}$. $W_0$ is defined for $x \ge -1/e$, while $W_{-1}$ defined
+for $-1/e \le x < 0$; see Figure~\ref{fig:lambertw}). The two branches meet at
+the point $x = -1/e$, where $W_0(-1/e) = W_{-1}(-1/e) = -1$, and for $x < -1/e$
+the function is not defined in the real domain.
 
 \begin{figure}[htp]
 \centering
 \includegraphics[width=.9\textwidth]{lambert_w_plot.pdf}
-\caption{The two real branches of the LambertW function: the principal branch
-$W_0$ (defined for $x \ge -1/e$) and the branch $W_{-1}$ (defined for
-$-1/e \le x < 0$). Both branches meet at $(-1/e, -1)$; $W_0(-1/e) = W_{-1}(-1/e)
-= -1$.}
+\caption{The two real branches of the LambertW function: the principal
+  branch $W_0$ (defined for $x \ge -1/e$) and the branch $W_{-1}$
+  (defined for $-1/e \le x < 0$). Both branches meet at $(-1/e, -1)$;
+  $W_0(-1/e) = W_{-1}(-1/e) = -1$.}
 \label{fig:lambertw}
 \end{figure}
 
@@ -5391,42 +5387,66 @@ $-1/e \le x < 0$). Both branches meet at $(-1/e, -1)$; $W_0(-1/e) = W_{-1}(-1/e)
 \label{subsubsec:w0}
 
 \paragraph{\textbf{Initial guess}}
+\label{par:w0-initial-guess}
 
-Starting from $-0.3$, the width of each interval $w_k$ is calculated
-by the geometric progression $w_k = 0.2 * j^k$, with $j =
-3.536298222377439$, where the value of $j$ is chosen empirically to
-guarantee the error for $|W_0(x) - P_k(x)| < 10^{-5}$ for each $w_k$.
+The initial guess is computed by MPFR in different ways, depending on the
+magnitude of $x$. When $x$ is the range $[-1/e, 1066510.2]$, the initial guess
+is calculated by a polynomial approximation. In particular, this range is
+divided in 16 subranges. For each of those, on
+Table~\ref{tab:w0-poly-initial-guess} are reported the boundaries $[a,b]$, and
+the maximum error $|W_0(x)-P(x)|$, where $P(x)$ is the polynomial interpolating
+$W_0$ in the specified range $[a,b]$. All the coefficients are stored in a
+precomputed table in the code and evaluated with Horner's method. The hardest
+segment to approximate is the closest to the boundary $-1/e$ (segment 0 in
+Table~\ref{tab:w0-poly-initial-guess}). For that one we use the same polynomial
+that we used for segment 1, that produces an error of magnitude
+$10^{-2}$. Starting from $x = -0.3$, the width of each interval $w_k$ is
+calculated by the geometric progression $w_k = 0.2 \cdot j^k$, with $j =
+3.536298222377439$, where the value of $j$ is chosen empirically to guarantee
+the error for $|W_0(x) - P_k(x)| < 10^{-5}$ for each $w_k$. For more details
+about the sub-ranges boundaries and the maximum error, see segments 3--15 in
+Table~\ref{tab:w0-poly-initial-guess}.
 
 \begin{table}[htp]
 \begin{tabular}{cccc}
-a           & b            & $|W_0(x)-P(x)|$ \\[0.05cm]
+segment & a           & b            & $|W_0(x)-P(x)|$ \\[0.05cm]
 \hline
--0.36       & -0.35        & 6.3398e-09      \\[0.05cm]
--0.35       & -0.28321206  & 2.9263e-06      \\[0.05cm]
--0.3        & -0.1         & 1.8725e-06      \\[0.05cm]
--0.1        & 0.60725964   & 2.0653e-06      \\[0.05cm]
-0.60725964  & 3.1083407    & 3.0241e-06      \\[0.05cm]
-3.1083407   & 11.952909    & 4.3717e-06      \\[0.05cm]
-11.952909   & 43.22994     & 5.7751e-06      \\[0.05cm]
-43.22994    & 153.83485    & 6.9773e-06      \\[0.05cm]
-153.83485   & 544.9668     & 7.8947e-06      \\[0.05cm]
-544.9668    & 1928.126     & 8.5598e-06      \\[0.05cm]
-1928.126    & 6819.3895    & 9.0376e-06      \\[0.05cm]
-6819.3895   & 24116.356    & 9.3856e-06      \\[0.05cm]
-24116.356   & 85283.587    & 9.6453e-06      \\[0.05cm]
-85283.587   & 301589.16    & 9.8441e-06      \\[0.05cm]
-301589.16   & 1066510.2    & 9.9999e-06      \\[0.05cm]
-\hline
+0       & $-1/e$      & -0.36        & ?               \\[0.05cm]
+1       & -0.36       & -0.35        & 6.3398e-09      \\[0.05cm]
+2       & -0.35       & -0.28321206  & 2.9263e-06      \\[0.05cm]
+3       & -0.3        & -0.1         & 1.8725e-06      \\[0.05cm]
+4       & -0.1        & 0.60725964   & 2.0653e-06      \\[0.05cm]
+5       & 0.60725964  & 3.1083407    & 3.0241e-06      \\[0.05cm]
+6       & 3.1083407   & 11.952909    & 4.3717e-06      \\[0.05cm]
+7       & 11.952909   & 43.22994     & 5.7751e-06      \\[0.05cm]
+8       & 43.22994    & 153.83485    & 6.9773e-06      \\[0.05cm]
+9       & 153.83485   & 544.9668     & 7.8947e-06      \\[0.05cm]
+10      & 544.9668    & 1928.126     & 8.5598e-06      \\[0.05cm]
+11      & 1928.126    & 6819.3895    & 9.0376e-06      \\[0.05cm]
+12      & 6819.3895   & 24116.356    & 9.3856e-06      \\[0.05cm]
+13      & 24116.356   & 85283.587    & 9.6453e-06      \\[0.05cm]
+14      & 85283.587   & 301589.16    & 9.8441e-06      \\[0.05cm]
+15      & 301589.16   & 1066510.2    & 9.9999e-06      \\[0.05cm]
+\hline                                                 \\
 \end{tabular}
 \caption{In this table are presented all the ranges $[a,b]$ that we
-  used to calculate the initial guess. For each of them we report the
-  maximum error $|W_0(x)-P(x)|$, where $P(x)$ is the polynomial chosen
-to approximate the function in $[a,b]$.}
-\label{table:lambertw}
+  used to calculate the initial guess.}
+\label{tab:w0-poly-initial-guess}
 \end{table}
 
 \paragraph{\textbf{Halley iteration}}
-\dots
+The initial guess is refined with Halley's iteration. An Halley step computes
+$f(w) = we^w - x$. Its derivatives are $f'(w) = (w+1)e^w$ and $f''(w) =
+(w+2)e^w$. Starting from the initial guess $w_0$ (see Paragraph ``Initial
+guess'' in Section \ref{par:w0-initial-guess}), we compute $w_{n+1}$ with the
+iteration in Equation \ref{eq:lambertw-halley}.
+
+\begin{equation} \label{eq:lambertw-halley}
+  w_{n+1} = w_n - \dfrac{f(w_n)}{f'(w_n) - \frac{f(w_n) f''(w_n)}{2 f'(w_n)}}
+         = \dfrac{f(w_n)}{(w_n+1)e^{w_n} - \frac{(w_n+2) f(w_n)}{2(w_n+1)}}.
+\end{equation}
+
+
 
 \subsection{Summary}
 
