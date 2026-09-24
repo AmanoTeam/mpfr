@@ -291,7 +291,7 @@ main (int argc, char *argv[])
             mpfr_rnd_t rnd = (mpfr_rnd_t) r;
             inexact = mpfr_fac_ui (y, n, rnd);
             err = rnd == MPFR_RNDN ? yprec + 1 : yprec;
-            if (mpfr_can_round (y, err, rnd, rnd, prec))
+            if (!inexact || mpfr_can_round (y, err, rnd, rnd, prec))
               {
                 mpfr_set (t, y, rnd);
                 inexact = mpfr_fac_ui (z, n, rnd);
