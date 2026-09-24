@@ -283,7 +283,7 @@ main (int argc, char *argv[])
       yprec = prec + 10;
       mpfr_set_prec (y, yprec);
 
-      for (n = 0; n < 50; n++)
+      for (n = 0; n < 1000; n++)
         RND_LOOP_NO_RNDF (r)
           {
             mpfr_rnd_t rnd = (mpfr_rnd_t) r;
