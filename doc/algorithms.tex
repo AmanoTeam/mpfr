@@ -5363,13 +5363,14 @@ $\delta_i = u$ (writing $v_k/V_k = \prod_{i=1}^k(1+\delta_i)$), and the last
 holds whenever $ku \le \tfrac{1}{2}$, i.e. $q \ge 1 + \lceil\log_2 k\rceil$,
 which is satisfied by our choice of working precision.
 
-\subsection{The LambertW function}
+\subsection{The Lambert W function}
 
-The LambertW function $W(z)$ is defined as the inverse of $W(z) = ze^z$, where
-$z$ is a complex number. Since $W(z)$ is a complex multivalued function, we only
+The Lambert W function $W(z)$ is defined as the inverse of $W(z) = ze^z$, where
+$z$ is a complex number, i.e., it satisfies $w e^w = z$ where $w = W(z)$.
+Since $W(z)$ is a complex multivalued function, we only
 consider its two real branches here: $W_0$ (often called the \textit{principal}
-branch), and $w_{-1}$. $W_0$ is defined for $x \ge -1/e$, while $W_{-1}$ defined
-for $-1/e \le x < 0$; see Figure~\ref{fig:lambertw}). The two branches meet at
+branch), and $W_{-1}$. $W_0$ is defined for $x \ge -1/e$, while $W_{-1}$ is defined
+for $-1/e \le x < 0$; see Figure~\ref{fig:lambertw}. The two branches meet at
 the point $x = -1/e$, where $W_0(-1/e) = W_{-1}(-1/e) = -1$, and for $x < -1/e$
 the function is not defined in the real domain.
 
@@ -5399,10 +5400,11 @@ $W_0$ in the specified range $[a,b]$. All the coefficients are stored in a
 precomputed table in the code and evaluated with Horner's method. The hardest
 segment to approximate is the closest to the boundary $-1/e$ (segment 0 in
 Table~\ref{tab:w0-poly-initial-guess}). For that one we use the same polynomial
-that we used for segment 1, that produces an error of magnitude
-$10^{-2}$. Starting from $x = -0.3$, the width of each interval $w_k$ is
-calculated by the geometric progression $w_k = 0.2 \cdot j^k$, with $j =
-3.536298222377439$, where the value of $j$ is chosen empirically to guarantee
+as for segment 1, that produces an error of magnitude
+$10^{-2}$. Starting from segment 3, the width of each interval $w_k$ is
+calculated by the geometric progression $w_k = 0.2 \cdot j^k$,
+with $k = {\rm segment} - 3$ and $j \approx 3.5363$,
+where the value of $j$ is chosen empirically to guarantee
 the error for $|W_0(x) - P_k(x)| < 10^{-5}$ for each $w_k$. For more details
 about the sub-ranges boundaries and the maximum error, see segments 3--15 in
 Table~\ref{tab:w0-poly-initial-guess}.
@@ -5430,23 +5432,42 @@ segment & a           & b            & $|W_0(x)-P(x)|$ \\[0.05cm]
 \hline                                                 \\
 \end{tabular}
 \caption{In this table are presented all the ranges $[a,b]$ that we
-  used to calculate the initial guess.}
+  used to calculate the initial guess of the Lambert W function
+(branch $W_0$).}
 \label{tab:w0-poly-initial-guess}
 \end{table}
 
-\paragraph{\textbf{Halley iteration}}
+\paragraph{\textbf{Halley's iteration}}
 The initial guess is refined with Halley's iteration. An Halley step computes
 $f(w) = we^w - x$. Its derivatives are $f'(w) = (w+1)e^w$ and $f''(w) =
 (w+2)e^w$. Starting from the initial guess $w_0$ (see Paragraph ``Initial
 guess'' in Section \ref{par:w0-initial-guess}), we compute $w_{n+1}$ with the
-iteration in Equation \ref{eq:lambertw-halley}.
+iteration in Equation~(\ref{eq:lambertw-halley}).
 
 \begin{equation} \label{eq:lambertw-halley}
   w_{n+1} = w_n - \dfrac{f(w_n)}{f'(w_n) - \frac{f(w_n) f''(w_n)}{2 f'(w_n)}}
          = \dfrac{f(w_n)}{(w_n+1)e^{w_n} - \frac{(w_n+2) f(w_n)}{2(w_n+1)}}.
 \end{equation}
 
-
+Assume we have computed an approximation $w$ of $W(x)$ with residual
+$w e^w - x = \epsilon$, and we want to deduce a bound on the difference
+$w - W$, where $W = W(x)$. Write $w = W + \delta$. Then:
+\begin{eqnarray*}
+\epsilon &=& w e^w - W e^W = (W+\delta) e^{W+\delta} - W e^W \\
+         &=& W e^W (e^\delta-1) + \delta e^\delta e^W
+             = x (e^\delta - 1 + \frac{\delta e^\delta}{W}).
+\end{eqnarray*}
+Since $e^\delta-1$ and $\delta e^\delta$ are of same sign,
+and both larger than $|\delta|/2$ in absolute value for $|\delta| \le 0.5$,
+we get when $W \ge 0$ (i.e., $x \ge 0$) that
+$|\epsilon| \ge x |\delta|/2 (1 + 1/W)$,
+thus
+\[ |\delta| \le \frac{|\epsilon|}{2x(1+1/W)} \le \frac{|\epsilon|}{2x(1+1/(w+0.5))}, \]
+since we have $w = W+\delta$ with $|\delta| \le 0.5$.
+This gives us a bound for $|\delta|$ in terms of the residual $\epsilon$, $x$,
+and $w$. If this bound is larger than $0.5$, we cannot compute anything.
+If it is smaller than $0.5$, it gives a bound on $w-W$.
+[FIXME: is that reasoning correct?]
 
 \subsection{Summary}
 
