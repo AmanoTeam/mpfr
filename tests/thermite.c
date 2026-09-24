@@ -1,7 +1,7 @@
 /* Test file for (physicist's) hermite polynomials.
 
 Copyright 2025-2026 Free Software Foundation, Inc.
-Contributed by Matteo Nicoli.
+Contributed by Matteo Nicoli and Paul Zimmermann.
 
 This file is part of the GNU MPFR Library.
 
@@ -38,13 +38,13 @@ typedef struct {
 } test_case_t;
 
 /* for n == 0:
-     - P_0(Inf)  -> 1.0
-     - P_0(-Inf) -> 1.0
-     - P_0(NaN)  -> 1.0
+     - H_0(Inf)  -> 1.0
+     - H_0(-Inf) -> 1.0
+     - H_0(NaN)  -> 1.0
    for n >= 1:
-     - P_n(Inf)  -> NaN
-     - P_n(-Inf) -> NaN
-     - P_n(NaN)  -> NaN */
+     - H_n(Inf)  -> Inf
+     - H_n(-Inf) -> (-1)^n*Inf
+     - H_n(NaN)  -> NaN */
 static void
 test_singular_input (void)
 {
@@ -63,25 +63,47 @@ test_singular_input (void)
       ret = mpfr_hermite (res, n, x, MPFR_RNDN);
       if (ret != 0 || !mpfr_nan_p (res))
         {
-          printf ("For x = NAN, P_%u should be NAN\ngot: ", n);
+          printf ("For x = NAN, H_%u should be NAN\ngot: ", n);
           mpfr_dump (res);
           printf ("With return value: %d\n", ret);
           exit (1);
         }
       mpfr_set_inf(x, 1);
       ret = mpfr_hermite (res, n, x, MPFR_RNDN);
-      if (ret != 0 || !mpfr_nan_p (res))
+      if (n == 0 && (ret != 0 || mpfr_cmp_ui (res, 1) != 0))
         {
-          printf ("For x = +Inf, P_%u should be NAN\ngot: ", n);
+          printf ("For x = +Inf, H_0 should be +1\ngot: ");
+          mpfr_dump (res);
+          printf ("With return value: %d\n", ret);
+          exit (1);
+        }
+      if (n > 0 && (ret != 0 || !mpfr_inf_p (res) || MPFR_IS_NEG(res)))
+        {
+          printf ("For x = +Inf, H_%u should be +Inf\ngot: ", n);
           mpfr_dump (res);
           printf ("With return value: %d\n", ret);
           exit (1);
         }
       mpfr_set_inf(x, -1);
       ret = mpfr_hermite (res, n, x, MPFR_RNDN);
-      if (ret != 0 || !mpfr_nan_p (res))
+      if (n == 0 && (ret != 0 || mpfr_cmp_ui (res, 1) != 0))
         {
-          printf ("For x = -Inf, P_%u should be NAN\ngot: ", n);
+          printf ("For x = -Inf, H_0 should be +1\ngot: ");
+          mpfr_dump (res);
+          printf ("With return value: %d\n", ret);
+          exit (1);
+        }
+      if (n > 0 && ((n%2)==0) && (ret != 0 || !mpfr_inf_p (res) || MPFR_IS_NEG(res)))
+        {
+          printf ("For x = -Inf, H_%u should be +Inf\ngot: ", n);
+          mpfr_dump (res);
+          printf ("With return value: %d\n", ret);
+          exit (1);
+        }
+      /* (n%2)==1 implies n <> 0 */
+      if ((n%2)==1 && (ret != 0 || !mpfr_inf_p (res) || MPFR_IS_POS(res)))
+        {
+          printf ("For x = -Inf, H_%u should be -Inf\ngot: ", n);
           mpfr_dump (res);
           printf ("With return value: %d\n", ret);
           exit (1);
@@ -101,28 +123,45 @@ test_zero_odd (void)
 
   mpfr_init2 (x,IEEE754_DOUBLE_PREC);
   mpfr_init2 (res,IEEE754_DOUBLE_PREC);
-  mpfr_set_ui (x, 0, MPFR_RNDN);
 
   for (i = 1; i < 100; i += 2)
     {
+      mpfr_set_ui (x, 0, MPFR_RNDN);
       mpfr_hermite (res, i, x, MPFR_RNDN);
       if (!MPFR_IS_ZERO (res))
         {
-          printf ("P_%d(0) should be 0; got ", i);
+          printf ("H_%d(+0) should be 0; got ", i);
           mpfr_out_str (stdout, 10, 0, res, MPFR_RNDD);
           printf ("\n");
           exit (1);
         }
-
       if ((i % 4) == 1 && MPFR_IS_NEG (res))
         {
-          printf ("P_%d(0) should be +0; got -0\n", i);
+          printf ("H_%d(+0) should be +0; got -0\n", i);
           exit (1);
         }
-
       if ((i % 4) == 3 && MPFR_IS_POS (res))
         {
-          printf ("P_%d(0) should be -0; got +0\n", i);
+          printf ("H_%d(+0) should be -0; got +0\n", i);
+          exit (1);
+        }
+      mpfr_neg (x, x, MPFR_RNDN);
+      mpfr_hermite (res, i, x, MPFR_RNDN);
+      if (!MPFR_IS_ZERO (res))
+        {
+          printf ("H_%d(-0) should be 0; got ", i);
+          mpfr_out_str (stdout, 10, 0, res, MPFR_RNDD);
+          printf ("\n");
+          exit (1);
+        }
+      if ((i % 4) == 1 && MPFR_IS_POS (res))
+        {
+          printf ("H_%d(-0) should be -0; got +0\n", i);
+          exit (1);
+        }
+      if ((i % 4) == 3 && MPFR_IS_NEG (res))
+        {
+          printf ("H_%d(-0) should be +0; got -0\n", i);
           exit (1);
         }
     }
@@ -151,7 +190,7 @@ test_first_iteration (void)
   ret = mpfr_hermite (res, 0, x, MPFR_RNDN);
   if (ret != 0 || !mpfr_equal_p (res, one))
     {
-      printf ("The first Hermite polynomial P_0 should be exactly 1.\ngot: ");
+      printf ("The first Hermite polynomial H_0 should be exactly 1.\ngot: ");
       mpfr_dump (res);
       printf ("With return value: %d\n", ret);
       exit (1);
@@ -182,7 +221,7 @@ test_second_iteration (void)
   ret = mpfr_hermite (res, 1, x, MPFR_RNDN);
   if (ret != 0 || !mpfr_equal_p (res, expected))
     {
-      printf ("P_1 should be 2x\ngot: ");
+      printf ("H_1 should be 2x\ngot: ");
       mpfr_dump (res);
       printf ("With return value: %d\n", ret);
       exit (1);
@@ -203,7 +242,7 @@ test_double_precision (void)
   mpfr_init2 (res, IEEE754_DOUBLE_PREC);
   mpfr_init2 (expected, IEEE754_DOUBLE_PREC);
 
-  /* P_3(3.49376) = 2.9924358881463502e2 with MPFR_RNDN */
+  /* H_3(3.49376) = 2.9924358881463502e2 with MPFR_RNDN */
   mpfr_set_d (x, 3.49376, MPFR_RNDN);
   mpfr_set_str (expected, "299.24358881463500800000000000000", 10, MPFR_RNDN);
 
@@ -215,7 +254,7 @@ test_double_precision (void)
       exit (1);
     }
 
-  /* P_6(-6.25) = 3.1102803906250000e6 with MPFR_RNDN */
+  /* H_6(-6.25) = 3.1102803906250000e6 with MPFR_RNDN */
   mpfr_set_d (x, -6.25, MPFR_RNDN);
   mpfr_set_str (expected, "3.11028039062500000000000000000e6", 10, MPFR_RNDN);
 
@@ -227,7 +266,7 @@ test_double_precision (void)
       exit (1);
     }
 
-  /* P_2(0.0001) = -1.9999999600000000e0 with MPFR_RNDN */
+  /* H_2(0.0001) = -1.9999999600000000e0 with MPFR_RNDN */
   mpfr_set_d (x, 0.0001, MPFR_RNDN);
   mpfr_set_str (expected, "-1.999999960000000000000000000000", 10, MPFR_RNDN);
 
@@ -265,12 +304,12 @@ test_exact (int n, int A, int B, mpfr_prec_t p)
   mpq_init (t);
   mpq_init (u);
   /* use the physicist's Permite recurrence:
-     P_0(x) = 1, P_1(x) = 2x,
-     P_j(x) = 2x * P_{j-1}(x) - 2(j-1) * P_{j-2}(x)
+     H_0(x) = 1, H_1(x) = 2x,
+     H_j(x) = 2x * H_{j-1}(x) - 2(j-1) * H_{j-2}(x)
      In coefficient form:
-     P_j[i] = 2 * P_{j-1}[i-1] - 2*(j-1) * P_{j-2}[i] */
-  mpq_set_ui (P0[0], 1, 1); /* P_0 = 1 */
-  mpq_set_ui (P1[1], 2, 1); /* P_1 = 2x */
+     H_j[i] = 2 * H_{j-1}[i-1] - 2*(j-1) * H_{j-2}[i] */
+  mpq_set_ui (P0[0], 1, 1); /* H_0 = 1 */
+  mpq_set_ui (P1[1], 2, 1); /* H_1 = 2x */
   for (j = 2; j <= n; j++)
     {
       /* P[j] = 2x * P[j-1] - 2(j-1) * P[j-2]
@@ -368,12 +407,12 @@ test_overflow (void)
   test_case_t *curr_case;
   test_case_t cases[] =
     {
-      { 2,  2.0,  1 },  /* P_2(2) = 14,     MPFR_EXP = 4  */
-      { 3,  2.0,  1 },  /* P_3(2) = 40,     MPFR_EXP = 6  */
-      { 2, -1.5,  1 },  /* P_2(-1.5) = 7,   MPFR_EXP = 3  */
-      { 3, -1.5, -1 },  /* P_3(-1.5) = -9,  MPFR_EXP = 4  */
-      { 5, -3.0, -1 },  /* P_5(-3) = -3816, MPFR_EXP = 11 */
-      { 4, -2.0,  1 },  /* P_4(-2) = 76,    MPFR_EXP = 7  */
+      { 2,  2.0,  1 },  /* H_2(2) = 14,     MPFR_EXP = 4  */
+      { 3,  2.0,  1 },  /* H_3(2) = 40,     MPFR_EXP = 6  */
+      { 2, -1.5,  1 },  /* H_2(-1.5) = 7,   MPFR_EXP = 3  */
+      { 3, -1.5, -1 },  /* H_3(-1.5) = -9,  MPFR_EXP = 4  */
+      { 5, -3.0, -1 },  /* H_5(-3) = -3816, MPFR_EXP = 11 */
+      { 4, -2.0,  1 },  /* H_4(-2) = 76,    MPFR_EXP = 7  */
     };
 
   ncases = sizeof (cases) / sizeof (cases[0]);
