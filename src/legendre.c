@@ -30,74 +30,51 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 static int
 asymptotic_small_x (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode,
-                    mpfr_exp_t err)
+                    mpfr_exp_t err, mpfr_prec_t realprec)
 {
   mpfr_t v;
   long m, j;
-  unsigned inex;
   int inex_round;
-  mpfr_prec_t res_prec, realprec;
-
-  MPFR_GROUP_DECL (small_x);
-  MPFR_ZIV_DECL (loop);
-
-  res_prec = MPFR_PREC (res);
 
   /* a-priori rounding error bound. See algorithms.tex for details.
      After n operations the error is at most n*2*ulp(v) <= 2^(ell+1)*ulp(v),
      where ell = ceil(log2(n)); 15 extra bits has been added for safety */
-  realprec = res_prec + MPFR_INT_CEIL_LOG2 (n) + 15;
 
-  MPFR_GROUP_INIT_1 (small_x, realprec, v);
-  MPFR_ZIV_INIT (loop, realprec);
+  mpfr_init2 (v, realprec);
 
-  for (;;)
+  /* v = 1 is exact */
+  mpfr_set_ui (v, 1, MPFR_RNDN);
+
+  if ((n & 1) == 0)
     {
-      /* v = 1 is exact */
-      inex = mpfr_set_ui (v, 1, MPFR_RNDN);
-
-      if ((n & 1) == 0)
+      /* Even n = 2m, m = n/2: c0 = P_n(0),
+         c0(0) = 1, c0(j) = c0(j-1) * (-(2j-1)) / (2j).
+         See algorithms.tex for details */
+      m = n / 2;
+      for (j = 1; j <= m; j++)
         {
-          /* Even n = 2m, m = n/2: c0 = P_n(0),
-             c0(0) = 1, c0(j) = c0(j-1) * (-(2j-1)) / (2j).
-             See algorithms.tex for details */
-          m = n / 2;
-          for (j = 1; j <= m; j++)
-            {
-              inex |= mpfr_mul_si (v, v, -(2 * j - 1), MPFR_RNDN);
-              inex |= mpfr_div_ui (v, v, 2 * j, MPFR_RNDN);
-            }
+          mpfr_mul_si (v, v, -(2 * j - 1), MPFR_RNDN);
+          mpfr_div_ui (v, v, 2 * j, MPFR_RNDN);
         }
-      else
-        {
-          /* Odd n = 2m+1, m = (n-1)/2: c1 = P'_n(0),
-             c1(0) = 1, c1(j) = c1(j-1) * (-(2j+1)) / (2j),
-             then lead = c1*x. See algorithms.tex for details */
-          m = (n - 1) / 2;
-          for (j = 1; j <= m; j++)
-            {
-              inex |= mpfr_mul_si (v, v, -(2 * j + 1), MPFR_RNDN);
-              inex |= mpfr_div_ui (v, v, 2 * j, MPFR_RNDN);
-            }
-          inex |= mpfr_mul (v, v, x, MPFR_RNDN);
-        }
-
-      /* if inex=0, then all the computation was exact, thus v is exactly V,
-         otherwise we call MPFR_CAN_ROUND() to check if we can deduce
-         the correct rounding */
-      if (!inex || MPFR_CAN_ROUND (v, realprec - err, res_prec, rnd_mode))
-        break;
-
-      MPFR_ZIV_NEXT (loop, realprec);
-      MPFR_GROUP_REPREC_1 (small_x, realprec, v);
     }
-
-  MPFR_ZIV_FREE (loop);
+  else
+    {
+      /* Odd n = 2m+1, m = (n-1)/2: c1 = P'_n(0),
+         c1(0) = 1, c1(j) = c1(j-1) * (-(2j+1)) / (2j),
+         then lead = c1*x. See algorithms.tex for details */
+      m = (n - 1) / 2;
+      for (j = 1; j <= m; j++)
+        {
+          mpfr_mul_si (v, v, -(2 * j + 1), MPFR_RNDN);
+          mpfr_div_ui (v, v, 2 * j, MPFR_RNDN);
+        }
+      mpfr_mul (v, v, x, MPFR_RNDN);
+    }
 
   inex_round = mpfr_round_near_x (res, v, (mpfr_uexp_t) (err - 2),
                                   0, rnd_mode);
 
-  MPFR_GROUP_CLEAR (small_x);
+  mpfr_clear (v);
 
   return inex_round;
 }
@@ -112,7 +89,6 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   /* these variables are used (and consequently initialized) only in the
      "Asymptotic expansion for small |x|" branch */
   mpfr_exp_t ex, l2n, rho, err;
-  int inex_round;
 
   /* the following variables are used (and consequently initialized) only
      for n >= 2, where x is not equal to -1, 0 or 1 */
@@ -120,7 +96,7 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   mpfr_t p1, p2, pn, first_term, second_term;
   mpfr_exp_t lost_bits;
   mpfr_exp_t b_i, log2_i_m1, g_i, h_i, q_i, a_i, a_n;
-  int x_is_zero;
+  int x_is_zero, is_x_tiny = 0;
 
   MPFR_SAVE_EXPO_DECL (expo);
   MPFR_GROUP_DECL (group);
@@ -209,23 +185,7 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 
           if (err >= (mpfr_exp_t) res_prec + MPFR_LEGENDRE_SMALL_X_GUARD)
             {
-              /* Compute in the extended exponent range so that the final
-                 overflow/underflow with respect to the caller's range is
-                 handled uniformly by mpfr_check_range. */
-              MPFR_SAVE_EXPO_MARK (expo);
-              inex_round = asymptotic_small_x (res, n, x, rnd_mode, err);
-
-              /* if asymptotic_small_x returns 0, then it cannot round.
-                 In that case, our asymptotic expansion failed, so we
-                 fall back to the usual Ziv loop. Otherwise, we return
-                 the correctly rounded result. */
-              if (inex_round)
-                {
-                  MPFR_SAVE_EXPO_FREE (expo);
-                  return mpfr_check_range (res, inex_round, rnd_mode);
-                }
-
-              MPFR_SAVE_EXPO_FREE (expo);
+              is_x_tiny = 1;
             }
         }
     }
@@ -246,6 +206,22 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
   MPFR_ZIV_INIT (loop, realprec);
   for (;;)
     {
+      if (is_x_tiny)
+        {
+          /* compute in the extended exponent range so that the final
+             overflow/underflow with respect to the caller's range is handled
+             uniformly by mpfr_check_range */
+          ternary_value = asymptotic_small_x (res, n, x, rnd_mode, err,
+                                              realprec);
+
+          /* if asymptotic_small_x returns 0, then it cannot round. In that
+             case, our asymptotic expansion failed, so we fall back to the usual
+             Ziv loop.  Otherwise, we skip the main iteration and we return
+             directly the result */
+          if (ternary_value)
+            goto clean;
+        }
+
       /* p1 = x, p2 = 1 */
       inex = mpfr_set (p1, x, MPFR_RNDN);     /* p1 is a is algorithms.tex */
       /* If x is 0, set exp_p1 arbitrarily to 0 (necessarily n is even).
@@ -355,6 +331,7 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 
   ternary_value = mpfr_set (res, p1, rnd_mode);
 
+ clean:
   MPFR_ZIV_FREE (loop);
   MPFR_GROUP_CLEAR (group);
   MPFR_SAVE_EXPO_FREE (expo);
@@ -363,3 +340,4 @@ mpfr_legendre (mpfr_ptr res, long n, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
      extended exponent range set by MPFR_SAVE_EXPO_MARK */
   return mpfr_check_range (res, ternary_value, rnd_mode);
 }
+
