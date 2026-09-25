@@ -437,7 +437,7 @@ test_overflow (void)
     {
       curr_case = cases + i;
 
-      RND_LOOP (rnd)
+      RND_LOOP_NO_RNDF (rnd)
         {
           mpfr_set_d (x, curr_case->x, MPFR_RNDN);
           mpfr_clear_flags ();
@@ -453,13 +453,9 @@ test_overflow (void)
               exit (1);
             }
 
-          /* We skip faithful rounding */
-          if (rnd == MPFR_RNDF)
-            continue;
-
           /* For rounding towards zero (RNDZ and RNDD for positive, or 
              RNDZ and RNDU for negative), the result is maxnum.
-             Otherwise +\-Inf (depending on the sign of x) */
+             Otherwise +/-Inf (depending on the sign of x) */
           is_towards_zero = (rnd == MPFR_RNDZ);
           if (curr_case->sign > 0)
             is_towards_zero |= (rnd == MPFR_RNDD);
