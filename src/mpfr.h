@@ -905,7 +905,7 @@ __MPFR_DECLSPEC int mpfr_unique_bytes (mpfr_srcptr, mpfr_bytes_t *);
 __MPFR_DECLSPEC void mpfr_bytes_free (mpfr_bytes_t *);
 
 /* Hash functions */
-__MPFR_DECLSPEC mpfr_digest_t mpfr_hash32 (mpfr_srcptr);
+__MPFR_DECLSPEC int mpfr_hash32 (mpfr_digest_t *, mpfr_srcptr);
 __MPFR_DECLSPEC int mpfr_hash32_update (mpfr_digest_ctx_t,
                                         const unsigned char *, size_t);
 __MPFR_DECLSPEC int mpfr_hash32_final (const mpfr_digest_ctx_t,

@@ -3848,6 +3848,30 @@ Free the buffer allocated by @code{mpfr_unique_bytes} and set
 Note: The ownership of @var{bytes} itself is kept by the user.
 @end deftypefun
 
+@deftypefun int mpfr_hash32 (mpfr_digest_t *@var{digest}, const mpfr_t @var{x})
+Store in @code{digest} a 32-bit hash digest of the
+unique bytes of the number @var{x}. The unique bytes are obtained by
+@code{mpfr_unique_bytes}. The digest produced by this function is equivalent
+to the one obtained by using the FNV-1a 32-bit hash functions provided
+by MPFR, as follows:
+@example
+mpfr_digest_ctx_t ctx;
+ctx = mpfr_digest_init (MPFR_HASH32_BASIS, sizeof (mpfr_digest_t),
+                        mpfr_hash32_update, mpfr_hash32_final);
+mpfr_digest_update_m (ctx, x);
+mpfr_digest_final (ctx, digest);
+mpfr_digest_ctx_clear (&ctx);
+@end example
+Return 0 if an error occurred while computing the digest.
+
+Note: This function maintains the consistency with
+@code{mpfr_cmp3}, meaning that if two numbers are considered equal by
+@code{mpfr_cmp3}, they should have the same hash digest. Notably,
++0.0 and -0.0 have the same digest.
+For more details on the way the hash digest is computed, see the document
+``The MPFR library: algorithms and proofs''.
+@end deftypefun
+
 @deftypefun mpfr_digest_ctx_t mpfr_digest_init (mpfr_digest_t @var{basis}, size_t @var{digest_size}, hash_update_fn_t @var{update_fn}, hash_final_fn_t @var{final_fn})
 Allocate and initialize a new digest context with initial hash state @var{basis}
 to compute a hash digest of size @var{digest_size} bytes, using the functions
@@ -3906,7 +3930,7 @@ This is the default function to update a 32-bit hash digest using
 the FNV-1a hash algorithm. It can be used as the @var{update_fn} argument
 of @code{mpfr_digest_init}. The function updates the hash state in
 @code{ctx->state} with the byte sequence in @var{bytes} of length
-@var{l} bytes.
+@code{l} bytes.
 Return 1 if successful, and 0 if an error occurred.
 @end deftypefun
 
@@ -3916,14 +3940,14 @@ using the FNV-1a hash algorithm. It can be used as the @var{final_fn} argument
 of @code{mpfr_digest_init}. The function stores the final hash digest in
 the buffer pointed to by @var{digest}, which must be already allocated
 and be large enough to hold a 32-bit digest.
-Return 1 if successful, and a 0 if an error occurred.
+Return 1 if successful, and 0 if an error occurred.
 @end deftypefun
 
 @deftypefun mpfr_digest_t mpfr_digest_ctx_get_hash (const mpfr_digest_ctx_t @var{ctx})
 Return the current hash state stored in the digest context @var{ctx}.
 
 Note: This function is intended for use in custom hash update and final functions.
-Do not use it as a substitute for @code{mopfr_digest_final} to get the final digest,
+Do not use it as a substitute for @code{mpfr_digest_final} to get the final digest,
 as the hash state returned by this function is not necessarily the final digest
 (for example, it may need to be further processed by a final function to produce
 the final digest).
@@ -3937,31 +3961,6 @@ Do not use it as a substitute for @code{mpfr_digest_init} to initialize the cont
 with a given hash state, as the context initialized by @code{mpfr_digest_init}
 may have some internal state that is not properly initialized if the
 hash state is set manually without using @code{mpfr_digest_init}.
-@end deftypefun
-
-@deftypefun mpfr_digest_t mpfr_hash32 (const mpfr_t @var{x})
-Return a @code{mpfr_digest_t} that represents the 32-bit hash digest of the
-unique bytes of the number @var{x}. The unique bytes are obtained by
-@code{mpfr_unique_bytes}. The digest produced by this function is equivalent
-to the one obtained by using the FNV-1a 32-bit hash functions provided
-by MPFR, as follows:
-@example
-mpfr_digest_ctx_t ctx;
-mpfr_digest_t digest;
-ctx = mpfr_digest_init (MPFR_HASH32_BASIS, sizeof (mpfr_digest_t),
-                        mpfr_hash32_update, mpfr_hash32_final);
-mpfr_digest_update_m (ctx, x);
-mpfr_digest_final (ctx, &digest);
-mpfr_digest_ctx_clear (&ctx);
-@end example
-Return 0 if an error occurred while computing the digest.
-
-Note: This function maintains the consistency with
-@code{mpfr_cmp3}, meaning that if two numbers are considered equal by
-@code{mpfr_cmp3}, they should have the same hash digest. Notably,
-+0.0 and -0.0 have the same digest.
-For more details on the way the hash digest is computed, see the document
-``The MPFR library: algorithms and proofs''.
 @end deftypefun
 
 @node Exception Related Functions, Memory Handling Functions, Miscellaneous Functions, MPFR Interface

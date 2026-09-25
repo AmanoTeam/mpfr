@@ -23,14 +23,14 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 #define FNV32_PRIME 0x01000193U
 
-/* To extract bytest from a limb we need to check for endianness */
+/* To extract bytes from a limb we need to check for endianness */
 #if defined (HAVE_LITTLE_ENDIAN)
 #define limb_byte_index(b) (sizeof (mp_limb_t) - 1 - (b))
 #elif defined (HAVE_BIG_ENDIAN)
 #define limb_byte_index(b) (b)
 #endif
 
-/* Those constants contains the three bytes for the 4 special numbers +/-0,
+/* Those constants contain the three bytes for the 4 special numbers +/-0,
    NAN, +Inf, -Inf, stored in little endian. The first byte represents the
    sign (0 for positive and 1 for negative), the second and the third bytes
    contain the 16-bit little endian exponent. Neither precision nor
@@ -42,7 +42,7 @@ static const unsigned char default_nan[]     = { 0x00, 0x02, 0x80 };
 static const unsigned char default_pos_inf[] = { 0x00, 0x03, 0x80 };
 static const unsigned char default_neg_inf[] = { 0x01, 0x03, 0x80 };
 
-/* Removing the leading zeros of a number guarantee that the encoding will
+/* Removing the leading zeros of a number guarantees that the encoding will
    be the same on different architectures with different sizes of the
    numbers */
 static size_t
@@ -58,6 +58,7 @@ count_relevant_bytes (void *x, size_t size)
 #endif
 }
 
+/* copy in {bytes,n} the relevant bytes from x, and return the length n */
 static size_t
 le_relevant_bytes (unsigned char *bytes, size_t size, void *x)
 {
@@ -73,12 +74,14 @@ le_relevant_bytes (unsigned char *bytes, size_t size, void *x)
   return relevant_size;
 }
 
+/* return the number of bytes occupied by 'bits' bits, i.e., ceil(bits/8) */
 static size_t
 bytes_for (mpfr_prec_t bits)
 {
   return (bits + 7) / 8;
 }
 
+/* return the number of bytes used by x */
 static size_t
 get_bytes_size (mpfr_srcptr x)
 {
@@ -93,8 +96,7 @@ fnv32 (digest32_t hash, const unsigned char *bytes, size_t bytes_len)
 {
   size_t i;
 
-  if (bytes == NULL)
-    goto _ret;
+  /* if bytes = NULL, we should have bytes_len = 0 */
 
   for (i = 0; i < bytes_len; i++)
     {
@@ -102,7 +104,6 @@ fnv32 (digest32_t hash, const unsigned char *bytes, size_t bytes_len)
       hash *= FNV32_PRIME;
     }
 
-_ret:
   return hash;
 }
 
@@ -118,14 +119,16 @@ get_singular_number (mpfr_srcptr x)
   if (MPFR_IS_POS (x))
     return default_pos_inf;
 
+  MPFR_ASSERTD (MPFR_IS_NEG (x));
   return default_neg_inf;
 }
 
+/* put in bytes the unique bytes of a non-singular number */
 static int
 non_singular_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
 {
   int i, j;
-  size_t written_bytes = 0, limb_bytes = 0, min_prec_byte_size = 0,
+  size_t written_bytes, limb_bytes = 0, min_prec_byte_size = 0,
          limb_size = 0, bytes_size = 0;
   unsigned char *mpfr_bytes = NULL, *l_bytes = NULL;
   unsigned char sign;
@@ -139,8 +142,10 @@ non_singular_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
   /* We only encode the minimum number of bits required to
      represent the number */
   prec = mpfr_min_prec (x);
-  /* The minimum number of bytes required to represent prec+1 bits */
-  min_prec_byte_size = bytes_for (prec + 1);
+  /* since x is non-singular, we should have prec >= 1 */
+  MPFR_ASSERTD (prec > 0);
+  /* The minimum number of bytes required to represent prec bits */
+  min_prec_byte_size = bytes_for (prec);
   limb_size = MPFR_LIMB_SIZE (x);
   limbs = MPFR_MANT (x);
 
@@ -149,15 +154,14 @@ non_singular_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
        min_prec_byte_size <= bytes_size */
   bytes_size = get_bytes_size (x);
   mpfr_bytes = (unsigned char *) malloc (bytes_size);
-  if (!mpfr_bytes)
-    return 0;
+  /* again, since x is non-singular, we have mpfr_bytes > 0 */
+  MPFR_ASSERTD (mpfr_bytes > 0);
 
   /* We encode (sequentially):
        - the sign (written_bytes = 1);
        - the precision (written_bytes <= sizeof (mpfr_prec_t));
        - the exponent (written_bytes <= sizeof (mpfr_exp_t)) */
-  written_bytes += le_relevant_bytes (mpfr_bytes + written_bytes,
-                                      1, &sign);
+  written_bytes = le_relevant_bytes (mpfr_bytes, 1, &sign);
   written_bytes += le_relevant_bytes (mpfr_bytes + written_bytes,
                                       sizeof (mpfr_prec_t), &prec);
   written_bytes += le_relevant_bytes (mpfr_bytes + written_bytes,
@@ -166,8 +170,8 @@ non_singular_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
   /* To encode the significand, we need to encode all the limbs in a reverse
      order. If the precision is not a multiple of the size of `mp_limb_t`,
      this algorithm should get rid of all the leading zeros. It should copy
-     limbs' bytes from the last to the most significant. */
-  for (i = limb_size - 1; i >= 0 && limb_bytes <= min_prec_byte_size; --i)
+     limbs' bytes from the least to the most significant. */
+  for (i = limb_size - 1; i >= 0 && limb_bytes < min_prec_byte_size; --i)
     {
       l_bytes = (unsigned char *) (limbs + i);
 
@@ -183,6 +187,7 @@ non_singular_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
   return 1;
 }
 
+/* put in bytes the unique bytes of x */
 int
 mpfr_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
 {
@@ -209,6 +214,7 @@ mpfr_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
   return non_singular_unique_bytes (x, bytes);
 }
 
+/* free the bytes array */
 void
 mpfr_bytes_free (mpfr_bytes_t *bytes)
 {
@@ -217,8 +223,9 @@ mpfr_bytes_free (mpfr_bytes_t *bytes)
   bytes->len = 0;
 }
 
-mpfr_digest_t
-mpfr_hash32 (mpfr_srcptr x)
+/* main hash function */
+int
+mpfr_hash32 (mpfr_digest_t *digest, mpfr_srcptr x)
 {
   mpfr_bytes_t bytes = { 0 };
   mpfr_digest_t hash = 0;
@@ -226,10 +233,10 @@ mpfr_hash32 (mpfr_srcptr x)
   if (!mpfr_unique_bytes (x, &bytes))
     return 0;
 
-  hash = fnv32 (MPFR_HASH32_BASIS, bytes.content, bytes.len);
+  *digest = fnv32 (MPFR_HASH32_BASIS, bytes.content, bytes.len);
   mpfr_bytes_free (&bytes);
 
-  return hash;
+  return 1;
 }
 
 int

@@ -49,8 +49,8 @@ test_zero (void)
   mpfr_init2 (nZero, 200);
   mpfr_set_zero (nZero, -1);
 
-  pZero_hash = mpfr_hash32 (pZero);
-  nZero_hash = mpfr_hash32 (nZero);
+  mpfr_hash32 (&pZero_hash, pZero);
+  mpfr_hash32 (&nZero_hash, nZero);
 
   /* Zeros with different signs should be equal */
   if (pZero_hash != nZero_hash)
@@ -75,11 +75,15 @@ test_zero (void)
 
   for (i = 0, j = 1; j < N_SAMPLES; i++, j++)
     {
-      if (mpfr_hash32 (pos[i]) != mpfr_hash32 (pos[j])
-        && mpfr_hash32 (neg[i]) != mpfr_hash32 (neg[j]))
+      mpfr_digest_t pi, pj, ni, nj;
+      mpfr_hash32 (&pi, pos[i]);
+      mpfr_hash32 (&pj, pos[j]);
+      mpfr_hash32 (&ni, neg[i]);
+      mpfr_hash32 (&nj, neg[j]);
+      if (pi != pj || pj != ni || ni != nj)
       {
         printf ("All zeros should be hashed the same, regardless their "
-                "precision. i: %d j: %d\n", i, j);
+                "sign and precision. i: %d j: %d\n", i, j);
         exit (1);
       }
     }
@@ -102,8 +106,8 @@ test_inf (void)
   mpfr_init2 (nInf, 200);
   mpfr_set_inf (nInf, -1);
 
-  pInf_hash = mpfr_hash32 (pInf);
-  nInf_hash = mpfr_hash32 (nInf);
+  mpfr_hash32 (&pInf_hash, pInf);
+  mpfr_hash32 (&nInf_hash, nInf);
 
   /* H(+Inf) and H(-Inf) should not be equal */
   if (pInf_hash == nInf_hash)
@@ -128,13 +132,18 @@ test_inf (void)
 
   for (i = 0, j = 1; j < N_SAMPLES; i++, j++)
   {
-    if (mpfr_hash32 (pos[i]) != mpfr_hash32 (pos[j]))
+    mpfr_digest_t pi, pj, ni, nj;
+    mpfr_hash32 (&pi, pos[i]);
+    mpfr_hash32 (&pj, pos[j]);
+    if (pi != pj)
       {
         printf ("All +Inf should be hashed the same, regardless their "
                 "precision. i: %d j: %d\n", i, j);
         exit (1);
       }
-    if (mpfr_hash32 (neg[i]) != mpfr_hash32 (neg[j]))
+    mpfr_hash32 (&ni, neg[i]);
+    mpfr_hash32 (&nj, neg[j]);
+    if (ni != nj)
       {
         printf ("All -Inf should be hashed the same, regardless their "
                 "precision. i: %d j:%d\n", i, j);
@@ -162,8 +171,8 @@ test_nan (void)
 
   MPFR_CHANGE_SIGN (unconventional_nan);
 
-  nan_hash = mpfr_hash32 (nan);
-  unconventional_nan_hash = mpfr_hash32 (unconventional_nan);
+  mpfr_hash32 (&nan_hash, nan);
+  mpfr_hash32 (&unconventional_nan_hash, unconventional_nan);
 
   /* mpfr_hash32 should ignore the sign of NAN */
   if (nan_hash != unconventional_nan_hash)
@@ -186,7 +195,10 @@ test_nan (void)
 
   for (i = 0, j = 1; j < N_SAMPLES; i++, j++)
     {
-      if (mpfr_hash32 (pos[i]) != mpfr_hash32 (pos[j]))
+      mpfr_digest_t pi, pj;
+      mpfr_hash32 (&pi, pos[i]);
+      mpfr_hash32 (&pj, pos[j]);
+      if (pi != pj)
        {
           printf ("All NANs should be hashed the same, regardless their "
                   "precision. i: %d j: %d\n", i, j);
@@ -215,8 +227,8 @@ test_precision (void)
   mpfr_init2 (high_prec, 20);
   mpfr_set_d (high_prec, 1.0, MPFR_RNDD);
 
-  hash_low_prec = mpfr_hash32 (low_prec);
-  hash_high_prec = mpfr_hash32 (high_prec);
+  mpfr_hash32 (&hash_low_prec, low_prec);
+  mpfr_hash32 (&hash_high_prec, high_prec);
 
   if (hash_low_prec != hash_high_prec)
     {
@@ -232,8 +244,8 @@ test_precision (void)
   mpfr_init2 (high_prec, 50);
   mpfr_set_d (high_prec, 1.0, MPFR_RNDD);
 
-  hash_low_prec = mpfr_hash32 (low_prec);
-  hash_high_prec = mpfr_hash32 (high_prec);
+  mpfr_hash32 (&hash_low_prec, low_prec);
+  mpfr_hash32 (&hash_high_prec, high_prec);
 
   if (hash_low_prec != hash_high_prec)
     {
@@ -249,8 +261,8 @@ test_precision (void)
   mpfr_init2 (high_prec, 80);
   mpfr_set_d (high_prec, 1.0, MPFR_RNDD);
 
-  hash_low_prec = mpfr_hash32 (low_prec);
-  hash_high_prec = mpfr_hash32 (high_prec);
+  mpfr_hash32 (&hash_low_prec, low_prec);
+  mpfr_hash32 (&hash_high_prec, high_prec);
 
   if (hash_low_prec != hash_high_prec)
     {
@@ -266,8 +278,8 @@ test_precision (void)
   mpfr_init2 (high_prec, 50);
   mpfr_set_d (high_prec, val, MPFR_RNDD);
 
-  hash_low_prec = mpfr_hash32 (low_prec);
-  hash_high_prec = mpfr_hash32 (high_prec);
+  mpfr_hash32 (&hash_low_prec, low_prec);
+  mpfr_hash32 (&hash_high_prec, high_prec);
 
   if (hash_low_prec == hash_high_prec)
     {
@@ -292,7 +304,7 @@ test_constants (void)
 
   mpfr_init2 (pi, p);
   mpfr_const_pi (pi, MPFR_RNDD);
-  h_pi = mpfr_hash32 (pi);
+  mpfr_hash32 (&h_pi, pi);
   if (h_pi != H_PI)
     {
       printf ("pi digest should be %lu; got %lu\n",
@@ -302,7 +314,7 @@ test_constants (void)
 
   mpfr_init2 (log2, p);
   mpfr_const_log2 (log2, MPFR_RNDD);
-  h_log2 = mpfr_hash32 (log2);
+  mpfr_hash32 (&h_log2, log2);
   if (h_log2 != H_LOG2)
     {
       printf ("log2 digest should be %lu; got %lu\n",
@@ -312,7 +324,7 @@ test_constants (void)
 
   mpfr_init2 (euler, p);
   mpfr_const_euler (euler, MPFR_RNDD);
-  h_euler = mpfr_hash32 (euler);
+  mpfr_hash32 (&h_euler, euler);
   if (h_euler != H_EULER)
     {
       printf ("euler digest should be %lu; got %lu\n",
@@ -322,7 +334,7 @@ test_constants (void)
 
   mpfr_init2 (catalan, p);
   mpfr_const_catalan (catalan, MPFR_RNDD);
-  h_catalan = mpfr_hash32 (catalan);
+  mpfr_hash32 (&h_catalan, catalan);
   if (h_catalan != H_CATALAN)
     {
       printf ("catalan digest should be %lu; got %lu\n",
@@ -410,7 +422,9 @@ test_pi_incremental_hashing (void)
       exit (1);
     }
 
-  if (h_pi != mpfr_hash32 (pi))
+  mpfr_digest_t h;
+  mpfr_hash32 (&h, pi);
+  if (h != H_PI)
     {
       printf ("pi digest should be %lu; got %lu\n",
               H_PI, h_pi);
