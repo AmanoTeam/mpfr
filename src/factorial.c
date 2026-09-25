@@ -118,67 +118,65 @@ magnitude (unsigned long n)
 }
 
 static int
-factorial (mpfr_t t, unsigned long int x)
+factorial (mpfr_t t, unsigned long int n)
 {
   int inexact;
-  unsigned long int i;
+  unsigned long int i, imax;
+  unsigned int b;
 
-  /* This is assumed to avoid an integer overflow in (unsigned long) 1 << b.
-     Overflow checking as done in mpfr_fac_ui may avoid a failure, but this
-     is not clear. Anyway, the code would be too slow for huge values of x. */
-  MPFR_ASSERTN (x < ULONG_MAX - (ULONG_MAX >> 1));
+  i = numberof_const (mpfr_fac_group) - 1;
+  MPFR_ASSERTD (n > i);  /* n <= i handled in mpfr_fac_ui() */
+  inexact = mpfr_set_ui (t, mpfr_fac_group[i], MPFR_RNDZ);
 
-  i = numberof_const (mpfr_fac_group);
-  MPFR_ASSERTD (x >= i);  /* x < i handled in mpfr_fac_ui() */
-  inexact = mpfr_set_ui (t, mpfr_fac_group[i-1], MPFR_RNDZ);
+  b = MPFR_INT_CEIL_LOG2 (i + 1);
+  imax = ((unsigned long) 1 << b) - 1;
 
-  /* multiply t by i * (i+1) * ... * x. Consecutive integers are grouped
-     and multiplied together as native unsigned long integers, so each
-     group needs a single mpfr_mul_ui. The maximum number of integers
-     of b bits, i.e. in [2^(b-1), 2^b - 1], whose product is guaranteed
-     to fit in an unsigned long, is floor(ULSIZE / b), since the product
-     of g such integers is less than 2^(g*b) <= 2^ULSIZE */
-  while (i <= x)
+  /* Multiply t by (i+1) * (i+2) * ... * n. */
+  for (;;)
     {
-      unsigned long cnt, imax, p;
-      unsigned int b;
+      unsigned long cnt;
 
-      b = MPFR_INT_CEIL_LOG2 (i + 1);
-
-      MPFR_ASSERTD (b >= 1 && b < ULSIZE);
-
-      /* maximum number of b-bit integers whose product fits in an unsigned
-         long; this is 1 once b > ULSIZE / 2, i.e. no grouping is possible
-         and each integer is multiplied individually */
+      /* Maximum number of b-bit integers whose product fits in an
+         unsigned long; this is 1 once b > ULSIZE / 2, i.e. no grouping
+         is possible and each integer is multiplied individually. */
       cnt = ULSIZE / b;
 
-      /* keep all grouped integers on b bits, i.e. do not
-         cross the 2^b boundary, so that the product of cnt
-         of them is guaranteed to fit in an unsigned long. */
-      imax = MIN (i + cnt, (unsigned long) 1 << b) - 1;
-      if (imax > x)
-        imax = x;
+      if (imax > n)
+        imax = n;
 
-      /* p = i * (i+1) * ... * imax, on native integers */
-      p = i;
-      while (++i <= imax)
-        p *= i;
+      while (i < imax)
+        {
+          unsigned long imax2, p;
 
-      inexact |= mpfr_mul_ui (t, t, p, MPFR_RNDZ);
+          imax2 = MIN (i + cnt, imax);
 
-      /* an overflow of an intermediate product is a real overflow: it
-         occurs in the maximal exponent range (set by
-         MPFR_SAVE_EXPO_MARK) and does not depend on the working
-         precision Nt, so we can stop as soon as we detect one */
-      if (MPFR_UNLIKELY (MPFR_BLOCK_EXCEP))
-        break;
+          /* p = (i+1) * (i+2) * ... * imax2, on native integers */
+          p = ++i;
+          while (i < imax2)
+            p *= ++i;
+
+          inexact |= mpfr_mul_ui (t, t, p, MPFR_RNDZ);
+
+          /* an overflow of an intermediate product is a real overflow: it
+             occurs in the maximal exponent range (set by
+             MPFR_SAVE_EXPO_MARK) and does not depend on the working
+             precision Nt, so we can stop as soon as we detect one */
+          if (MPFR_UNLIKELY (MPFR_BLOCK_EXCEP))
+            return inexact;
+        }
+
+      if (i == n)
+        return inexact;
+
+      b++;
+      imax = (imax << 1) + 1;
     }
 
   return inexact;
 }
 
 int
-mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
+mpfr_fac_ui (mpfr_ptr y, unsigned long int n, mpfr_rnd_t rnd_mode)
 {
   int inexact;
   mpfr_exp_t emax;
@@ -191,31 +189,30 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
 
   emax = mpfr_get_emax ();
 
-  /* for x such that x! fits in an unsigned long, we directly set y from
-     the hardcoded value, avoiding the costly loop of mpfr_mul_ui calls */
-  if (MPFR_UNLIKELY (x < numberof_const (mpfr_fac_group)))
-    return mpfr_set_ui (y, mpfr_fac_group[x], rnd_mode);
+  /* For n such that n! fits in an unsigned long, we directly set y from
+     the precomputed value, avoiding the costly loop of mpfr_mul_ui calls. */
+  if (MPFR_UNLIKELY (n < numberof_const (mpfr_fac_group)))
+    return mpfr_set_ui (y, mpfr_fac_group[n], rnd_mode);
 
-  /* for very large x, x! overflows for any valid emax (including the
+  /* For very large n, n! overflows for any valid emax (including the
      maximum MPFR_EMAX_MAX) */
-  if (MPFR_FAC_OVERFLOW_N > 0 && MPFR_UNLIKELY (x >= MPFR_FAC_OVERFLOW_N))
+  if (MPFR_FAC_OVERFLOW_N > 0 && MPFR_UNLIKELY (n >= MPFR_FAC_OVERFLOW_N))
     return mpfr_overflow (y, rnd_mode, 1);
 
   MPFR_SAVE_EXPO_MARK (expo);
 
-  /* once x >= MPFR_FAC_NO_GROUPING_N, every remaining integer requires its
-     own mpfr_mul_ui call, so it is worth checking for overflow using
+  /* Once n >= MPFR_FAC_NO_GROUPING_N, every remaining integer requires
+     its own multiplication, so it is worth checking for overflow using
        log2(n!) = floor(lgamma(n+1)/log(2)) <= lgamma(n+1)/log(2).
-     If log2(n!) cannot fit in emax, it's going to be an overflow */
-  if (x >= MPFR_FAC_NO_GROUPING_N
-      && magnitude (x) > emax)
+     If log2(n!) > emax, it's going to be an overflow. */
+  if (n >= MPFR_FAC_NO_GROUPING_N && magnitude (n) > emax)
     {
       MPFR_SAVE_EXPO_FREE (expo);
       return mpfr_overflow (y, rnd_mode, 1);
     }
 
   Ny = MPFR_PREC (y);
-  Nt = Ny + 2 * MPFR_INT_CEIL_LOG2 (x) + 7;
+  Nt = Ny + 2 * MPFR_INT_CEIL_LOG2 (n) + 7;
 
   mpfr_init2 (t, Nt);
 
@@ -224,7 +221,7 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
     {
       MPFR_BLOCK_DECL (flags);
 
-      MPFR_BLOCK (flags, inexact = factorial (t, x));
+      MPFR_BLOCK (flags, inexact = factorial (t, n));
 
       /* Since we rounded toward zero (MPFR_RNDZ), an intermediate overflow
          necessarily is a real overflow. And once the working precision is
@@ -239,14 +236,14 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
 
       /* We have an error bound expressed with a factor of the typical
          form ku/(1-ku), where k is the number of inexact products and
-         u = 2^(1-p). And thanks to a "MPFR_INT_CEIL_LOG2 (x)" term in
+         u = 2^(1-p). And thanks to a "MPFR_INT_CEIL_LOG2 (n)" term in
          the initial working precision (and even more), p > 2+log2(k),
          so that ku < 1/2. So the factor is less than 2ku, and the number
-         of lost bits is less than log2(2k) < 1 + MPFR_INT_CEIL_LOG2 (x).
+         of lost bits is less than log2(2k) < 1 + MPFR_INT_CEIL_LOG2 (n).
          Note: One could do better, but this should not be noticeable in
          practice, because it is expected that even with this bound, the
          MPFR_CAN_ROUND will succeed in general. */
-      err = Nt - 1 - MPFR_INT_CEIL_LOG2 (x);
+      err = Nt - 1 - MPFR_INT_CEIL_LOG2 (n);
 
       if (MPFR_LIKELY (!inexact || MPFR_CAN_ROUND (t, err, Ny, rnd_mode)))
         break;
