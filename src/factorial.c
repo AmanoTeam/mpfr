@@ -118,22 +118,22 @@ magnitude (unsigned long n)
 }
 
 static int
-factorial (mpfr_t t, unsigned long int x, mpfr_rnd_t rnd)
+factorial (mpfr_t t, unsigned long int x)
 {
-  int inexact = 0;
+  int inexact;
   unsigned long int i;
 
-  /* TODO: start at the last value of mpfr_fac_group (in particular,
-     the grouping is inefficient for the smallest values of i as it
-     stops at powers of 2). */
+  i = numberof_const (mpfr_fac_group);
+  MPFR_ASSERTD (x >= i);  /* x < i handled in mpfr_fac_ui() */
+  inexact = mpfr_set_ui (t, mpfr_fac_group[i-1], MPFR_RNDZ);
 
-  /* multiply t by 2 * 3 * ... * x. Consecutive integers are grouped
+  /* multiply t by i * (i+1) * ... * x. Consecutive integers are grouped
      and multiplied together as native unsigned long integers, so each
      group needs a single mpfr_mul_ui. The maximum number of integers
      of b bits, i.e. in [2^(b-1), 2^b - 1], whose product is guaranteed
      to fit in an unsigned long, is floor(ULSIZE / b), since the product
      of g such integers is less than 2^(g*b) <= 2^ULSIZE */
-  for (i = 2; i <= x ; )
+  while (i <= x)
     {
       unsigned long cnt, imax, p;
       unsigned int b;
@@ -159,7 +159,7 @@ factorial (mpfr_t t, unsigned long int x, mpfr_rnd_t rnd)
       while (++i <= imax)
         p *= i;
 
-      inexact |= mpfr_mul_ui (t, t, p, rnd);
+      inexact |= mpfr_mul_ui (t, t, p, MPFR_RNDZ);
 
       /* an overflow of an intermediate product is a real overflow: it
          occurs in the maximal exponent range (set by
@@ -219,11 +219,7 @@ mpfr_fac_ui (mpfr_ptr y, unsigned long int x, mpfr_rnd_t rnd_mode)
     {
       MPFR_BLOCK_DECL (flags);
 
-      /* t = 1 is exact whatever the precision, so that the ternary value
-         of the whole product is the one returned by factorial() */
-      mpfr_set_ui (t, 1, MPFR_RNDZ);
-
-      MPFR_BLOCK (flags, inexact = factorial (t, x, MPFR_RNDZ));
+      MPFR_BLOCK (flags, inexact = factorial (t, x));
 
       /* Since we rounded toward zero (MPFR_RNDZ), an intermediate overflow
          necessarily is a real overflow. And once the working precision is
