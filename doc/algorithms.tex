@@ -5008,6 +5008,7 @@ holds whenever $ku \le \tfrac{1}{2}$, i.e. $q \ge 1 + \lceil\log_2 k\rceil$,
 which is satisfied by our choice of working precision.
 
 \subsection{Hermite polynomials}
+\label{subsec:hermite-polynomials}
 
 Hermite polynomials $P_n(x)$, with $n \geq 0$, are a sequence of orthogonal
 polynomials defined in the domain $(-\infty,\infty)$. These have a special
@@ -5489,6 +5490,63 @@ in the case $x \ge 0$, using the fact that $w = W + \delta$,
 This can be used as stopping criteria for Halley's iteration: as soon as
 the bound for $|\delta|$ is smaller than $\ulp(w)$ (assuming $w$ has some
 guard bits), we can stop the iteration and perform the rounding test.
+
+\subsubsection{Handling small inputs}
+
+When $|x|$ is very small, $W_0(x)$ can be well approximated by the leading
+term of its Taylor expansion around $x=0$, avoiding the Halley iteration.
+The expansion is
+\begin{equation} \label{eq:w0-taylor}
+  W_0(x) = \sum_{k=1}^{\infty} \dfrac{(-k)^{k-1}}{k!}\;x^k,
+\end{equation}
+i.e., $W_0(x) = x - x^2 + \frac{3}{2}x^3 - \frac{8}{3}x^4 + \cdots$, which
+converges for $|x| < 1/e$. Starting from the Taylor expansion in Equation
+\ref{eq:w0-taylor}, we bound the ratio of two consecutive coefficients of
+$|c_k/c_{k+1}|$ as
+\[
+  \left|\frac{c_{k+1}}{c_k}\right|
+  = \frac{(k+1)^k}{(k+1)!} \cdot \frac{k!}{k^{k-1}}
+  = \frac{(k+1)^{k-1}}{k^{k-1}}
+  = \left(1 + \frac{1}{k}\right)^{k-1}
+  < \left(1 + \frac{1}{k}\right)^{k}
+  < e,
+\]
+with $k > 0$.
+
+Since $|c_{k+1}/c_k| < e$, each term $c_{k+1}$ is at most a factor $e|x|$ of the
+previous $c_k$. As usual, let $t := e|x|$, then the tail is bounded by a
+geometric series:
+\[
+  \left|\sum_{k \ge 2} c_k x^k\right| \le |x|\,\sum_{j \ge 1} t^j
+  = |x|\,\frac{t}{1-t}
+\]
+for $t < 1$.
+
+\paragraph{\textbf{Bounding $t$ in the implementation.}}
+Let $\Exp(x) = \texttt{MPFR\_GET\_EXP}(x)$, which satisfies $2^{\Exp(x)-1} \le
+|x| < 2^{\Exp(x)}$. Since $e < 2^2$, $t = e|x| < 2^{\Exp(x) + 2} = 2^\rho$,
+where $\rho = \Exp(x) + 2$.
+
+The condition $\rho \le -2$ guarantees
+$t < 2^\rho \le 2^{-2} = \tfrac{1}{4}$ (in particular $|x| < 1/e$, so the
+series converges).
+The relative error from keeping only the leading term is bounded by
+$t/(1-t)$. Since $t < \tfrac{1}{4} < \tfrac{1}{2}$, we have
+$1 - t > \tfrac{1}{2}$, and therefore
+\[
+  \frac{t}{1-t} < 2t < 2^{\rho+1}.
+\]
+Hence $|W_0(x) - x| < |x| \cdot 2^{\rho+1} < 2^{\Exp(x) - \mathtt{err}}$ with
+$\mathtt{err} = -\rho - 1 = -\Exp(x) - 3$, which is the form of error bound
+expected by \texttt{mpfr\_round\_near\_x}.
+
+If $p = \texttt{MPFR\_PREC}(\mathrm{res})$, we try this shortcut only when
+$-\rho - 1 \ge p + 64$, i.e., $\Exp(x) \le -p - 67$.
+
+This implementation of the error bounds for small inputs is similar to the one
+presented for orthogonal polynomials (see Sections
+\ref{subsec:legendre-polynomials} and \ref{subsec:hermite-polynomials}
+above). As in these cases, the extra $64$ guard bits are used as an heuristic.
 
 \subsection{Summary}
 
