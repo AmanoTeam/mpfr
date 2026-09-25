@@ -1526,6 +1526,11 @@ More on exponent handling:
 
 * If a mpfr_exp_t needs to be converted from or to a MPFR number, the
   mpfr_set_exp_t or mpfr_get_exp_t macro should be used.
+  Warning! mpfr_get_exp_t returns a value in the mpfr_eexp_t type. The
+  reason is that it corresponds to mpfr_get_si or mpfr_get_sj, as there
+  isn't a function to convert a MPFR number to int (_MPFR_EXP_FORMAT = 2)
+  or short (_MPFR_EXP_FORMAT = 1). But this may change in the future, if
+  a return value in the mpfr_exp_t type would be more practical.
 
 * If a mpfr_exp_t needs to be converted into a character string with a
   formatted output function (fprintf, printf, sprintf), the mpfr_eexp_t
