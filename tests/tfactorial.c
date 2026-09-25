@@ -1,4 +1,4 @@
-/* Test file for mpfr_factorial.
+/* Test file for mpfr_fac_ui.
 
 Copyright 2001-2026 Free Software Foundation, Inc.
 Contributed by the Pascaline and Caramba projects, INRIA.
