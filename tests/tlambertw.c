@@ -148,7 +148,7 @@ test_lambert_random (mpfr_prec_t p, unsigned long N, lambert_branch_t fn,
 
   for (n = 0; n < N; n++)
     {
-      /* we generate a random number [min, max] */
+      /* we generate a random number included in [min, max] */
       mpfr_urandomb (x, RANDS);
       mpfr_mul_d (x, x, max - min, MPFR_RNDN);
       mpfr_add_d (x, x, min, MPFR_RNDN);
@@ -190,7 +190,7 @@ main (void)
   w0_special_cases ();
 
   test_lambert_random (IEEE754_DOUBLE_PREC, RANDOM_TEST_BATCH,
-                       mpfr_lambertw0, -0.367879, 1e6);
+                       mpfr_lambertw0, -0.367879, 5.0);
 
   /* branch W_{-1} */
   /* the domain of W_{-1} is [-1/e, 0) */

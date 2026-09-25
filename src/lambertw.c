@@ -137,27 +137,6 @@ eval_poly (mpfr_ptr res, const double *coeffs, size_t n_coeffs, mpfr_srcptr x,
 #define EVAL_POLY_RANGE(res,k,x,rnd) \
   eval_poly (res, w0_poly_coeffs_range[k], W0_POLY_DEGREE + 1, x, rnd)
 
-/* the correctly rounded implementation of the constant 1/e, where e is
-   Euler's number, i.e. exp(1) */
-static int
-mpfr_const_inve (mpfr_ptr res)
-{
-  int ternary;
-  mpfr_t inve;
-  mpfr_prec_t realprec;
-
-  realprec = MPFR_PREC (res) + 1;
-
-  mpfr_init2 (inve, realprec);
-  mpfr_exp (inve, __gmpfr_mone, MPFR_RNDZ);
-
-  ternary = mpfr_set (res, inve, MPFR_RNDZ);
-
-  mpfr_clear (inve);
-
-  return ternary;
-}
-
 static int
 early_exit_on_boundary (mpfr_ptr res, int cmp_boundary, mpfr_rnd_t rnd_mode)
 {
@@ -204,11 +183,11 @@ initial_guess_w0 (mpfr_ptr res, mpfr_srcptr x, mpfr_srcptr inve)
 
   if (is_large)
     {
-      /* TODO: handle large x using the expansion:
-         W_0(x) \approx L_1 - L_2 + L_2/L_1 with
-           L_1 = log x;
-           L_2 = log L_1.
-         for now we return 11.442562431228513, that is W0(1066510.2) */
+      /* TODO: handle large x using the usual expansion?
+           W_0(x) \approx L_1 - L_2 + L_2/L_1 with
+             L_1 = log x;
+             L_2 = log L_1.
+         For now we return 11.442562431228513, that is W0(1066510.2) */
       mpfr_set_d(res, 11.442562431228513, MPFR_RNDN);
       return;
     }
@@ -261,9 +240,9 @@ mpfr_lambertwm1 (mpfr_ptr res, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       MPFR_RET_NAN;
     }
 
-  /* we need -1/e correctly rounded to MPFR_PREC (x) */
+  /* we compute -1/e with precision MPFR_PREC (x) rounded towards zero */
   mpfr_init2 (inve, MPFR_PREC (x));
-  mpfr_const_inve (inve);
+  mpfr_exp (inve, __gmpfr_mone, MPFR_RNDZ);
   MPFR_SET_NEG (inve);
   cmp_boundary = mpfr_cmp (x, inve);
   mpfr_clear (inve);
@@ -307,10 +286,9 @@ mpfr_lambertw0 (mpfr_ptr res, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
       MPFR_RET (0);
     }
 
-  /* we need to compute -1/e with precision MPFR_PREC (x) rounded
-     towards zero */
+  /* we compute -1/e with precision MPFR_PREC (x) rounded towards zero */
   mpfr_init2 (inve, MPFR_PREC (x));
-  mpfr_const_inve (inve);
+  mpfr_exp (inve, __gmpfr_mone, MPFR_RNDZ);
   MPFR_SET_NEG (inve);
   cmp_boundary = mpfr_cmp (x, inve);
 
@@ -328,6 +306,7 @@ mpfr_lambertw0 (mpfr_ptr res, mpfr_srcptr x, mpfr_rnd_t rnd_mode)
 
   mpfr_clear (inve);
 
+  /* Halley's refinement iteration */
   for (;;)
     {
       mpfr_exp_t dw_exp, d;
