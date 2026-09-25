@@ -99,9 +99,7 @@ test_int (void)
                           n, (unsigned long) p, mpfr_print_rnd_mode (rnd));
                   exit (1);
                 }
-              if ((inex1 < 0  && inex2 >= 0) ||
-                  (inex1 == 0 && inex2 != 0) ||
-                  (inex1 > 0  && inex2 <= 0))
+              if (!SAME_SIGN (inex1, inex2))
                 {
                   printf ("Wrong inexact flag for n=%lu prec=%lu rnd=%s\n",
                           n, (unsigned long) p, mpfr_print_rnd_mode (rnd));
