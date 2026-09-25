@@ -21,6 +21,8 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-test.h"
 
+#define RANDOM_TEST_BATCH 1500
+
 #define INVE "0.367879441171442321595523770161"
 
 static void
@@ -129,6 +131,54 @@ wm1_special_cases (void)
   mpfr_clear (res);
 }
 
+typedef int (*lambert_branch_t) (mpfr_ptr, mpfr_srcptr, mpfr_rnd_t);
+
+static void
+test_lambert_random (mpfr_prec_t p, unsigned long N, lambert_branch_t fn,
+                     double min, double max)
+{
+  mpfr_t x, y, z, t;
+  unsigned long n;
+  int rnd;
+
+  mpfr_init2 (x, p);
+  mpfr_init2 (y, p);
+  mpfr_init2 (z, p + 20);
+  mpfr_init2 (t, p);
+
+  for (n = 0; n < N; n++)
+    {
+      /* we generate a random number [min, max] */
+      mpfr_urandomb (x, RANDS);
+      mpfr_mul_d (x, x, max - min, MPFR_RNDN);
+      mpfr_add_d (x, x, min, MPFR_RNDN);
+
+      RND_LOOP_NO_RNDF (rnd)
+        {
+          fn (y, x, (mpfr_rnd_t) rnd);
+          fn (z, x, MPFR_RNDN);
+          if (mpfr_can_round (z, p + 20, MPFR_RNDN, (mpfr_rnd_t) rnd, p))
+            {
+              mpfr_set (t, z, (mpfr_rnd_t) rnd);
+              if (mpfr_cmp (y, t))
+                {
+                  printf ("Error in test_lambert_random [%f,%f] for x=",
+                          min, max);
+                  mpfr_out_str (stdout, 10, 0, x, MPFR_RNDN);
+                  printf (" rnd=%s\n", mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
+                  DUMP_NUMBERS (t, y);
+                  exit (1);
+                }
+            }
+        }
+    }
+
+  mpfr_clear (x);
+  mpfr_clear (y);
+  mpfr_clear (z);
+  mpfr_clear (t);
+}
+
 int
 main (void)
 {
@@ -138,6 +188,9 @@ main (void)
   /* the domain of W_0 is [-1/e, +Inf) */
   w0_test_domain ();
   w0_special_cases ();
+
+  test_lambert_random (IEEE754_DOUBLE_PREC, RANDOM_TEST_BATCH,
+                       mpfr_lambertw0, -0.367879, 1e6);
 
   /* branch W_{-1} */
   /* the domain of W_{-1} is [-1/e, 0) */
