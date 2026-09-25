@@ -1,6 +1,6 @@
-/* Hashing functions usage.
+/* MPFR hash interface usage.
 
-Copyright 2025 Free Software Foundation, Inc.
+Copyright 2026 Free Software Foundation, Inc.
 Contributed by Matteo Nicoli.
 
 This file is part of the GNU MPFR Library.
@@ -27,6 +27,9 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 #define DJB2_BASIS 0x00001505
 
+/* this is a very simple implementation of the djb2 hash function. As
+   documented in mpfr.texi, you can implement your own hash function and pass it
+   to MPFR as a callback to mpfr_digest_init */
 static uint32_t
 djb2(uint32_t hash, const unsigned char *bytes, size_t bytes_len)
 {
@@ -81,7 +84,7 @@ custom_mpfr_hash32 (mpfr_t x)
       goto cleanup;
     }
 
-  fprintf (stdout, "custom 32-bit hash digest: %2lu\n", hash);
+  fprintf (stdout, "custom 32-bit hash digest:\t%2lu\n", hash);
 
 cleanup:
   mpfr_digest_ctx_clear (&ctx);
@@ -109,14 +112,33 @@ default_mpfr_hash32 (mpfr_t x)
       goto cleanup;
     }
 
-  fprintf (stdout, "default 32-bit hash digest: %2lu\n", hash);
+  fprintf (stdout, "default 32-bit hash digest:\t%2lu\n", hash);
 
 cleanup:
   mpfr_digest_ctx_clear (&ctx);
 }
 
+
+static void
+hash32_shortcut (mpfr_t x)
+{
+  int ret;
+  mpfr_digest_t hash;
+
+  ret = mpfr_hash32 (&hash, x);
+
+  if (!ret)
+    {
+      fprintf (stderr, "[hash32_shortcut] An error occurred while "
+                       "executing digest update\n");
+      return;
+    }
+
+  fprintf (stdout, "mpfr_hash32 digest (shortcut):\t%2lu\n", hash);
+}
+
 int
-main (int argc, char *argv[])
+main (void)
 {
   mpfr_prec_t p = 50;
   mpfr_t pi;
@@ -124,7 +146,17 @@ main (int argc, char *argv[])
   mpfr_init2 (pi, p);
   mpfr_const_pi (pi, MPFR_RNDD);
 
+  /* this function calculates the 32 bit hash of the number pi using the
+     default algorithm implemented in MPFR. If you need to calculate a ready
+     to use digest of a single number, this is the simplest way to do that */
+  hash32_shortcut (pi);
+
+  /* this is the standard way to compute hashed in MPFR. See mpfr.texi for
+     further details on the APIs usage */
   default_mpfr_hash32 (pi);
+
+  /* the same APIs can be used to compute the digest by using user-implemented
+     algorithms. See mpfr.texi for further details */
   custom_mpfr_hash32 (pi);
 
 cleanup:
