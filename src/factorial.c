@@ -123,6 +123,11 @@ factorial (mpfr_t t, unsigned long int x)
   int inexact;
   unsigned long int i;
 
+  /* This is assumed to avoid an integer overflow in (unsigned long) 1 << b.
+     Overflow checking as done in mpfr_fac_ui may avoid a failure, but this
+     is not clear. Anyway, the code would be too slow for huge values of x. */
+  MPFR_ASSERTN (x < ULONG_MAX - (ULONG_MAX >> 1));
+
   i = numberof_const (mpfr_fac_group);
   MPFR_ASSERTD (x >= i);  /* x < i handled in mpfr_fac_ui() */
   inexact = mpfr_set_ui (t, mpfr_fac_group[i-1], MPFR_RNDZ);
