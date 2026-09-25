@@ -123,6 +123,10 @@ factorial (mpfr_t t, unsigned long int x, mpfr_rnd_t rnd)
   int inexact = 0;
   unsigned long int i;
 
+  /* TODO: start at the last value of mpfr_fac_group (in particular,
+     the grouping is inefficient for the smallest values of i as it
+     stops at powers of 2). */
+
   /* multiply t by 2 * 3 * ... * x. Consecutive integers are grouped
      and multiplied together as native unsigned long integers, so each
      group needs a single mpfr_mul_ui. The maximum number of integers
@@ -131,8 +135,8 @@ factorial (mpfr_t t, unsigned long int x, mpfr_rnd_t rnd)
      of g such integers is less than 2^(g*b) <= 2^ULSIZE */
   for (i = 2; i <= x ; )
     {
-      unsigned long p, cnt, room, j;
-      int b, round;
+      unsigned long cnt, imax, p;
+      unsigned int b;
 
       b = MPFR_INT_CEIL_LOG2 (i + 1);
 
@@ -145,30 +149,17 @@ factorial (mpfr_t t, unsigned long int x, mpfr_rnd_t rnd)
 
       /* keep all grouped integers on b bits, i.e. do not
          cross the 2^b boundary, so that the product of cnt
-         of them is guaranteed to fit in an unsigned long.
-         Note that room >= 1 since i < 2^b, thus cnt >= 1 */
-      room = ((unsigned long) 1 << b) - i;
-      if (cnt > room)
-        cnt = room;
+         of them is guaranteed to fit in an unsigned long. */
+      imax = MIN (i + cnt, (unsigned long) 1 << b) - 1;
+      if (imax > x)
+        imax = x;
 
-      /* p = i * (i+1) * ... * min (i+cnt-1, x), on native integers;
-         the j <= x condition also stops the group at x */
-      p = 1;
-      for (j = i; j < i + cnt && j <= x; j++)
-        p *= j;
-      i = j;
+      /* p = i * (i+1) * ... * imax, on native integers */
+      p = i;
+      while (++i <= imax)
+        p *= i;
 
-      round = mpfr_mul_ui (t, t, p, rnd);
-
-      /* assume the first inexact product gives the sign
-         of difference: is that always correct?
-         FIXME: no. With a precision of 4 bits, if we approximate 7!
-         with rounding to nearest, we get successively 1, 2, 6, 24,
-         120, then 120*6 is rounded to 704, and 704*7 is rounded to 5120.
-         The first inexact product is 120*6 which is smaller than 720,
-         but the final result 5120 is larger than 7!=5040. */
-      if (inexact == 0)
-        inexact = round;
+      inexact |= mpfr_mul_ui (t, t, p, rnd);
 
       /* an overflow of an intermediate product is a real overflow: it
          occurs in the maximal exponent range (set by
