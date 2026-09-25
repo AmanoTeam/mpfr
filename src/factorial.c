@@ -89,10 +89,10 @@ static const unsigned long mpfr_fac_group[] = {
    Note: for very large n (above MPFR_FAC_OVERFLOW_N), overflow is detected
    via the hard-coded threshold in mpfr_fac_ui, so this function is only
    called for n up to that threshold */
-static mpfr_exp_t
+static mpfr_eexp_t
 magnitude (unsigned long n)
 {
-  mpfr_exp_t ret;
+  mpfr_eexp_t ret;
   mpfr_t lb, fn, ln2;
 
   /* we check that n < ULONG_MAX, so n+1 does not overflow */
@@ -108,7 +108,7 @@ magnitude (unsigned long n)
   mpfr_div (lb, lb, ln2, MPFR_RNDD);
   mpfr_floor (lb, lb);
 
-  ret = mpfr_get_si (lb, MPFR_RNDD);
+  ret = mpfr_get_exp_t (lb, MPFR_RNDD);
 
   mpfr_clear (lb);
   mpfr_clear (fn);
