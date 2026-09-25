@@ -106,6 +106,7 @@
 \newtheorem{theorem}{Theorem}
 \newtheorem{fact}{Fact}
 \newtheorem{assumption}{Hypothesis}
+\newtheorem{corollary}{Corollary}
 
 \begin{document}
 \maketitle
@@ -4611,6 +4612,7 @@ independently by Mark Dickinson:
 The smallest bound is $e=186564318007$ for $b=7$ and $b=49$.
 
 \subsection{Legendre polynomials}
+\label{subsec:legendre-polynomials}
 
 Legendre polynomials $P_n(x)$, with $n \geq 0$ and $\vert x \vert \leq 1$, form
 a sequence of orthogonal polynomials that have many applications in physics and
@@ -4808,10 +4810,11 @@ again with a larger working precision $p' > p$.
   If $i=2^k \ge 4$, then $\lfloor \log_2(i) \rfloor = k$ and
   $\lceil \log_2(i-1) \rceil = k$, thus the statement holds.
   Finally if $i=2^k+1$, then $\lfloor \log_2(i) \rfloor = k$ and
-  $\lceil \log_2(i-1) \rceil = k$, thus	the statement holds.
+  $\lceil \log_2(i-1) \rceil = k$, thus the statement holds.
 \end{proof}
 
 \subsubsection{Handling small inputs}
+\label{subsec:legendre-small-inputs}
 
 When $|x|$ is very small, $P_n(x)$ can be well approximated by the leading
 term of its Taylor expansion around $x=0$, avoiding the full Bonnet recursion.
@@ -4983,6 +4986,7 @@ a threshold that ensures the first rounding test is likely to succeed
 in most cases.
 
 \paragraph{\textbf{Error analysis of $c_{0,m}$ and $c_{1,m}$}}
+\label{par:legendre-error-analysis}
 
 Since neither algorithm involves any addition or subtraction, there is no
 cancellation, and we can bound the total rounding error \textit{a-priori}.
@@ -5001,6 +5005,364 @@ relative error satisfies
 where the first inequality follows from Lemma~\ref{lemma_graillat} with all
 $\delta_i = u$ (writing $v_k/V_k = \prod_{i=1}^k(1+\delta_i)$), and the last
 holds whenever $ku \le \tfrac{1}{2}$, i.e. $q \ge 1 + \lceil\log_2 k\rceil$,
+which is satisfied by our choice of working precision.
+
+\subsection{Hermite polynomials}
+
+Hermite polynomials $H_n(x)$, with $n \geq 0$, are a sequence of orthogonal
+polynomials defined in the domain $(-\infty,\infty)$. They have a special
+interest in various branches of physics, e.g., in defining eigenstates
+of the quantum harmonic oscillator.
+
+In this document, $H_n(x)$ refers to the physicist's convention -- the
+ones implemented by \texttt{mpfr\_hermite}; this differs from the
+probabilist's convention, which differs by scaling factors.
+
+MPFR does not use Rodrigues' formula to compute Hermite polynomials
+explicitly, but instead relies on a three-term recursion, which is more
+efficient and numerically stable:
+\begin{equation} \label{eq:hermite-recursion}
+  \begin{cases}
+      H_0(x) = 1,  \\
+      H_1(x) = 2x, \\
+      H_{n+1}(x) = 2xH_{n}(x) - 2nH_{n-1}(x).
+  \end{cases}
+\end{equation}
+The polynomial $H_n(x)$ is even for $n$ even, and odd for $n$ odd,
+i.e., $H_n(-x) = (-1)^n~H_n(x)$.
+
+Some values of $x$ and $n$ are treated as special cases in which the
+recurrence is not evaluated. These two cases are, where (b) follows
+from the fact that $H_n$ is odd for $n$ odd:
+\begin{itemize}
+\item[(a)] The base cases $H_0$ and $H_1$.
+\item[(b)] If $n$ is odd, then $H_n(0) = 0$.
+\end{itemize}
+
+\paragraph{\textbf{Recursion implementation and error analysis.}}
+
+Let's start from Algorithm \ref{algo:hermite-special} in which special cases
+are implemented.
+\vspace{.3cm}
+
+\begin{algorithm}[H]
+  \caption{\texttt{mpfr\_hermite} special cases}
+  \label{algo:hermite-special}
+  \KwData{mpfr\_ptr res, unsigned n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
+  \KwResult{ternary value}
+  \BlankLine
+  \lIf{$x$ {\rm is NaN}}{
+    res $\gets$ NaN;
+    \Return 0\;
+  }
+  \lIf{$n=0$}{
+    res $\gets$ 1;
+    \Return 0\;
+  }
+  \lIf{$x = \pm\infty$}{
+    res $\gets (-1)^n x$;
+    \Return 0\;
+  }
+  \lIf{$x=0$ {\rm and} $n$ {\rm is odd}}{
+    res $\gets$ 0;
+    \Return 0\;
+  }
+  \lIf{$n=1$}{
+    \Return mpfr\_mul\_2ui(res, x, 1, rnd\_mode)\;
+  }
+  \BlankLine
+\end{algorithm}
+\vspace{.3cm}
+
+\begin{algorithm}[H]
+  \caption{\texttt{mpfr\_hermite} recursion}
+  \label{algo:hermite-rec}
+  \KwData{mpfr\_ptr res, unsigned n, mpfr\_srcptr x, mpfr\_rnd\_t rnd\_mode}
+  \KwResult{ternary value}
+  \BlankLine
+  \tcc{All the following MPFR numbers are initialized to precision $p$}
+  $b~\gets{}~1$;
+  $~~a~\gets~\N{}(2x)$;
+  $~~f~\gets~a$\;
+  $~~i~\gets~1$\;
+  \While{$i<n$}{
+    $g~\gets~\N{}(b \cdot{} (2 * i))$\;
+    $h\gets~\N{}(f \cdot{} a)$\;
+    $q~\gets~\N{}(h - g)$\;
+    \BlankLine
+    $b~\gets~a$\;
+    $a~\gets~q$\;
+    $i~\gets~i + 1$\;
+  }
+\end{algorithm}
+\vspace{.3cm}
+
+Algorithm \ref{algo:hermite-rec} shows how the recursion for Hermite polynomial
+is implemented in MPFR. In the error analysis below we will name $a_i$ and
+$b_i$ the values of the variables $a$ and $b$ at the start of loop $i$, where
+$a_i$ approximates $H_i(x)$ and $b_i$ approximates $H_{i-1}(x)$, and
+$g_i$, $h_i$, $q_i$, $b_{i+1}$, $a_{i+1}$ the values of the variables $g$, $h$,
+$q$, $b$, $a$ computed during loop $i$. We are interested in the final value
+$a_n$, which approximates $H_n(x)$.
+
+For the error analysis, we are going to use the same naming convention that
+we used for Legendre polynomials in Section
+\ref{subsec:legendre-polynomials}, so we will associate to each variable,
+say $x_i$ at loop $i$, an integer $e_{x,i}$ such that the total rounding
+error on $x_i$ with respect to the exact value $X_i$ it approximates is
+bounded as follows:
+\[ |x_i - X_i| \le 2^{e_{x,i}}. \]
+This error bound $e_{x,i}$ will be computed at runtime within the code
+(due to the possible cancellation in $q = \N{}(h - g)$, it is not possible
+to compute an error bound \textit{a priori}).
+
+As for Legendre polynomials, we are going to assume all roundings are to
+nearest, with working precision $p$.
+
+\par\noindent
+\textbf{Analysis of $a = \N{}(2\cdot{}x)$.} This is the
+first initialization of the value $a$, say $a_1$, which approximates $H_1(x)=2x$.
+Here, we use the
+\texttt{mpfr\_mul\_2ui} function to multiply the exact input $x$ by 2.
+If the precision of $a$ is less than that of $x$,
+the multiplication $a = \N{}(2\cdot{}x)$ can yield a rounding error.
+This error is bounded by
+$\frac{1}{2} \ulp(a_1) \le \frac{1}{2} 2^{\Exp(a_1) - p}$:
+\[ e_{a_1} \le \Exp(a_1) - p - 1. \]
+
+\par\noindent
+\textbf{Analysis of $f~\gets~a$.} Since this operation is exact ($f$ and $a$ have
+the same precision $p$):
+\[ e_f \le \Exp(f) - p - 1. \]
+
+\par\noindent
+\textbf{Analysis of $g_i = \N{}(b_i \cdot{}(2i))$.}
+Here we have two sources of error: the rounding error on $g_i$, and
+the induced error on $b_i$. The first one is bounded by
+$\frac{1}{2} \ulp(g_i)$, the second one by $2^{e_{b,i}} (2i)$.
+Since $2^x+2^y \le 2^{\max(x,y)+1}$:
+\[ e_{g,i} \le \max(\Exp(g_i)-p, e_{b,i} + \lceil \log_2(2i) \rceil + 1). \]
+
+\par\noindent
+\textbf{Analysis of $h_i = \N{}(f\cdot{}a_i)$.}
+Here we have three sources of error: the rounding error on $h_i$,
+the induced error on $f$, which approximates $2x$,
+and the induced error on $a_i$, which approximates $H_i(x)$:
+\begin{eqnarray*}
+  |h_i - 2x H_i(x)| & \le &
+  |h_i - f a_i| + |f a_i - 2x a_i| + |2x a_i - 2x H_i(x)| \\
+  & \le & 2^{\Exp(h_i)-p-1} + 2^{e_{f} + \Exp(a_i)} + 2^{1 + \Exp(x) + e_{a,i}}.
+\end{eqnarray*}
+Since $2^x + 2^y + 2^z \le 2^{\max(x,y,z)+2}$, it follows:
+\[ e_{h,i} \le 2 + \max(\Exp(h_i)-p-1, e_{f} + \Exp(a_i),
+  1 + \Exp(x) + e_{a,i}). \]
+
+\par\noindent
+\textbf{Analysis of $q_i = \N{}(h_i - g_i)$.}
+Here again, we have three sources of error: the rounding error on $q_i$,
+the induced error on $h_i$, which approximates $H_i := 2x H_i(x)$,
+and the induced error on $g_i$, which approximates $G_i := (2i)H_{i-1}(x)$:
+\[ |q_i - (H_i - G_i)| \le 2^{\Exp(q_i)-p-1} + 2^{e_{h,i}} + 2^{e_{g,i}}. \]
+Using again $2^x + 2^y + 2^z \le 2^{\max(x,y,z)+2}$, it follows:
+\[ e_{q,i} \le 2 + \max(\Exp(q_i)-p-1, e_{h,i}, e_{g,i}). \]
+
+At the end of the loop, we will get an approximation $a_n$ of $H_n(x)$ such
+that:
+\[ |a_n - H_n(x)| \le 2^{e_{a,n}}. \]
+This error bound will be used in the rounding test, and if it fails, we will try
+again with a larger working precision $p' > p$.
+
+\paragraph{\textbf{Overflow handling.}}
+
+This paragraph details how overflow is handled.
+Each polynomial $H_n$ has $n$ distinct real roots, each of them lies in the
+closed interval $[-\sqrt{2n+1}, \sqrt{2n+1}]$, that is called the
+\emph{oscillatory region} of the polynomial $H_n(x)$.
+
+The values of $H_n(x)$ grow very rapidly as $|x|$ increases beyond $\sqrt{2n+1}$,
+and thus overflow can occur for large $n$ and sufficiently large $|x|$.
+The following monotonic growth theorem shows that, outside the oscillatory region,
+if an overflow occurs at some step of the recursion, it will occur at
+all subsequent steps, i.e., if $H_n(x)$ overflows, the same happens to every
+$H_i(x)$ with $i > n$.
+
+\noindent Consider the recurrence $H_{n+1}(x) = 2x H_n(x) - 2n H_{n-1}(x)$.
+
+\begin{lemma}
+For $x > 0$ with $x^2 > 2n$, and for all $1 \le i \le n$:
+\[
+  H_i(x) / H_{i-1}(x) > x.
+\]
+\end{lemma}
+
+In other words, at each step of the recurrence the value grows by at
+least a factor $x$. In particular $H_i(x) > x^i > 0$, and the sequence
+$|H_i(x)|$ is strictly increasing with $i$. This means that, outside
+the oscillatory region, i.e., $x^2 > 2i + 1$, if $H_i(x)$ overflows,
+so does $H_{i+1}(x)$.
+
+\begin{proof}{(by induction on $i$)}
+For the base case $i = 1$: $H_1(x)/H_0(x) = 2x > x$ since $x > 0$.
+For the inductive step, assume $H_i(x)/H_{i-1}(x) > x$ for some
+$i \ge 1$ with $x^2 > 2i$.
+From the recurrence:
+\[
+  \frac{H_{i+1}(x)}{H_i(x)} = 2x - 2i \, \frac{H_{i-1}(x)}{H_i(x)}.
+\]
+
+By the induction hypothesis, $H_i(x)/H_{i-1}(x) > x > 0$, hence
+$0 < H_{i-1}(x)/H_i(x) < 1/x$. Therefore:
+\[
+  \frac{H_{i+1}(x)}{H_i(x)} > 2x - \frac{2i}{x}.
+\]
+This is greater than $x$ if and only if $x > 2i/x$, i.e., $x^2 > 2i$,
+which holds by hypothesis. This completes the induction.
+\end{proof}
+
+\begin{corollary}
+If $x > 0$ with $x^2 > 2n$, and if $H_i(x)$ overflows for some
+$1 \le i \le n$, then $H_m(x)$ overflows for all $m$ with
+$i \le m \le n$.
+\end{corollary}
+
+In the implementation, computations are performed in extended exponent
+range. An overflow in this range
+means the value exceeds \texttt{MPFR\_EMAX\_MAX}.
+
+If $|x| \leq \sqrt{2n+1}$ the polynomial changes sign and its values can
+decrease in magnitude from one step to the next, so the monotonic growth
+argument does not hold within this interval. At the moment, MPFR treats every
+intermediate overflow in the same way, considering the final value
+$H_n(x)$ overflows, both when $x$ is in the oscillatory region or not.
+
+\subsubsection{Handling small inputs}
+
+As for Legendre polynomials, when $|x|$ is very small, $H_n(x)$ can be well
+approximated by the leading term of its Taylor expansion around $x=0$. Thus,
+we are going to use the same methodology used for Legendre polynomials in Section
+\ref{subsec:legendre-small-inputs}.
+Let $c_k$ be the coefficient of degree $k$ of $H_n(x)$,
+or $c_{k,n}$ in case of ambiguity.
+We want to bound the ratios of the first terms
+($|c_3/c_1|$ for odd polynomials and $|c_2/c_0|$ for the even ones). Starting
+from the Hermite differential equation $y'' - 2x y' + 2ny = 0$ we obtain the
+following recurrence
+\begin{equation} \label{eq:hermite-ode-recurrence}
+  (k+2)(k+1)c_{k+2}
+  + 2 (n - k) c_k = 0.
+\end{equation}
+
+For odd degrees, we set $k = 1$, and we get $6c_3 = -2(n-1)c_1$. Hence,
+\[
+  \left|\frac{c_3}{c_1}\right| = \frac{n-1}{3} \le \frac{n}{3}.
+\]
+
+Now, for even degrees we set $k = 0$ and we get $2c_2 = -2n\,c_0$. Hence,
+\[
+  \left|\frac{c_2}{c_0}\right| = n.
+\]
+
+For generic terms, Equation (\ref{eq:hermite-ode-recurrence}) gives
+\[
+  \frac{c_{k+2}}{c_k} = \frac{-2(n-k)}{(k+2)(k+1)},
+\]
+so for $0 \le k < n$:
+\[
+  \left|\frac{c_{k+2}}{c_k}\right|
+  =
+  \frac{2(n-k)}{(k+2)(k+1)}
+  \le \frac{2n}{2} = n.
+\]
+For $k \ge n$, $c_{k+2} = 0$. Therefore, $|c_{k+2}/c_k| \le n$ for all $k \ge 0$.
+Let
+\[
+  t := nx^2,
+\]
+then the tail is bounded by a geometric series:
+\[
+  \left|\sum_{j \ge 1} c_{s+2j}x^{s+2j}\right|
+  \le |c_s x^s|\,\sum_{j \ge 1} t^j
+  = |c_s x^s|\,\frac{t}{1-t}
+\]
+for $t < 1$.
+
+\paragraph{\textbf{Implementation.}} The trailing term (i.e., that of smallest
+degree) is evaluated differently
+depending on the parity of $n$:
+\begin{itemize}
+\item If $n$ is even, the trailing term is $c_{0,n} = H_n(0)$, computed by
+  \[
+    c_{0,0}=1, \qquad c_{0,j}=-2(j-1)c_{0,j-2},
+    \quad j = 2, 4, ..., n,
+  \]
+  thus
+  \[
+    c_{0,n} = (-1)^{n/2} \frac{2 (n-1)!}{(n/2-1)!}.
+  \]
+
+\item If $n$ is odd, the trailing term is $c_{1,n} x$, computed by
+  \[
+    c_{1,1}=2, \qquad c_{1,j}=-2jc_{1,j-2},
+    \quad j = 3, 5, ..., n,
+  \]
+  thus
+  \[
+    c_{1,n} = (-1)^{(n-1)/2} \frac{2 n!}{((n-1)/2)!}.
+  \]
+\end{itemize}
+We remark that for $n$ odd, the trailing coefficient of $H_n$
+is the same (up to sign) as the one of $H_{n+1}$.
+
+
+\paragraph{\textbf{Bounding $t$ in the implementation.}}
+In the code, $t = nx^2$ is bounded as follows.
+Let $e_x = \texttt{MPFR\_GET\_EXP}(x)$, which satisfies
+$2^{e_x-1} \le |x| < 2^{e_x}$, and let
+$\ell = \lceil \log_2 n \rceil$, so that $n \le 2^\ell$.
+Then
+\[
+  t = nx^2 < 2^\ell \cdot \left(2^{e_x}\right)^2
+          = 2^{\ell + 2e_x} = 2^\rho,
+\]
+where $\rho = 2e_x + \ell$.
+
+The condition $\rho \le -2$ guarantees
+$t < 2^\rho \le 2^{-2} = \tfrac{1}{4}$.
+The relative error from keeping only the trailing term equals $t/(1-t)$.
+Since $t < \tfrac{1}{4} < \tfrac{1}{2}$, we have $1 - t > \tfrac{1}{2}$,
+and therefore
+\[
+  \frac{t}{1-t} < \frac{t}{1/2} = 2t < 2 \cdot 2^\rho = 2^{\rho+1}.
+\]
+Truncating the expansion after the first nonzero term yields at least
+$-\rho - 1$ correct bits relative to that term.
+
+In the implementation, if $p$ is the precision of the result, we try this
+shortcut only when
+\[
+  -\rho - 1 \ge p + 64.
+\]
+Since $p \ge 1$, this stronger condition implies $\rho \le -2$, so the
+preceding analysis applies. The extra $64$ guard bits are an heuristic:
+a threshold that ensures the first rounding test is likely to succeed
+in most cases.
+
+\paragraph{\textbf{Error analysis of $c_{0,n}$ and $c_{1,n}$}}
+As for the Legendre case (Sections \ref{par:legendre-error-analysis}), we set
+a working precision $q$, and each \texttt{mpfr\_mul\_si} introduces a relative
+error of at most $u = 2^{-q}$ per operation. We denote by $V_k$ the exact real
+value of the $k$-th iterate and by $v_k$ its computed floating-point approximation,
+with $V_0 = v_0 = 1$ exact in the even case, and $V_0 = v_0 = 2$ exact in the odd
+case. After $k$ such rounding
+operations the accumulated relative error satisfies
+\[
+  \frac{|v_k - V_k|}{|V_k|}
+  \le \frac{ku}{1-ku}
+  \le 2ku = k \cdot 2^{1-q},
+\]
+where the first inequality follows from Lemma~\ref{lemma_graillat} with all
+$\delta_i = u$ (writing $v_k/V_k = \prod_{i=1}^k(1+\delta_i)$), and the last
+holds whenever $ku \le \tfrac{1}{2}$, i.e., $q \ge 1 + \lceil\log_2 k\rceil$,
 which is satisfied by our choice of working precision.
 
 \subsection{Summary}

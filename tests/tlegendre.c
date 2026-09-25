@@ -21,24 +21,14 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 #include "mpfr-test.h"
 
+#define MPFR_ORTHOGONAL_POLY_FN mpfr_legendre
+#include "torthopoly.c"
+
 #define ARBITRARILY_LOW_PREC 10
-#define IEEE754_SINGLE_PREC  24
-#define IEEE754_DOUBLE_PREC  53
-#define MPFR_PREC_100        100
-#define MPFR_PREC_200        200
 
 #define RANDOM_TESTS_BATCH    20
 #define DYADIC_BOUND          35
 #define GENERIC_UI_RAND_MOD   10
-
-#define DUMP_NUMBERS(expected, got)   \
-          do                          \
-            {                         \
-              printf ("expected: ");  \
-              mpfr_dump (expected);   \
-              printf ("got:      ");  \
-              mpfr_dump (got);        \
-            } while (0)
 
 static const unsigned degrees[] =
 {
@@ -446,63 +436,6 @@ test_round (void)
   mpfr_free_cache ();
 }
 
-/* perform K random tests with degree n and precision p */
-static void
-test_random (int n, mpfr_prec_t p, unsigned long K)
-{
-  mpfr_t x, y, z, t;
-  unsigned long k;
-  int rnd;
-
-  mpfr_init2 (x, p);
-  mpfr_init2 (y, p);
-  mpfr_init2 (z, p + 20);
-  mpfr_init2 (t, p);
-
-  for (k = 0; k < K; k++)
-    {
-      mpfr_urandomb (x, RANDS); /* x is in [0,1] */
-      mpfr_mul_ui (x, x, 2, MPFR_RNDN);
-      mpfr_sub_ui (x, x, 1, MPFR_RNDN); /* now x is in [-1,1] */
-      RND_LOOP_NO_RNDF (rnd)
-        {
-          mpfr_legendre (y, n, x, (mpfr_rnd_t) rnd);
-          mpfr_legendre (z, n, x, MPFR_RNDN);
-          if (mpfr_can_round (z, p + 20, MPFR_RNDN, (mpfr_rnd_t) rnd, p))
-            {
-              mpfr_set (t, z, (mpfr_rnd_t) rnd);
-              if (!mpfr_equal_p (y, t))
-                {
-                  printf ("Error in mpfr_legendre for n=%d x=", n);
-                  mpfr_out_str (stdout, 16, 0, x, MPFR_RNDN);
-                  printf (" rnd=%s\n", mpfr_print_rnd_mode ((mpfr_rnd_t) rnd));
-                  DUMP_NUMBERS (t, y);
-                  exit (1);
-                }
-            }
-        }
-    }
-
-  mpfr_clear (x);
-  mpfr_clear (y);
-  mpfr_clear (z);
-  mpfr_clear (t);
-}
-
-static void
-random_test_suite (int num_tests)
-{
-  /* we choose a uniform random distribution of 10 degrees from the ones allowed
-     by the C++ standard [0, 128] */
-  int i;
-  int test_degrees[] = {54, 76, 57, 70, 16, 76, 4, 120, 22, 99};
-
-  for (i = 0; i < 10; i++)
-    {
-      test_random (test_degrees[i], IEEE754_DOUBLE_PREC, num_tests);
-    }
-}
-
 static void
 bug20251001 (void)
 {
@@ -893,7 +826,7 @@ main (void)
 
   /* perform RANDOM_TESTS_BATCH tests for each of the 10 degree chosen between
      the ones allowed  C++ standard [0, 128] */
-  random_test_suite (RANDOM_TESTS_BATCH);
+  random_poly_suite (RANDOM_TESTS_BATCH, IEEE754_DOUBLE_PREC);
 
   bug20251001 ();
 
@@ -911,3 +844,7 @@ main (void)
   tests_end_mpfr ();
   return 0;
 }
+
+#undef MPFR_ORTHOGONAL_POLY_FN
+#undef RANDOM_TESTS_N_DEGREE
+#undef RANDOM_TESTS_BATCH
