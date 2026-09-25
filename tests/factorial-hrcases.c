@@ -19,6 +19,18 @@ You should have received a copy of the GNU Lesser General Public License
 along with the GNU MPFR Library; see the file COPYING.LESSER.
 If not, see <https://www.gnu.org/licenses/>. */
 
+/* Output format: a list of C arrays whose elements are
+ *   [0] The value of n.
+ *   [1] The repeated bit in the sequence of 0s or 1s.
+ *   [2] The length of this sequence.
+ *   [3] The position of the MSB of this sequence (0 for the MSB of n!).
+ *   [4] The size of n!, i.e. its exponent (useful for GNU MPFR).
+ *
+ * Note: stdout is flushed as in practice, this program will not output
+ * many data. So this is very useful when stdout is piped, e.g. to tee.
+ * This avoids the need to run this program via stdbuf.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -83,6 +95,7 @@ int main (int argc, char **argv)
       printf ("\n");
       mpz_out_str (stdout, 2, f);
       printf (" (%lu)\n", s);
+      fflush (stdout);
 #endif
 
       for (i = 0, b = 0; i < s; i = j, b = !b)
@@ -95,8 +108,8 @@ int main (int argc, char **argv)
           unsigned long len = j - i;
           if (len < minlen || j < jmin)
             continue;
-          printf ("{ %lu, %lu, %d, %lu /* %lu */ },\n",
-                  n, len, b, i, s - j);
+          printf ("{ %lu, %d, %lu, %lu, %lu },\n", n, b, len, s - j, s);
+          fflush (stdout);
         }
     }
 
