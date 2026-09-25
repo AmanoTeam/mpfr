@@ -421,10 +421,15 @@ test_pi_incremental_hashing (void)
       fprintf (stderr, "cannot get the resulting digest of pi\n");
       exit (1);
     }
+  if (h_pi != H_PI)
+    {
+      printf ("pi digest should be %lu; got %lu\n",
+              H_PI, h_pi);
+      exit (1);
+    }
 
-  mpfr_digest_t h;
-  mpfr_hash32 (&h, pi);
-  if (h != H_PI)
+  mpfr_hash32 (&h_pi, pi);
+  if (h_pi != H_PI)
     {
       printf ("pi digest should be %lu; got %lu\n",
               H_PI, h_pi);
