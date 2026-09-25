@@ -27,17 +27,13 @@ If not, see <https://www.gnu.org/licenses/>. */
 
 #define DJB2_BASIS 0x00001505
 
-/* this is a very simple implementation of the djb2 hash function. As
-   documented in mpfr.texi, you can implement your own hash function and pass it
-   to MPFR as a callback to mpfr_digest_init */
 static uint32_t
 djb2(uint32_t hash, const unsigned char *bytes, size_t bytes_len)
 {
-    for (size_t i = 0; i < bytes_len; i++)
-      {
-        hash = ((hash << 5) + hash) + bytes[i];
-      }
-    return hash;
+  for (size_t i = 0; i < bytes_len; i++)
+      hash = ((hash << 5) + hash) + bytes[i];
+
+  return hash;
 }
 
 static int
@@ -118,7 +114,6 @@ cleanup:
   mpfr_digest_ctx_clear (&ctx);
 }
 
-
 static void
 hash32_shortcut (mpfr_t x)
 {
@@ -156,7 +151,10 @@ main (void)
   default_mpfr_hash32 (pi);
 
   /* the same APIs can be used to compute the digest by using user-implemented
-     algorithms. See mpfr.texi for further details */
+     algorithms. It uses a very simple implementation of the djb2 hash function
+     (see the djb2 function here). As documented in mpfr.texi, you can implement
+     your own hash function and pass it to MPFR as a callback to
+     mpfr_digest_init */
   custom_mpfr_hash32 (pi);
 
 cleanup:
