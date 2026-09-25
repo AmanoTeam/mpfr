@@ -5458,17 +5458,37 @@ $w - W$, where $W = W(x)$. Write $w = W + \delta$. Then:
          &=& W e^W (e^\delta-1) + \delta e^\delta e^W
              = x (e^\delta - 1 + \frac{\delta e^\delta}{W}).
 \end{eqnarray*}
-Since $e^\delta-1$ and $\delta e^\delta$ are of same sign,
-and both larger than $|\delta|/2$ in absolute value for $|\delta| \le 0.5$,
-we get when $W \ge 0$ (i.e., $x \ge 0$) that
-$|\epsilon| \ge x |\delta|/2 (1 + 1/W)$,
-thus
-\[ |\delta| \le \frac{|\epsilon|}{2x(1+1/W)} \le \frac{|\epsilon|}{2x(1+1/(w+0.5))}, \]
-since we have $w = W+\delta$ with $|\delta| \le 0.5$.
-This gives us a bound for $|\delta|$ in terms of the residual $\epsilon$, $x$,
-and $w$. If this bound is larger than $0.5$, we cannot compute anything.
-If it is smaller than $0.5$, it gives a bound on $w-W$.
-[FIXME: is that reasoning correct?]
+We assume $W \ge 0$ here, thus $x \ge 0$.
+First consider $\epsilon \ge 0$, which implies $\delta \ge 0$.
+We then have $\epsilon/x = e^\delta-1 + \delta e^\delta/W
+\ge \delta + \delta/W$, thus $\delta \le \epsilon/x/(1+1/W)$.
+Thus if $|\epsilon/x| \le 1/2$, then $\delta \le 1/2$.
+
+Now consider $\epsilon \le 0$, which implies $\delta \le 0$.
+Define $\alpha$ such that
+$e^\delta-1+\delta e^\delta/W = \alpha (1+1/W)$,
+where $\alpha$ is a function of $\delta$ and $W$.
+It is easy to see that for $W$ fixed,
+$\alpha$ is non-negative and decreasing with $\delta$.
+For $\delta=-1/2$, we have $\alpha = g(W)$, where:
+\[ g = \frac{e^{-1/2}-1 - \frac{1}{2} e^{-1/2}/W}{1+1/W}, \]
+The function $g(W)$ is decreasing on $[0, \infty)$, and $g(0) \approx -0.3032$.
+Assume $\epsilon/x > -0.303$, then $\epsilon/x/(1+1/W) = \alpha > -0.303$.
+Since $\alpha$ is decreasing with $\delta$, and is smaller than
+$-0.303$ for $\delta=-1/2$, this implies $\delta \ge -1/2$.
+
+Whatever the sign of $\epsilon$, 
+we conclude that if $|\epsilon/x| < 0.303$, then $|\delta| \le 1/2$.
+If $-1/2 \le \delta \le 0$, we have
+$|e^\delta-1| \ge 0.786 |\delta|$ and $|\delta e^\delta| \ge 0.606 |\delta|$,
+thus $|\epsilon/x| \ge 0.786 |\delta| + 0.606 |\delta|/W$,
+and $|\delta| \le |\epsilon|/x/(0.786 + 0.606/W)$.
+In both cases, as soon as $|\epsilon/x| < 0.303$, we conclude
+in the case $x \ge 0$, using the fact that $w = W + \delta$,
+\[ |\delta| \le \frac{|\epsilon|}{x (0.786 + 0.606/(w+1/2))}. \]
+This can be used as stopping criteria for Halley's iteration: as soon as
+the bound for $|\delta|$ is smaller than $\ulp(w)$ (assuming $w$ has some
+guard bits), we can stop the iteration and perform the rounding test.
 
 \subsection{Summary}
 
