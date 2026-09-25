@@ -153,9 +153,9 @@ non_singular_unique_bytes (mpfr_srcptr x, mpfr_bytes_t *bytes)
      always less (or equal) than `bytes_size`:
        min_prec_byte_size <= bytes_size */
   bytes_size = get_bytes_size (x);
+  /* again, since x is non-singular, we have bytes_size > 0 */
+  MPFR_ASSERTD (bytes_size > 0);
   mpfr_bytes = (unsigned char *) malloc (bytes_size);
-  /* again, since x is non-singular, we have mpfr_bytes > 0 */
-  MPFR_ASSERTD (mpfr_bytes > 0);
 
   /* We encode (sequentially):
        - the sign (written_bytes = 1);
@@ -228,7 +228,6 @@ int
 mpfr_hash32 (mpfr_digest_t *digest, mpfr_srcptr x)
 {
   mpfr_bytes_t bytes = { 0 };
-  mpfr_digest_t hash = 0;
 
   if (!mpfr_unique_bytes (x, &bytes))
     return 0;
