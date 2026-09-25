@@ -82,14 +82,11 @@ int main (int argc, char **argv)
 
   for (n = n0; n <= n1; n++)
     {
-      unsigned long s, i, j, jmin;
+      unsigned long s, i, j;
       int b;
 
       mpz_mul_ui (f, f, n); /* f = n! */
       s = mpz_sizeinbase (f, 2);
-
-      /* Goal of pmax: to restrict the precision before the sequence. */
-      jmin = s > pmax ? s - pmax : 0;
 
 #ifdef VERBOSE
       printf ("\n");
@@ -98,7 +95,13 @@ int main (int argc, char **argv)
       fflush (stdout);
 #endif
 
-      for (i = 0, b = 0; i < s; i = j, b = !b)
+      /* Goal of pmax: to restrict the precision before the sequence. */
+      i = s > pmax ? s - pmax - 1 : 0;
+      b = mpz_tstbit (f, i);
+      while (i > 0 && mpz_tstbit (f, i-1) == b)
+        i--;
+
+      for (; i < s; i = j, b = !b)
         {
           assert (mpz_tstbit (f, i) == b);
           j = (b ? mpz_scan0 : mpz_scan1) (f, i);
@@ -106,7 +109,7 @@ int main (int argc, char **argv)
           if (i == 0)
             continue;
           unsigned long len = j - i;
-          if (len < minlen || j < jmin)
+          if (len < minlen)
             continue;
           printf ("{ %lu, %d, %lu, %lu, %lu },\n", n, b, len, s - j, s);
           fflush (stdout);
